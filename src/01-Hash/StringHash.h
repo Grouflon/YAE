@@ -2,7 +2,8 @@
 
 #include <unordered_map>
 #include <string.h>
-#include <stdint.h>
+
+#include <00-Type/IntTypes.h>
 
 #ifdef _DEBUG
 #define DEBUG_STRINGHASH 1
@@ -18,10 +19,10 @@ public:
 	StringHash(const char* _str);
 	~StringHash();
 
-	uint32_t getHash() const;
+	u32 getHash() const;
 
 	bool operator==(const StringHash& _rhs) const;
-	bool operator==(uint32_t _rhs) const;
+	bool operator==(u32 _rhs) const;
 	bool operator!=(const StringHash& _rhs) const;
 	bool operator< (const StringHash& _rhs) const;
 	bool operator> (const StringHash& _rhs) const;
@@ -29,7 +30,7 @@ public:
 	bool operator>=(const StringHash& _rhs) const;
 
 private:
-	uint32_t m_hash;
+	u32 m_hash;
 #if DEBUG_STRINGHASH
 	const char*	m_string;
 #endif
@@ -39,10 +40,10 @@ private:
 class StringHashRepository
 {
 public:
-	const char* registerStringHash(uint32_t _hash, const char* _string);
+	const char* registerStringHash(u32 _hash, const char* _string);
 
 private:
-	std::unordered_map<uint32_t, std::string> m_stringMap;
+	std::unordered_map<u32, std::string> m_stringMap;
 };
 
 extern StringHashRepository g_stringHashRepository;

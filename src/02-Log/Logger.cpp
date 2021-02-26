@@ -1,19 +1,25 @@
 #include "Logger.h"
 
-#include <HashTools.h>
+#include <00-Type/GlobalContext.h>
 
 namespace yae {
 
 #define DEFAULT_CATEGORY_NAME "Default"
 
-Logger::Logger(const char* _logFilePath, uint32_t _outputTargets)
+Logger::Logger(const char* _logFilePath, u32 _outputTargets)
 {
-
+    if (g_context.logger == nullptr)
+    {
+        g_context.logger = this;
+    }
 }
 
 Logger::~Logger()
 {
-
+	if (g_context.logger == this)
+	{
+		g_context.logger = nullptr;
+	}
 }
 
 void Logger::setCategoryVerbosity(const char* _categoryName, LogVerbosity _verbosity)
@@ -29,7 +35,7 @@ LogCategory& Logger::_findCategory(const char* _categoryName)
     _categoryName = DEFAULT_CATEGORY_NAME;
   }
 
-  uint32_t hash = HashString(_categoryName);
+  StringHash hash = _categoryName;
   auto it = m_categories.find(hash);
   if (it == m_categories.end())
   {
@@ -43,7 +49,5 @@ LogCategory& Logger::_findCategory(const char* _categoryName)
 
   return it->second;
 }
-
-Logger g_logger;
 
 } // namespace yae

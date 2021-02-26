@@ -1,13 +1,13 @@
 #pragma once
 
-#include <stdint.h>
 #include <string>
 #include <vector>
 #include <ctime>
 
-#include <Assert.h>
-#include <StringHash.h>
-#include <StringTools.h>
+#include <00-Macro/Assert.h>
+#include <00-Type/IntTypes.h>
+#include <01-Hash/StringHash.h>
+#include <01-String/StringTools.h>
 
 namespace yae {
 
@@ -30,7 +30,7 @@ enum LogOutputTargetFlag
 {
   std::time_t time;
   std::string message;
-  uint32_t category_hash;
+  u32 category_hash;
 };*/
 
 struct LogCategory
@@ -42,7 +42,7 @@ struct LogCategory
 class Logger
 {
 public:
-  Logger(const char* _logFilePath = nullptr, uint32_t _outputTargets = LogOutputTargetFlag_Stdout|LogOutputTargetFlag_File);
+  Logger(const char* _logFilePath = nullptr, u32 _outputTargets = LogOutputTargetFlag_Stdout|LogOutputTargetFlag_File);
   ~Logger();
 
   template<typename ...Args>
@@ -63,10 +63,9 @@ public:
 private:
   LogCategory& _findCategory(const char* _categoryName);
 
-  uint32_t m_outputTargets = 0u;
-  std::unordered_map<uint32_t, LogCategory> m_categories;
+  u32 m_outputTargets = 0u;
+  std::unordered_map<StringHash, LogCategory> m_categories;
   //std::vector<LogLine> m_lines;
 };
 
-extern Logger g_logger;
 };

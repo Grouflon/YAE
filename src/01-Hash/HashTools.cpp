@@ -7,7 +7,7 @@
 
 namespace yae {
 
-uint32_t Hash32(const void* _data, size_t _size)
+u32 Hash32(const void* _data, size_t _size)
 {
 	if (_size == 0)
 	{
@@ -16,9 +16,9 @@ uint32_t Hash32(const void* _data, size_t _size)
 
 	// FNV-1a algorithm
 	// http://isthe.com/chongo/tech/comp/fnv/
-	uint32_t hash = OFFSET_BASIS;
-	const uint8_t* buf = static_cast<const uint8_t*>(_data);
-	for (uint32_t i = 0u; i < _size; i++)
+	u32 hash = OFFSET_BASIS;
+	const u8* buf = static_cast<const u8*>(_data);
+	for (u32 i = 0u; i < _size; i++)
 	{
 		hash = hash * FNV_PRIME;
 		hash = hash ^ *buf;
@@ -27,7 +27,7 @@ uint32_t Hash32(const void* _data, size_t _size)
 	return hash;
 }
 
-uint32_t HashString(const char* _str)
+u32 HashString(const char* _str)
 {
 	return Hash32(_str, strlen(_str));
 }
