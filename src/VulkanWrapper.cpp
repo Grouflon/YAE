@@ -187,6 +187,9 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	m_window = _window;
 	m_validationLayersEnabled = _validationLayersEnabled;
 
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetFramebufferSizeCallback(m_window, &FramebufferResizeCallback);
+
 	// Extensions
 	u32 extensionCount = 0;
 	const char* extensions[MAX_EXTENSION_COUNT];
@@ -467,6 +470,195 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	vkGetDeviceQueue(m_device, queueIndices.graphicsFamily, 0, &m_graphicsQueue);
 	vkGetDeviceQueue(m_device, queueIndices.presentFamily, 0, &m_presentQueue);
 
+	// Create Command Pools
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.queueFamilyIndex = queueIndices.graphicsFamily;
+		poolInfo.flags = 0; // Optional
+
+		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
+		YAE_VERBOSE_CAT("vulkan", "Created Command Pool");
+	}
+
+	// Create Swap Chain
+	_createSwapChain();
+
+	// Create Sync Objects
+	{
+		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+		VkSemaphoreCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+		{
+			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_imageAvailableSemaphores[i]));
+			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_renderFinishedSemaphores[i]));
+			VK_VERIFY(vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]));
+		}
+
+		YAE_VERBOSE_CAT("vulkan", "Created Sync Objects");
+	}
+	
+	return true;
+}
+
+void VulkanWrapper::draw()
+{
+	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX));
+	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]));
+
+	uint32_t imageIndex;
+	{
+		VkResult result = vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			_recreateSwapChain();
+			return;
+		}
+		else if (result != VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
+		{
+			YAE_ASSERT(false);
+		}
+	}
+
+	if (m_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+	{
+		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX))
+	}
+	m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
+
+	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = sizeof(waitSemaphores) / sizeof(*waitSemaphores);
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
+	submitInfo.signalSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	VK_VERIFY(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]));
+
+	VkSwapchainKHR swapChains[] = { m_swapChain };
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = sizeof(swapChains) / sizeof(*swapChains);
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+
+	{
+		VkResult result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
+		{
+			m_framebufferResized = false;
+			_recreateSwapChain();
+		}
+		else if (result != VK_SUCCESS)
+		{
+			YAE_ASSERT(false);
+		}
+	}
+
+	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void VulkanWrapper::shutdown()
+{
+	VK_VERIFY(vkDeviceWaitIdle(m_device));
+
+	_destroySwapChain();
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
+		vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
+	}
+	m_inFlightFences.clear();
+	m_renderFinishedSemaphores.clear();
+	m_imageAvailableSemaphores.clear();
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Sync Objects");
+
+	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+	m_commandPool = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Command Pool");
+
+	m_presentQueue = VK_NULL_HANDLE;
+	m_graphicsQueue = VK_NULL_HANDLE;
+
+	vkDestroyDevice(m_device, nullptr);
+	m_device = VK_NULL_HANDLE;
+	m_physicalDevice = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Device");
+
+	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+	m_surface = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Surface");
+
+	if (m_validationLayersEnabled)
+	{
+		vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+		m_debugMessenger = VK_NULL_HANDLE;
+		YAE_VERBOSE_CAT("vulkan", "Destroyed Debug Messenger");
+	}
+
+	vkDestroyInstance(m_instance, nullptr);
+	m_instance = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Vulkan instance");
+
+	glfwSetFramebufferSizeCallback(m_window, nullptr);
+	glfwSetWindowUserPointer(m_window, nullptr);
+	m_window = nullptr;
+}
+
+bool VulkanWrapper::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, u32 _extensionCount)
+{
+	u32 deviceExtensionCount;
+	VK_VERIFY(vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &deviceExtensionCount, nullptr));
+	std::vector<VkExtensionProperties> deviceExtensions(deviceExtensionCount);
+	VK_VERIFY(vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &deviceExtensionCount, deviceExtensions.data()));
+
+	for (u32 i = 0; i < _extensionCount; ++i)
+	{
+		bool found = false;
+		const char* extensionName = _extensionsList[i];
+		for (u32 j = 0; j < deviceExtensionCount; ++j)
+		{
+			if (strcmp(extensionName, deviceExtensions[j].extensionName) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			return false;
+	}
+	return true;
+}
+
+void VulkanWrapper::FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height)
+{
+	VulkanWrapper* vulkanWrapper = reinterpret_cast<VulkanWrapper*>(glfwGetWindowUserPointer(_window));
+	vulkanWrapper->m_framebufferResized = true;
+}
+
+void VulkanWrapper::_createSwapChain()
+{
+	QueueFamilyIndices queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
+
 	// Create Swap Chain
 	{
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_physicalDevice, m_surface);
@@ -560,7 +752,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		
+
 		VkAttachmentReference colorAttachmentRef{};
 		colorAttachmentRef.attachment = 0;
 		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -622,7 +814,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			fragmentShaderModule = createShaderModule(m_device, file->getContent(), file->getContentSize());
 			file->releaseUnuse();
 		}
-	
+
 		VkPipelineShaderStageCreateInfo vertexShaderStageInfo{};
 		vertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -661,7 +853,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
-		scissor.offset = {0, 0};
+		scissor.offset = { 0, 0 };
 		scissor.extent = m_swapChainExtent;
 
 		VkPipelineViewportStateCreateInfo viewportState{};
@@ -782,15 +974,8 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		YAE_VERBOSE_CAT("vulkan", "Created Frame Buffers");
 	}
 
-	// Create Command Pools
+	// Allocate command buffers
 	{
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.queueFamilyIndex = queueIndices.graphicsFamily;
-		poolInfo.flags = 0; // Optional
-
-		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
-
 		m_commandBuffers.resize(m_swapChainFramebuffers.size());
 
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -800,8 +985,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		allocInfo.commandBufferCount = uint32_t(m_commandBuffers.size());
 
 		VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data()));
-
-		YAE_VERBOSE_CAT("vulkan", "Created Command Pool & Buffers");
+		YAE_VERBOSE_CAT("vulkan", "Allocated Command Buffers");
 	}
 
 	// Start Command Buffers
@@ -823,7 +1007,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_swapChainExtent;
 
-			VkClearValue clearColor = {0.f, 0.f, 0.f, 1.f};
+			VkClearValue clearColor = { 0.f, 0.f, 0.f, 1.f };
 			renderPassInfo.clearValueCount = 1;
 			renderPassInfo.pClearValues = &clearColor;
 
@@ -838,95 +1022,16 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		YAE_VERBOSE_CAT("vulkan", "Filled command buffers");
 	}
 
-	// Create Sync Objects
-	{
-		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-		m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-		m_imagesInFlight.resize(m_swapChainImages.size(), VK_NULL_HANDLE);
-
-		VkSemaphoreCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-		{
-			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_imageAvailableSemaphores[i]));
-			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_renderFinishedSemaphores[i]));
-			VK_VERIFY(vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]));
-		}
-
-		YAE_VERBOSE_CAT("vulkan", "Created Sync Objects");
-	}
-	
-	return true;
+	m_imagesInFlight.resize(m_swapChainImages.size(), VK_NULL_HANDLE);
 }
 
-void VulkanWrapper::draw()
+void VulkanWrapper::_destroySwapChain()
 {
-	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX));
-	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]));
-
-	uint32_t imageIndex;
-	vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-	if (m_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-	{
-		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX))
-	}
-	m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
-
-	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = sizeof(waitSemaphores) / sizeof(*waitSemaphores);
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
-	submitInfo.signalSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
-	submitInfo.pSignalSemaphores = signalSemaphores;
-	VK_VERIFY(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]));
-
-	VkSwapchainKHR swapChains[] = { m_swapChain };
-	VkPresentInfoKHR presentInfo{};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.waitSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
-	presentInfo.pWaitSemaphores = signalSemaphores;
-	presentInfo.swapchainCount = sizeof(swapChains) / sizeof(*swapChains);
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
-
-	vkQueuePresentKHR(m_presentQueue, &presentInfo);
-
-	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
-void VulkanWrapper::shutdown()
-{
-	VK_VERIFY(vkDeviceWaitIdle(m_device));
-
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-	{
-		vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
-		vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
-		vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
-	}
 	m_imagesInFlight.clear();
-	m_inFlightFences.clear();
-	m_renderFinishedSemaphores.clear();
-	m_imageAvailableSemaphores.clear();
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Sync Objects");
 
+	vkFreeCommandBuffers(m_device, m_commandPool, static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
 	m_commandBuffers.clear();
-	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-	m_commandPool = VK_NULL_HANDLE;
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Command Pool");
+	YAE_VERBOSE_CAT("vulkan", "Freed Command Buffers");
 
 	for (VkFramebuffer framebuffer : m_swapChainFramebuffers) {
 		vkDestroyFramebuffer(m_device, framebuffer, nullptr);
@@ -951,58 +1056,24 @@ void VulkanWrapper::shutdown()
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain Images");
 
 	vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
+	m_swapChain = VK_NULL_HANDLE;
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain");
-
-	m_presentQueue = VK_NULL_HANDLE;
-	m_graphicsQueue = VK_NULL_HANDLE;
-
-	vkDestroyDevice(m_device, nullptr);
-	m_device = VK_NULL_HANDLE;
-	m_physicalDevice = VK_NULL_HANDLE;
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Device");
-
-	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-	m_surface = VK_NULL_HANDLE;
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Surface");
-
-	if (m_validationLayersEnabled)
-	{
-		vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
-		m_debugMessenger = VK_NULL_HANDLE;
-		YAE_VERBOSE_CAT("vulkan", "Destroyed Debug Messenger");
-	}
-
-	vkDestroyInstance(m_instance, nullptr);
-	m_instance = VK_NULL_HANDLE;
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Vulkan instance");
-
-	m_window = nullptr;
 }
 
-bool VulkanWrapper::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, u32 _extensionCount)
+void VulkanWrapper::_recreateSwapChain()
 {
-	u32 deviceExtensionCount;
-	VK_VERIFY(vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &deviceExtensionCount, nullptr));
-	std::vector<VkExtensionProperties> deviceExtensions(deviceExtensionCount);
-	VK_VERIFY(vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &deviceExtensionCount, deviceExtensions.data()));
-
-	for (u32 i = 0; i < _extensionCount; ++i)
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(m_window, &width, &height);
+	while (width == 0 || height == 0)
 	{
-		bool found = false;
-		const char* extensionName = _extensionsList[i];
-		for (u32 j = 0; j < deviceExtensionCount; ++j)
-		{
-			if (strcmp(extensionName, deviceExtensions[j].extensionName) == 0)
-			{
-				found = true;
-				break;
-			}
-		}
-
-		if (!found)
-			return false;
+		glfwGetFramebufferSize(m_window, &width, &height);
+		glfwWaitEvents();
 	}
-	return true;
+
+	vkDeviceWaitIdle(m_device);
+
+	_destroySwapChain();
+	_createSwapChain();
 }
 
 } // namespace yae

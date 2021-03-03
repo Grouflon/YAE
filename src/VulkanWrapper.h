@@ -19,7 +19,13 @@ public:
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, uint32_t _extensionCount);
 
+	static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
+
 private:
+	void _createSwapChain();
+	void _destroySwapChain();
+	void _recreateSwapChain();
+
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
 
@@ -54,6 +60,7 @@ private:
 	size_t m_currentFrame = 0;
 
 	bool m_validationLayersEnabled = false;
+	bool m_framebufferResized = false;
 };
 
 }

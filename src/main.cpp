@@ -17,7 +17,6 @@
 const uint32_t WIDTH = 800u;
 const uint32_t HEIGHT = 600u;
 
-
 int main(int _argc, char** _argv)
 {
     yae::Logger logger;
@@ -33,13 +32,12 @@ int main(int _argc, char** _argv)
 
     // Init Window
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Disable OpenGL context creation
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Disable resizable window
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // Disable resizable window
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     YAE_VERBOSE_CAT("glfw", "Created glfw window");
 
-    // Init Vulkan
+	// Init Vulkan
 	yae::VulkanWrapper vulkanWrapper;
-
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
