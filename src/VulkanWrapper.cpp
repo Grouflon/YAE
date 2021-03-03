@@ -182,7 +182,7 @@ VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, GLFWw
 	}
 }
 
-bool VulkanWrapper::Init(GLFWwindow* _window, bool _validationLayersEnabled)
+bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 {
 	m_window = _window;
 	m_validationLayersEnabled = _validationLayersEnabled;
@@ -459,7 +459,7 @@ bool VulkanWrapper::Init(GLFWwindow* _window, bool _validationLayersEnabled)
 		createInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		VK_VERIFY(vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device));
-		YAE_VERBOSE_CAT("vulkan", "Created Logical Device");
+		YAE_VERBOSE_CAT("vulkan", "Created Device");
 	}
 	YAE_ASSERT(m_device != VK_NULL_HANDLE);
 
@@ -525,6 +525,28 @@ bool VulkanWrapper::Init(GLFWwindow* _window, bool _validationLayersEnabled)
 		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr));
 		m_swapChainImages.resize(imageCount);
 		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data()));
+
+		m_swapChainImageViews.resize(imageCount);
+		for (size_t i = 0; i < imageCount; ++i)
+		{
+			VkImageViewCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = m_swapChainImages[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = m_swapChainImageFormat;
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
+
+			VK_VERIFY(vkCreateImageView(m_device, &createInfo, nullptr, &m_swapChainImageViews[i]));
+		}
+		YAE_VERBOSE_CAT("vulkan", "Created Swap Chain Images");
 	}
 
 	// Create render pass
@@ -548,12 +570,22 @@ bool VulkanWrapper::Init(GLFWwindow* _window, bool _validationLayersEnabled)
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
 
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassInfo.attachmentCount = 1;
 		renderPassInfo.pAttachments = &colorAttachment;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
 
 		VK_VERIFY(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass));
 		YAE_VERBOSE_CAT("vulkan", "Created Render Pass");
@@ -726,12 +758,184 @@ bool VulkanWrapper::Init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		YAE_VERBOSE_CAT("vulkan", "Created Graphics Pipeline");
 	}
+
+	// Create Frame Buffers
+	{
+		m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
+		for (size_t i = 0; i < m_swapChainImageViews.size(); ++i)
+		{
+			VkImageView attachments[] = {
+				m_swapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = m_renderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = m_swapChainExtent.width;
+			framebufferInfo.height = m_swapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			VK_VERIFY(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]));
+		}
+		YAE_VERBOSE_CAT("vulkan", "Created Frame Buffers");
+	}
+
+	// Create Command Pools
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.queueFamilyIndex = queueIndices.graphicsFamily;
+		poolInfo.flags = 0; // Optional
+
+		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
+
+		m_commandBuffers.resize(m_swapChainFramebuffers.size());
+
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = m_commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = uint32_t(m_commandBuffers.size());
+
+		VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data()));
+
+		YAE_VERBOSE_CAT("vulkan", "Created Command Pool & Buffers");
+	}
+
+	// Start Command Buffers
+	{
+		for (size_t i = 0; i < m_commandBuffers.size(); ++i)
+		{
+			VkCommandBufferBeginInfo beginInfo{};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = 0; // Optional
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			VK_VERIFY(vkBeginCommandBuffer(m_commandBuffers[i], &beginInfo));
+
+			VkRenderPassBeginInfo renderPassInfo{};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = m_renderPass;
+			renderPassInfo.framebuffer = m_swapChainFramebuffers[i];
+
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = m_swapChainExtent;
+
+			VkClearValue clearColor = {0.f, 0.f, 0.f, 1.f};
+			renderPassInfo.clearValueCount = 1;
+			renderPassInfo.pClearValues = &clearColor;
+
+			vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+			vkCmdDraw(m_commandBuffers[i], 3, 1, 0, 0);
+			vkCmdEndRenderPass(m_commandBuffers[i]);
+
+			VK_VERIFY(vkEndCommandBuffer(m_commandBuffers[i]));
+		}
+
+		YAE_VERBOSE_CAT("vulkan", "Filled command buffers");
+	}
+
+	// Create Sync Objects
+	{
+		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+		m_imagesInFlight.resize(m_swapChainImages.size(), VK_NULL_HANDLE);
+
+		VkSemaphoreCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+		{
+			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_imageAvailableSemaphores[i]));
+			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_renderFinishedSemaphores[i]));
+			VK_VERIFY(vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]));
+		}
+
+		YAE_VERBOSE_CAT("vulkan", "Created Sync Objects");
+	}
 	
 	return true;
 }
 
-void VulkanWrapper::Shutdown()
+void VulkanWrapper::draw()
 {
+	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX));
+	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]));
+
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	if (m_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+	{
+		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX))
+	}
+	m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
+
+	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = sizeof(waitSemaphores) / sizeof(*waitSemaphores);
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
+	submitInfo.signalSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	VK_VERIFY(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]));
+
+	VkSwapchainKHR swapChains[] = { m_swapChain };
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = sizeof(signalSemaphores) / sizeof(*signalSemaphores);
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = sizeof(swapChains) / sizeof(*swapChains);
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+
+	vkQueuePresentKHR(m_presentQueue, &presentInfo);
+
+	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void VulkanWrapper::shutdown()
+{
+	VK_VERIFY(vkDeviceWaitIdle(m_device));
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
+		vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
+	}
+	m_imagesInFlight.clear();
+	m_inFlightFences.clear();
+	m_renderFinishedSemaphores.clear();
+	m_imageAvailableSemaphores.clear();
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Sync Objects");
+
+	m_commandBuffers.clear();
+	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+	m_commandPool = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Command Pool");
+
+	for (VkFramebuffer framebuffer : m_swapChainFramebuffers) {
+		vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+	}
+	m_swapChainFramebuffers.clear();
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Frame Buffers");
+
+	vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+	m_graphicsPipeline = VK_NULL_HANDLE;
 	vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
 	m_pipelineLayout = VK_NULL_HANDLE;
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Graphic Pipeline");
@@ -740,7 +944,11 @@ void VulkanWrapper::Shutdown()
 	m_renderPass = VK_NULL_HANDLE;
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Render Pass");
 
+	for (VkImageView imageView : m_swapChainImageViews) {
+		vkDestroyImageView(m_device, imageView, nullptr);
+	}
 	m_swapChainImages.clear();
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain Images");
 
 	vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain");
@@ -751,7 +959,7 @@ void VulkanWrapper::Shutdown()
 	vkDestroyDevice(m_device, nullptr);
 	m_device = VK_NULL_HANDLE;
 	m_physicalDevice = VK_NULL_HANDLE;
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Logical Device");
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Device");
 
 	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	m_surface = VK_NULL_HANDLE;

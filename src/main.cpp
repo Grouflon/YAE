@@ -45,16 +45,17 @@ int main(int _argc, char** _argv)
 #else
 	const bool enableValidationLayers = true;
 #endif
-	vulkanWrapper.Init(window, enableValidationLayers);
+	vulkanWrapper.init(window, enableValidationLayers);
 
     // Loop
     while(!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+        vulkanWrapper.draw();
     }
 
     // Shutdown
-	vulkanWrapper.Shutdown();
+	vulkanWrapper.shutdown();
     glfwDestroyWindow(window);
     YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
     glfwTerminate();
