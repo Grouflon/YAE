@@ -26,6 +26,10 @@ private:
 	void _destroySwapChain();
 	void _recreateSwapChain();
 
+	void _createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _buffer, VkDeviceMemory& _bufferMemory);
+	void _destroyBuffer(VkBuffer& _buffer, VkDeviceMemory& _bufferMemory);
+	void _copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size);
+
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
 
@@ -47,6 +51,11 @@ private:
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
 	VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
+
+	VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
 
 	std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
