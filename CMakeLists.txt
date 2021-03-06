@@ -48,6 +48,7 @@ file(GLOB_RECURSE YAE_SRC "./src/**.h" "./src/**.cpp")
 add_compile_definitions(
 	_CRT_SECURE_NO_WARNINGS
 	GLFW_INCLUDE_VULKAN
+	GLM_FORCE_RADIANS
 )
 
 set(SOURCES
