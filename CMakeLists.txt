@@ -65,6 +65,7 @@ include_directories(
 	./extern/GLFW/include/
 	./extern/glm/
 	./extern/stb/
+	./extern/tinyobjloader/
 	$ENV{VK_SDK_PATH}/include/
 )
 

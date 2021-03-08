@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 #include <00-Type/IntTypes.h>
 
@@ -11,6 +12,16 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 namespace yae {
 
 class FileResource;
+
+struct Vertex {
+	glm::vec3 pos;
+	glm::vec3 color;
+	glm::vec2 texCoord;
+
+	bool operator==(const Vertex& other) const {
+		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
+};
 
 class VulkanWrapper
 {
@@ -24,6 +35,7 @@ public:
 	static bool HasStencilComponent(VkFormat _format);
 
 	static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
+	static bool LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices);
 
 private:
 	void _createSwapChain();
@@ -45,6 +57,7 @@ private:
 
 	VkCommandBuffer _beginSingleTimeCommands();
 	void _endSingleTimeCommands(VkCommandBuffer _commandBuffer);
+
 
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
@@ -70,6 +83,8 @@ private:
 	VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
+	std::vector<Vertex> m_vertices;
+	std::vector<u32> m_indices;
 	VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
 	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
@@ -105,4 +120,18 @@ private:
 	bool m_framebufferResized = false;
 };
 
+}
+
+#include <functional>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
+namespace std {
+	template<> struct hash<yae::Vertex> {
+		size_t operator()(yae::Vertex const& vertex) const {
+			return ((hash<glm::vec3>()(vertex.pos) ^
+				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.texCoord) << 1);
+		}
+	};
 }

@@ -4,11 +4,12 @@
 #include <vector>
 #include <chrono>
 
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 #include <00-Macro/Assert.h>
 #include <00-Type/IntTypes.h>
@@ -21,26 +22,8 @@
 
 namespace yae {
 
-struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-};
-static const std::vector<Vertex> s_vertices = {
-	{{-0.5f, -0.5f, 0.f}, {1.0f, 0.0f, 0.0f}, {1.f, 0.f}},
-	{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.f, 0.f}},
-	{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.f, 1.f}},
-	{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.f, 1.f}},
-
-	{{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.f, 0.f}},
-	{{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {0.f, 0.f}},
-	{{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.f, 1.f}},
-	{{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.f, 1.f}}
-};
-static const std::vector<uint16_t> s_indices = {
-	4, 5, 6, 6, 7, 4,
-	0, 1, 2, 2, 3, 0,
-};
+const char* MODEL_PATH = "./data/models/viking_room.obj";
+const char* TEXTURE_PATH = "./data/textures/viking_room.png";
 
 struct UniformBufferObject
 {
@@ -544,7 +527,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Texture Image...");
 		int textureWidth, textureHeight, textureChannels;
-		stbi_uc* pixels = stbi_load("./data/textures/texture.jpg", &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load(TEXTURE_PATH, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 		YAE_ASSERT(pixels);
 
 		VkDeviceSize imageSize = textureWidth * textureHeight * 4;
@@ -610,10 +593,21 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		YAE_VERBOSE_CAT("vulkan", "Created Texture Sampler");
 	}
 
+	// Load Model
+	{
+		YAE_VERBOSE_CAT("vulkan", "Loading Model...");
+		m_vertices.clear();
+		m_indices.clear();
+		bool ret = LoadModel(MODEL_PATH, m_vertices, m_indices);
+		YAE_ASSERT(ret);
+		YAE_VERBOSE_CAT("vulkan", "Loaded Model");
+	}
+
 	// Create Vertex Buffer
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Vertex Buffer...");
-		VkDeviceSize bufferSize = sizeof(s_vertices[0]) * s_vertices.size();
+
+		VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 		_createBuffer(
@@ -627,7 +621,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		{
 			void* data;
 			VK_VERIFY(vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data));
-			memcpy(data, s_vertices.data(), bufferSize);
+			memcpy(data, m_vertices.data(), bufferSize);
 			vkUnmapMemory(m_device, stagingBufferMemory);
 		}
 		_createBuffer(
@@ -646,7 +640,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	// Create Index Buffer
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Index Buffer...");
-		VkDeviceSize bufferSize = sizeof(s_indices[0]) * s_indices.size();
+		VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 		_createBuffer(
@@ -660,7 +654,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		{
 			void* data;
 			VK_VERIFY(vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data));
-			memcpy(data, s_indices.data(), bufferSize);
+			memcpy(data, m_indices.data(), bufferSize);
 			vkUnmapMemory(m_device, stagingBufferMemory);
 		}
 		_createBuffer(
@@ -923,6 +917,55 @@ void VulkanWrapper::FramebufferResizeCallback(GLFWwindow* _window, int _width, i
 {
 	VulkanWrapper* vulkanWrapper = reinterpret_cast<VulkanWrapper*>(glfwGetWindowUserPointer(_window));
 	vulkanWrapper->m_framebufferResized = true;
+}
+
+bool VulkanWrapper::LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices)
+{
+	YAE_ASSERT(_outVertices.empty());
+	YAE_ASSERT(_outIndices.empty());
+
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH))
+	{
+		YAE_ERROR((warn + err).c_str());
+		return false;
+	}
+
+	std::unordered_map<Vertex, u32> uniqueVertices;
+
+	for (const auto& shape : shapes)
+	{
+		for (const auto& index : shape.mesh.indices)
+		{
+			Vertex v{};
+			v.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			v.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			v.color = {1.f, 1.f, 1.f};
+
+			auto it = uniqueVertices.find(v);
+			if (it == uniqueVertices.end())
+			{
+				it = uniqueVertices.insert(std::make_pair(v, u32(_outVertices.size()))).first;
+				_outVertices.push_back(v);
+			}
+			_outIndices.push_back(it->second);
+		}
+	}
+
+	return true;
 }
 
 void VulkanWrapper::_createSwapChain()
@@ -1460,10 +1503,10 @@ void VulkanWrapper::_createSwapChain()
 			VkBuffer vertexBuffers[] = { m_vertexBuffer };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+			vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 			vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
 
-			vkCmdDrawIndexed(m_commandBuffers[i], u32(s_indices.size()), 1, 0, 0, 0);
+			vkCmdDrawIndexed(m_commandBuffers[i], u32(m_indices.size()), 1, 0, 0, 0);
 			vkCmdEndRenderPass(m_commandBuffers[i]);
 
 			VK_VERIFY(vkEndCommandBuffer(m_commandBuffers[i]));
@@ -1754,7 +1797,7 @@ void VulkanWrapper::_updateUniformBuffer(u32 _imageIndex)
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - s_startTime).count();
 
 	UniformBufferObject ubo{};
-	ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+	ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
 	ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
 	ubo.proj = glm::perspective(glm::radians(45.f), m_swapChainExtent.width / float(m_swapChainExtent.height), .1f, 10.f);
 	ubo.proj[1][1] *= -1;
