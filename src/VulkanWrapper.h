@@ -4,6 +4,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include <00-Type/IntTypes.h>
+
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace yae {
@@ -17,7 +19,9 @@ public:
 	void draw();
 	void shutdown();
 
-	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, uint32_t _extensionCount);
+	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
+	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
+	static bool HasStencilComponent(VkFormat _format);
 
 	static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
 
@@ -30,14 +34,14 @@ private:
 	void _destroyBuffer(VkBuffer& _inOutBuffer, VkDeviceMemory& _inOutBufferMemory);
 	void _copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size);
 
-	void _createImage(uint32_t _width, uint32_t _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VkDeviceMemory& _outImageMemory);
+	void _createImage(u32 _width, u32 _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VkDeviceMemory& _outImageMemory);
 	void _destroyImage(VkImage& _inOutImage, VkDeviceMemory& _inOutImageMemory);
 	void _transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout);
-	void _copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height);
+	void _copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _width, u32 _height);
 
-	VkImageView _createImageView(VkImage _image, VkFormat _format);
+	VkImageView _createImageView(VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags);
 
-	void _updateUniformBuffer(uint32_t _imageIndex);
+	void _updateUniformBuffer(u32 _imageIndex);
 
 	VkCommandBuffer _beginSingleTimeCommands();
 	void _endSingleTimeCommands(VkCommandBuffer _commandBuffer);
@@ -80,6 +84,11 @@ private:
 
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> m_commandBuffers;
+
+	VkFormat m_depthFormat;
+	VkImage m_depthImage;
+	VkDeviceMemory m_depthImageMemory;
+	VkImageView m_depthImageView;
 
 	VkImage m_textureImage;
 	VkDeviceMemory m_textureImageMemory;
