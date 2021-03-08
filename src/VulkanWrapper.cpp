@@ -102,11 +102,10 @@ static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceK
 {
 	QueueFamilyIndices queueFamilyIndices;
 
-	const u32 MAX_QUEUE_FAMILY_COUNT = 64u;
-	u32 queueFamilyCount = MAX_QUEUE_FAMILY_COUNT;
-	VkQueueFamilyProperties queueFamilyProperties[MAX_QUEUE_FAMILY_COUNT];
-	vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, queueFamilyProperties);
-	YAE_ASSERT(queueFamilyCount < MAX_QUEUE_FAMILY_COUNT);
+	u32 queueFamilyCount;
+	vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, queueFamilyProperties.data());
 
 	for (u32 i = 0; i < queueFamilyCount; ++i)
 	{
@@ -148,18 +147,14 @@ static u32 FindMemoryType(VkPhysicalDevice _physicalDevice, u32 _typeFilter, VkM
 	return INVALID_MEMORY_TYPE;
 }
 
-const u32 MAX_FORMAT_COUNT = 16u;
-const u32 MAX_PRESENTMODE_COUNT = 16u;
 struct SwapChainSupportDetails {
 	VkSurfaceCapabilitiesKHR capabilities;
-	VkSurfaceFormatKHR formats[MAX_FORMAT_COUNT];
-	u32 formatCount = 0;
-	VkPresentModeKHR presentModes[MAX_PRESENTMODE_COUNT];
-	u32 presentModeCount = 0;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
 
 	bool isValid() const
 	{
-		return formatCount > 0 && presentModeCount > 0;
+		return !formats.empty() && !presentModes.empty();
 	}
 };
 static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface)
@@ -167,18 +162,22 @@ static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice _device, V
 	SwapChainSupportDetails details;
 	VK_VERIFY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_device, _surface, &details.capabilities));
 
-	details.formatCount = MAX_FORMAT_COUNT;
-	VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(_device, _surface, &details.formatCount, details.formats));
+	u32 formatCount;
+	VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(_device, _surface, &formatCount, nullptr));
+	details.formats.resize(formatCount);
+	VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(_device, _surface, &formatCount, details.formats.data()));
 
-	details.presentModeCount = MAX_PRESENTMODE_COUNT;
-	VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(_device, _surface, &details.presentModeCount, details.presentModes));
+	u32 presentModeCount;
+	VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(_device, _surface, &presentModeCount, nullptr));
+	details.presentModes.resize(presentModeCount);
+	VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(_device, _surface, &presentModeCount, details.presentModes.data()));
 
 	return details;
 }
 
-bool ChooseSwapSurfaceFormat(const VkSurfaceFormatKHR* _availableFormats, u32 _availableFormatCount, VkSurfaceFormatKHR* _outSurfaceFormat)
+bool ChooseSwapSurfaceFormat(const VkSurfaceFormatKHR* _availableFormats, size_t _availableFormatCount, VkSurfaceFormatKHR* _outSurfaceFormat)
 {
-	for (u32 i = 0; i < _availableFormatCount; ++i)
+	for (size_t i = 0; i < _availableFormatCount; ++i)
 	{
 		if (_availableFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB && _availableFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 		{
@@ -195,9 +194,9 @@ bool ChooseSwapSurfaceFormat(const VkSurfaceFormatKHR* _availableFormats, u32 _a
 	return false;
 }
 
-VkPresentModeKHR ChooseSwapPresentMode(const VkPresentModeKHR* _availablePresentModes, u32 _availablePresentModeCount)
+VkPresentModeKHR ChooseSwapPresentMode(const VkPresentModeKHR* _availablePresentModes, size_t _availablePresentModeCount)
 {
-	for (u32 i = 0; i < _availablePresentModeCount; ++i)
+	for (size_t i = 0; i < _availablePresentModeCount; ++i)
 	{
 		if (_availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
 		{
@@ -352,7 +351,8 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		createInfo.ppEnabledExtensionNames = extensions;
 		createInfo.enabledLayerCount = 0;
 
-		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+		VkValidationFeaturesEXT features{};
 		if (m_validationLayersEnabled)
 		{
 			createInfo.enabledLayerCount = VALIDATION_LAYERS_COUNT;
@@ -360,6 +360,13 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 			PopulateDebugUtilsMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = &debugCreateInfo;
+
+			VkValidationFeatureEnableEXT enables[] = { VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT };
+			features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+			features.enabledValidationFeatureCount = 1;
+			features.pEnabledValidationFeatures = enables;
+
+			debugCreateInfo.pNext = &features;
 		}
 
 		VK_VERIFY(vkCreateInstance(&createInfo, nullptr, &m_instance));
@@ -891,10 +898,10 @@ void VulkanWrapper::_createSwapChain()
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_physicalDevice, m_surface);
 		VkSurfaceFormatKHR surfaceFormat;
 		{
-			bool result = ChooseSwapSurfaceFormat(swapChainSupport.formats, swapChainSupport.formatCount, &surfaceFormat);
+			bool result = ChooseSwapSurfaceFormat(swapChainSupport.formats.data(), swapChainSupport.formats.size(), &surfaceFormat);
 			YAE_ASSERT(result);
 		}
-		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes, swapChainSupport.presentModeCount);
+		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes.data(), swapChainSupport.presentModes.size());
 		VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities, m_window);
 		u32 imageCount = swapChainSupport.capabilities.minImageCount + 1;
 		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
