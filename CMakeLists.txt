@@ -47,6 +47,7 @@ file(GLOB_RECURSE YAE_SRC "./src/**.h" "./src/**.cpp")
 
 add_compile_definitions(
 	_CRT_SECURE_NO_WARNINGS
+	_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 	GLFW_INCLUDE_VULKAN
 	GLM_FORCE_RADIANS
 )
@@ -62,6 +63,7 @@ include_directories(
 	./src/
 	./extern/GLFW/include/
 	./extern/glm/
+	./extern/stb/
 	$ENV{VK_SDK_PATH}/include/
 )
 

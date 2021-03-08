@@ -26,11 +26,21 @@ private:
 	void _destroySwapChain();
 	void _recreateSwapChain();
 
-	void _createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _buffer, VkDeviceMemory& _bufferMemory);
-	void _destroyBuffer(VkBuffer& _buffer, VkDeviceMemory& _bufferMemory);
+	void _createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VkDeviceMemory& _outBufferMemory);
+	void _destroyBuffer(VkBuffer& _inOutBuffer, VkDeviceMemory& _inOutBufferMemory);
 	void _copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size);
 
+	void _createImage(uint32_t _width, uint32_t _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VkDeviceMemory& _outImageMemory);
+	void _destroyImage(VkImage& _inOutImage, VkDeviceMemory& _inOutImageMemory);
+	void _transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout);
+	void _copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height);
+
+	VkImageView _createImageView(VkImage _image, VkFormat _format);
+
 	void _updateUniformBuffer(uint32_t _imageIndex);
+
+	VkCommandBuffer _beginSingleTimeCommands();
+	void _endSingleTimeCommands(VkCommandBuffer _commandBuffer);
 
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
@@ -40,6 +50,7 @@ private:
 	VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceProperties m_physicalDeviceProperties;
 	VkDevice m_device = VK_NULL_HANDLE;
 	VkQueue m_graphicsQueue = VK_NULL_HANDLE;
 	VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -69,6 +80,11 @@ private:
 
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> m_commandBuffers;
+
+	VkImage m_textureImage;
+	VkDeviceMemory m_textureImageMemory;
+	VkImageView m_textureImageView;
+	VkSampler m_textureSampler;
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;

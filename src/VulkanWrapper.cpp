@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include <00-Macro/Assert.h>
 #include <00-Type/IntTypes.h>
 #include <00-Type/TypeTools.h>
@@ -21,12 +24,13 @@ namespace yae {
 struct Vertex {
 	glm::vec2 pos;
 	glm::vec3 color;
+	glm::vec2 texCoord;
 };
 static const std::vector<Vertex> s_vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.f, 0.f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.f, 0.f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.f, 1.f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.f, 1.f}}
 };
 static const std::vector<uint16_t> s_indices = {
 	0, 1, 2, 2, 3, 0
@@ -425,6 +429,9 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			if (deviceFeatures.geometryShader == 0)
 				return 0;
 
+			if (deviceFeatures.samplerAnisotropy == 0)
+				return 0;
+
 			QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(_device, _surface);
 			if (!queueFamilyIndices.isComplete())
 				return 0;
@@ -465,11 +472,8 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			return EXIT_FAILURE;
 		}
 
-		{
-			VkPhysicalDeviceProperties deviceProperties;
-			vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProperties);
-			YAE_VERBOSEF_CAT("vulkan", "Picked physical device \"%s\"", deviceProperties.deviceName);
-		}
+		vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalDeviceProperties);
+		YAE_VERBOSEF_CAT("vulkan", "Picked physical device \"%s\"", m_physicalDeviceProperties.deviceName);
 	}
 	YAE_ASSERT(m_physicalDevice != VK_NULL_HANDLE);
 	QueueFamilyIndices queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
@@ -477,6 +481,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	// Create Logical Device
 	{
 		VkPhysicalDeviceFeatures deviceFeatures{};
+		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -522,6 +527,74 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
 		YAE_VERBOSE_CAT("vulkan", "Created Command Pool");
+	}
+
+	// Create Texture Image
+	{
+		int textureWidth, textureHeight, textureChannels;
+		stbi_uc* pixels = stbi_load("./data/textures/texture.jpg", &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+		YAE_ASSERT(pixels);
+
+		VkDeviceSize imageSize = textureWidth * textureHeight * 4;
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+		_createBuffer(
+			imageSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer, stagingBufferMemory
+		);
+
+		void* data;
+		vkMapMemory(m_device, stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<size_t>(imageSize));
+		vkUnmapMemory(m_device, stagingBufferMemory);
+
+		stbi_image_free(pixels);
+
+		_createImage(
+			textureWidth,
+			textureHeight,
+			VK_FORMAT_R8G8B8A8_SRGB,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			m_textureImage,
+			m_textureImageMemory
+		);
+
+		_transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		_copyBufferToImage(stagingBuffer, m_textureImage, textureWidth, textureHeight);
+		_transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		_destroyBuffer(stagingBuffer, stagingBufferMemory);
+
+		m_textureImageView = _createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+		YAE_VERBOSE_CAT("vulkan", "Created Texture Image");
+	}
+
+	// Create Texture Sampler
+	{
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy = m_physicalDeviceProperties.limits.maxSamplerAnisotropy;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias = 0.f;
+		samplerInfo.minLod = 0.f;
+		samplerInfo.maxLod = 0.f;
+
+		VK_VERIFY(vkCreateSampler(m_device, &samplerInfo, nullptr, &m_textureSampler));
+		YAE_VERBOSE_CAT("vulkan", "Created Texture Sampler");
 	}
 
 	// Create Vertex Buffer
@@ -611,20 +684,33 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		YAE_VERBOSE_CAT("vulkan", "Created Sync Objects");
 	}
 
-	// Create Descriptor Set Layout
+	// Create Descriptors Set Layout
 	{
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		VkDescriptorSetLayoutBinding uboLayoutBinding;
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkDescriptorSetLayoutBinding samplerLayoutBinding;
+		samplerLayoutBinding.binding = 1;
+		samplerLayoutBinding.descriptorCount = 1;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] =
+		{
+			uboLayoutBinding,
+			samplerLayoutBinding
+		};
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &uboLayoutBinding;
+		layoutInfo.bindingCount = uint32_t(countof(bindings));
+		layoutInfo.pBindings = bindings;
 		VK_VERIFY(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayout));
-		YAE_VERBOSE_CAT("vulkan", "Created Descriptor Set Layout");
+		YAE_VERBOSE_CAT("vulkan", "Created Descriptors Set Layout");
 	}
 
 	// Create Swap Chain
@@ -724,6 +810,13 @@ void VulkanWrapper::shutdown()
 
 	_destroyBuffer(m_vertexBuffer, m_vertexBufferMemory);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Vertex Buffer");
+
+	vkDestroySampler(m_device, m_textureSampler, nullptr);
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Sampler");
+
+	vkDestroyImageView(m_device, m_textureImageView, nullptr);
+	_destroyImage(m_textureImage, m_textureImageMemory);
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Image");
 
 	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 	m_commandPool = VK_NULL_HANDLE;
@@ -855,22 +948,7 @@ void VulkanWrapper::_createSwapChain()
 		m_swapChainImageViews.resize(imageCount);
 		for (size_t i = 0; i < imageCount; ++i)
 		{
-			VkImageViewCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = m_swapChainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = m_swapChainImageFormat;
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-
-			VK_VERIFY(vkCreateImageView(m_device, &createInfo, nullptr, &m_swapChainImageViews[i]));
+			m_swapChainImageViews[i] = _createImageView(m_swapChainImages[i], m_swapChainImageFormat);
 		}
 		YAE_VERBOSE_CAT("vulkan", "Created Swap Chain Images");
 	}
@@ -971,7 +1049,7 @@ void VulkanWrapper::_createSwapChain()
 		bindingDescription.stride = sizeof(Vertex);
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		VkVertexInputAttributeDescription attributeDescriptions[2];
+		VkVertexInputAttributeDescription attributeDescriptions[3];
 		attributeDescriptions[0] = {};
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -983,6 +1061,12 @@ void VulkanWrapper::_createSwapChain()
 		attributeDescriptions[1].location = 1;
 		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+		attributeDescriptions[2] = {};
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1128,14 +1212,16 @@ void VulkanWrapper::_createSwapChain()
 	{
 		uint32_t descriptorSetCount = uint32_t(m_swapChainImages.size());
 
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount = descriptorSetCount;
+		VkDescriptorPoolSize poolSizes[2] = {};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = descriptorSetCount;
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = descriptorSetCount;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.poolSizeCount = uint32_t(countof(poolSizes));
+		poolInfo.pPoolSizes = poolSizes;
 		poolInfo.maxSets = descriptorSetCount;
 
 		VK_VERIFY(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool));
@@ -1152,23 +1238,37 @@ void VulkanWrapper::_createSwapChain()
 
 		for (uint32_t i = 0; i < descriptorSetCount; ++i)
 		{
+			VkWriteDescriptorSet descriptorWrites[2] = {};
+
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = m_uniformBuffers[i];
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(UniformBufferObject);
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = m_descriptorSets[i];
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &bufferInfo;
+			descriptorWrites[0].pImageInfo = nullptr;
+			descriptorWrites[0].pTexelBufferView = nullptr;
 
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_descriptorSets[i];
-			descriptorWrite.dstBinding = 0;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &bufferInfo;
-			descriptorWrite.pImageInfo = nullptr;
-			descriptorWrite.pTexelBufferView = nullptr;
+			VkDescriptorImageInfo imageInfo{};
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = m_textureImageView;
+			imageInfo.sampler = m_textureSampler;
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = m_descriptorSets[i];
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pBufferInfo = nullptr;
+			descriptorWrites[1].pImageInfo = &imageInfo;
+			descriptorWrites[1].pTexelBufferView = nullptr;
 
-			vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
+			vkUpdateDescriptorSets(m_device, uint32_t(countof(descriptorWrites)), descriptorWrites, 0, nullptr);
 		}
 
 		YAE_VERBOSE_CAT("vulkan", "Created Descriptor Sets");
@@ -1319,68 +1419,189 @@ void VulkanWrapper::_recreateSwapChain()
 	_createSwapChain();
 }
 
-void VulkanWrapper::_createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _buffer, VkDeviceMemory& _bufferMemory)
+void VulkanWrapper::_createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VkDeviceMemory& _outBufferMemory)
 {
 	VkBufferCreateInfo bufferInfo{};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = _size;
 	bufferInfo.usage = _usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	VK_VERIFY(vkCreateBuffer(m_device, &bufferInfo, nullptr, &_buffer));
+	VK_VERIFY(vkCreateBuffer(m_device, &bufferInfo, nullptr, &_outBuffer));
 
 	VkMemoryRequirements memoryRequirements;
-	vkGetBufferMemoryRequirements(m_device, _buffer, &memoryRequirements);
+	vkGetBufferMemoryRequirements(m_device, _outBuffer, &memoryRequirements);
 	VkMemoryAllocateInfo allocateInfo{};
 	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocateInfo.allocationSize = memoryRequirements.size;
 	uint32_t memoryType = FindMemoryType(m_physicalDevice, memoryRequirements.memoryTypeBits, _properties);
 	YAE_ASSERT(memoryType != INVALID_MEMORY_TYPE);
 	allocateInfo.memoryTypeIndex = memoryType;
-	VK_VERIFY(vkAllocateMemory(m_device, &allocateInfo, nullptr, &_bufferMemory));
+	VK_VERIFY(vkAllocateMemory(m_device, &allocateInfo, nullptr, &_outBufferMemory));
 
-	VK_VERIFY(vkBindBufferMemory(m_device, _buffer, _bufferMemory, 0));
+	VK_VERIFY(vkBindBufferMemory(m_device, _outBuffer, _outBufferMemory, 0));
 }
 
-void VulkanWrapper::_destroyBuffer(VkBuffer& _buffer, VkDeviceMemory& _bufferMemory)
+void VulkanWrapper::_destroyBuffer(VkBuffer& _inOutBuffer, VkDeviceMemory& _inOutBufferMemory)
 {
-	vkDestroyBuffer(m_device, _buffer, nullptr);
-	_buffer = VK_NULL_HANDLE;
-	vkFreeMemory(m_device, _bufferMemory, nullptr);
-	_bufferMemory = VK_NULL_HANDLE;
+	vkDestroyBuffer(m_device, _inOutBuffer, nullptr);
+	_inOutBuffer = VK_NULL_HANDLE;
+	vkFreeMemory(m_device, _inOutBufferMemory, nullptr);
+	_inOutBufferMemory = VK_NULL_HANDLE;
 }
 
 void VulkanWrapper::_copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size)
 {
-	VkCommandBufferAllocateInfo allocateInfo{};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandPool = m_commandPool;
-	allocateInfo.commandBufferCount = 1;
-	VkCommandBuffer commandBuffer;
-	VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocateInfo, &commandBuffer));
-
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	VK_VERIFY(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-
+	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+	
 	VkBufferCopy copyRegion{};
 	copyRegion.srcOffset = 0;
 	copyRegion.dstOffset = 0;
 	copyRegion.size = _size;
 	vkCmdCopyBuffer(commandBuffer, _srcBuffer, _dstBuffer, 1, &copyRegion);
 
-	VK_VERIFY(vkEndCommandBuffer(commandBuffer));
+	_endSingleTimeCommands(commandBuffer);
+}
 
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-	vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+void VulkanWrapper::_createImage(uint32_t _width, uint32_t _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VkDeviceMemory& _outImageMemory)
+{
+	VkImageCreateInfo imageInfo{};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width = _width;
+	imageInfo.extent.height = _height;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.format = _format;
+	imageInfo.tiling = _tiling;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageInfo.usage = _usage;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.flags = 0;
+	VK_VERIFY(vkCreateImage(m_device, &imageInfo, nullptr, &_outImage));
 
-	vkQueueWaitIdle(m_graphicsQueue);
+	VkMemoryRequirements memoryRequirements;
+	vkGetImageMemoryRequirements(m_device, _outImage, &memoryRequirements);
 
-	vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+	VkMemoryAllocateInfo allocateInfo{};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocateInfo.allocationSize = memoryRequirements.size;
+	allocateInfo.memoryTypeIndex = FindMemoryType(m_physicalDevice, memoryRequirements.memoryTypeBits, _properties);
+	VK_VERIFY(vkAllocateMemory(m_device, &allocateInfo, nullptr, &_outImageMemory));
+
+	vkBindImageMemory(m_device, _outImage, _outImageMemory, 0);
+}
+
+void VulkanWrapper::_destroyImage(VkImage& _inOutImage, VkDeviceMemory& _inOutImageMemory)
+{
+	vkDestroyImage(m_device, _inOutImage, nullptr);
+	_inOutImage = VK_NULL_HANDLE;
+	vkFreeMemory(m_device, _inOutImageMemory, nullptr);
+	_inOutImageMemory = VK_NULL_HANDLE;
+}
+
+void VulkanWrapper::_transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
+{
+	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = _oldLayout;
+	barrier.newLayout = _newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.image = _image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
+	if (_oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && _newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (_oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && _newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else
+	{
+		YAE_ASSERT_MSG(false, "Unsupported layout transition");
+	}
+
+	vkCmdPipelineBarrier(
+		commandBuffer,
+		sourceStage, destinationStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	_endSingleTimeCommands(commandBuffer);
+}
+
+void VulkanWrapper::_copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height)
+{
+	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+
+	VkBufferImageCopy region{};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+
+	region.imageOffset = {0, 0, 0};
+	region.imageExtent = { _width, _height, 1 };
+
+	vkCmdCopyBufferToImage(
+		commandBuffer,
+		_buffer,
+		_image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1, &region
+	);
+
+	_endSingleTimeCommands(commandBuffer);
+}
+
+VkImageView VulkanWrapper::_createImageView(VkImage _image, VkFormat _format)
+{
+	VkImageViewCreateInfo viewInfo{};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = _image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = _format;
+	viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	VK_VERIFY(vkCreateImageView(m_device, &viewInfo, nullptr, &imageView));
+	return imageView;
 }
 
 void VulkanWrapper::_updateUniformBuffer(uint32_t _imageIndex)
@@ -1400,6 +1621,38 @@ void VulkanWrapper::_updateUniformBuffer(uint32_t _imageIndex)
 	VK_VERIFY(vkMapMemory(m_device, m_uniformBuffersMemory[_imageIndex], 0, sizeof(ubo), 0, &data));
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(m_device, m_uniformBuffersMemory[_imageIndex]);
+}
+
+VkCommandBuffer VulkanWrapper::_beginSingleTimeCommands()
+{
+	VkCommandBufferAllocateInfo allocateInfo{};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandPool = m_commandPool;
+	allocateInfo.commandBufferCount = 1;
+	VkCommandBuffer commandBuffer;
+	VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocateInfo, &commandBuffer));
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VK_VERIFY(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+	return commandBuffer;
+}
+
+void VulkanWrapper::_endSingleTimeCommands(VkCommandBuffer _commandBuffer)
+{
+	VK_VERIFY(vkEndCommandBuffer(_commandBuffer));
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &_commandBuffer;
+	vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+	vkQueueWaitIdle(m_graphicsQueue);
+
+	vkFreeCommandBuffers(m_device, m_commandPool, 1, &_commandBuffer);
 }
 
 } // namespace yae

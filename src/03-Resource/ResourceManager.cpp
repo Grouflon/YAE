@@ -76,7 +76,7 @@ void ResourceManager::flushResources()
 		unregisterResource(resource);
 		delete resource;
 	}
-	m_toDeleteResources.empty();
+	m_toDeleteResources.clear();
 }
 
 }
