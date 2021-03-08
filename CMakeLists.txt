@@ -43,6 +43,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib/$<CONFIG>/)
 #find_package(MIRROR REQUIRED HINTS "./extern/mirror")
 
 file(GLOB_RECURSE YAE_SRC "./src/**.h" "./src/**.cpp")
+file(GLOB IMGUI_SRC "./extern/imgui/*.h" "./extern/imgui/*.cpp")
 #file(GLOB IMGUI_SRC "./extern/imgui/*.h" "./extern/imgui/*.cpp")
 
 add_compile_definitions(
@@ -55,6 +56,7 @@ add_compile_definitions(
 
 set(SOURCES
 	${YAE_SRC}
+	${IMGUI_SRC}
 )
 
 # Group the previous files using the folder tree 
@@ -66,6 +68,7 @@ include_directories(
 	./extern/glm/
 	./extern/stb/
 	./extern/tinyobjloader/
+	./extern/imgui/
 	$ENV{VK_SDK_PATH}/include/
 )
 
