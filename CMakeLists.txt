@@ -43,7 +43,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib/$<CONFIG>/)
 #find_package(MIRROR REQUIRED HINTS "./extern/mirror")
 
 file(GLOB_RECURSE YAE_SRC "./src/**.h" "./src/**.cpp")
-file(GLOB IMGUI_SRC "./extern/imgui/*.h" "./extern/imgui/*.cpp")
+file(GLOB IMGUI_SRC
+	"./extern/imgui/*.h"
+	"./extern/imgui/*.cpp"
+	"./extern/imgui/backends/imgui_impl_glfw.cpp"
+	"./extern/imgui/backends/imgui_impl_glfw.h"
+	"./extern/imgui/backends/imgui_impl_vulkan.cpp"
+	"./extern/imgui/backends/imgui_impl_vulkan.h"
+)
 #file(GLOB IMGUI_SRC "./extern/imgui/*.h" "./extern/imgui/*.cpp")
 
 add_compile_definitions(

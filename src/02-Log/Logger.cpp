@@ -50,4 +50,6 @@ LogCategory& Logger::_findCategory(const char* _categoryName)
   return it->second;
 }
 
+Logger g_logger = Logger();
+
 } // namespace yae

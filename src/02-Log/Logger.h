@@ -68,4 +68,6 @@ private:
   //std::vector<LogLine> m_lines;
 };
 
+extern Logger g_logger;
+
 };

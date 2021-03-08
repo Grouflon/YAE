@@ -5,11 +5,11 @@
 #include <chrono>
 
 #include <glm/gtc/matrix_transform.hpp>
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+#include <backends/imgui_impl_vulkan.h>
 
 #include <00-Macro/Assert.h>
 #include <00-Type/IntTypes.h>
@@ -24,6 +24,8 @@ namespace yae {
 
 const char* MODEL_PATH = "./data/models/viking_room.obj";
 const char* TEXTURE_PATH = "./data/textures/viking_room.png";
+
+const u32 INVALID_QUEUE = ~0u;
 
 struct UniformBufferObject
 {
@@ -68,23 +70,6 @@ static void PopulateDebugUtilsMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 	_createInfo.pUserData = nullptr; // Optional
 }
 
-const u32 INVALID_QUEUE = ~0u;
-struct QueueFamilyIndices
-{
-	u32 graphicsFamily = INVALID_QUEUE;
-	u32 presentFamily = INVALID_QUEUE;
-
-	bool isComplete() const
-	{
-		if (graphicsFamily == INVALID_QUEUE)
-			return false;
-
-		if (presentFamily == INVALID_QUEUE)
-			return false;
-
-		return true;
-	}
-};
 static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface)
 {
 	QueueFamilyIndices queueFamilyIndices;
@@ -463,11 +448,11 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			return EXIT_FAILURE;
 		}
 
+		m_queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
 		vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalDeviceProperties);
 		YAE_VERBOSEF_CAT("vulkan", "Picked physical device \"%s\"", m_physicalDeviceProperties.deviceName);
 	}
 	YAE_ASSERT(m_physicalDevice != VK_NULL_HANDLE);
-	QueueFamilyIndices queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
 
 	// Create Logical Device
 	{
@@ -489,7 +474,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		// Create queues
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<u32> uniqueQueueFamilies = { queueIndices.graphicsFamily, queueIndices.presentFamily };
+		std::set<u32> uniqueQueueFamilies = { m_queueIndices.graphicsFamily, m_queueIndices.presentFamily };
 		float queuePriority = 1.0f;
 		for (u32 queueFamily : uniqueQueueFamilies)
 		{
@@ -508,16 +493,16 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	YAE_ASSERT(m_device != VK_NULL_HANDLE);
 
 	// Get Queues
-	vkGetDeviceQueue(m_device, queueIndices.graphicsFamily, 0, &m_graphicsQueue);
-	vkGetDeviceQueue(m_device, queueIndices.presentFamily, 0, &m_presentQueue);
+	vkGetDeviceQueue(m_device, m_queueIndices.graphicsFamily, 0, &m_graphicsQueue);
+	vkGetDeviceQueue(m_device, m_queueIndices.presentFamily, 0, &m_presentQueue);
 
 	// Create Command Pools
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Command Pool...");
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.queueFamilyIndex = queueIndices.graphicsFamily;
-		poolInfo.flags = 0; // Optional
+		poolInfo.queueFamilyIndex = m_queueIndices.graphicsFamily;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
 		YAE_VERBOSE_CAT("vulkan", "Created Command Pool");
@@ -731,17 +716,18 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	return true;
 }
 
-void VulkanWrapper::draw()
+void VulkanWrapper::beginDraw()
 {
-	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX));
-	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]));
+	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFlightFrame], VK_TRUE, UINT64_MAX));
+	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFlightFrame]));
 
-	u32 imageIndex;
 	{
-		VkResult result = vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFlightFrame], VK_NULL_HANDLE, &m_currentFrameIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			_recreateSwapChain();
+			shutdownImGui();
+			initImGui();
 			return;
 		}
 		else if (result != VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
@@ -750,16 +736,71 @@ void VulkanWrapper::draw()
 		}
 	}
 
-	if (m_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+	if (m_imagesInFlight[m_currentFrameIndex] != VK_NULL_HANDLE)
 	{
-		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX))
+		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[m_currentFrameIndex], VK_TRUE, UINT64_MAX))
 	}
-	m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
+	m_imagesInFlight[m_currentFrameIndex] = m_inFlightFences[m_currentFlightFrame];
 
-	_updateUniformBuffer(imageIndex);
+	_updateUniformBuffer(m_currentFrameIndex);
 
-	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
+
+	vkResetCommandBuffer(frame.commandBuffer, 0);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = 0; // Optional
+	beginInfo.pInheritanceInfo = nullptr; // Optional
+	VK_VERIFY(vkBeginCommandBuffer(frame.commandBuffer, &beginInfo));
+
+	VkRenderPassBeginInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = m_renderPass;
+	renderPassInfo.framebuffer = frame.frameBuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = m_swapChainExtent;
+
+	VkClearValue clearValues[2];
+	clearValues[0].color = { 0.f, 0.f, 0.f, 1.f };
+	clearValues[1].depthStencil = { 1.f, 0 };
+
+	renderPassInfo.clearValueCount = u32(countof(clearValues));
+	renderPassInfo.pClearValues = clearValues;
+	vkCmdBeginRenderPass(frame.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void VulkanWrapper::drawMesh()
+{
+	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
+
+	vkCmdBindPipeline(frame.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+
+	VkBuffer vertexBuffers[] = { m_vertexBuffer };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(frame.commandBuffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(frame.commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindDescriptorSets(frame.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &frame.descriptorSet, 0, nullptr);
+
+	vkCmdDrawIndexed(frame.commandBuffer, u32(m_indices.size()), 1, 0, 0, 0);
+}
+
+void VulkanWrapper::drawImGui(ImDrawData* _drawData)
+{
+	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
+
+	ImGui_ImplVulkan_RenderDrawData(_drawData, frame.commandBuffer);
+}
+
+void VulkanWrapper::endDraw()
+{
+	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
+	
+	vkCmdEndRenderPass(frame.commandBuffer);
+	VK_VERIFY(vkEndCommandBuffer(frame.commandBuffer));
+
+	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFlightFrame] };
+	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFlightFrame] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -767,10 +808,10 @@ void VulkanWrapper::draw()
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
+	submitInfo.pCommandBuffers = &frame.commandBuffer;
 	submitInfo.signalSemaphoreCount = u32(countof(signalSemaphores));
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	VK_VERIFY(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]));
+	VK_VERIFY(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFlightFrame]));
 
 	VkSwapchainKHR swapChains[] = { m_swapChain };
 	VkPresentInfoKHR presentInfo{};
@@ -779,7 +820,7 @@ void VulkanWrapper::draw()
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = u32(countof(swapChains));
 	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pImageIndices = &m_currentFrameIndex;
 
 	{
 		VkResult result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
@@ -787,6 +828,8 @@ void VulkanWrapper::draw()
 		{
 			m_framebufferResized = false;
 			_recreateSwapChain();
+			shutdownImGui();
+			initImGui();
 		}
 		else if (result != VK_SUCCESS)
 		{
@@ -794,13 +837,17 @@ void VulkanWrapper::draw()
 		}
 	}
 
-	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	m_currentFlightFrame = (m_currentFlightFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	m_currentFrameIndex = ~0;
+}
+
+void VulkanWrapper::waitIdle()
+{
+	VK_VERIFY(vkDeviceWaitIdle(m_device));
 }
 
 void VulkanWrapper::shutdown()
 {
-	VK_VERIFY(vkDeviceWaitIdle(m_device));
-
 	_destroySwapChain();
 
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
@@ -860,6 +907,49 @@ void VulkanWrapper::shutdown()
 	glfwSetFramebufferSizeCallback(m_window, nullptr);
 	glfwSetWindowUserPointer(m_window, nullptr);
 	m_window = nullptr;
+}
+
+void VulkanWrapper::initImGui()
+{
+	YAE_ASSERT(m_window);
+
+	YAE_VERBOSE_CAT("imgui", "Initializing ImGui...");
+
+	ImGui_ImplVulkan_InitInfo initInfo{};
+	initInfo.Instance = m_instance;
+	initInfo.PhysicalDevice = m_physicalDevice;
+	initInfo.Device = m_device;
+	initInfo.QueueFamily = m_queueIndices.graphicsFamily;
+	initInfo.Queue = m_graphicsQueue;
+	initInfo.PipelineCache = nullptr;
+	initInfo.DescriptorPool = m_descriptorPool;
+	initInfo.Subpass = 0;
+	initInfo.MinImageCount = MAX_FRAMES_IN_FLIGHT;          // >= 2
+	initInfo.ImageCount = u32(m_frameobjects.size());		// >= MinImageCount
+	initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;           // >= VK_SAMPLE_COUNT_1_BIT
+	initInfo.Allocator = nullptr;
+	initInfo.CheckVkResultFn = [](VkResult _err) { VK_VERIFY(_err); };
+
+	bool ret = ImGui_ImplVulkan_Init(&initInfo, m_renderPass);
+	YAE_ASSERT(ret);
+
+	// Upload Fonts
+	{
+		// Use any command queue
+		//VK_VERIFY(vkResetCommandPool(m_device, m_commandPool, 0));
+		VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+		ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+		_endSingleTimeCommands(commandBuffer);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+	}
+
+	YAE_VERBOSE_CAT("imgui", "Initialized ImGui");
+}
+
+void VulkanWrapper::shutdownImGui()
+{
+	ImGui_ImplVulkan_Shutdown();
+	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 }
 
 bool VulkanWrapper::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount)
@@ -970,8 +1060,6 @@ bool VulkanWrapper::LoadModel(const char* _path, std::vector<Vertex>& _outVertic
 
 void VulkanWrapper::_createSwapChain()
 {
-	QueueFamilyIndices queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
-
 	// Create Swap Chain
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Swap Chain...");
@@ -1005,8 +1093,8 @@ void VulkanWrapper::_createSwapChain()
 		In that case you may use a value like VK_IMAGE_USAGE_TRANSFER_DST_BIT instead and use a memory operation to transfer the rendered image to a swap chain image.
 		*/
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		u32 queueFamilyIndices[] = { queueIndices.graphicsFamily, queueIndices.presentFamily };
-		if (queueIndices.graphicsFamily != queueIndices.presentFamily)
+		u32 queueFamilyIndices[] = { m_queueIndices.graphicsFamily, m_queueIndices.presentFamily };
+		if (m_queueIndices.graphicsFamily != m_queueIndices.presentFamily)
 		{
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = 2;
@@ -1027,17 +1115,18 @@ void VulkanWrapper::_createSwapChain()
 	}
 
 	// Get Swap chain images;
+	u32 frameCount = 0;
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Swap Chain Images...");
-		u32 imageCount;
-		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr));
-		m_swapChainImages.resize(imageCount);
-		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data()));
+		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &frameCount, nullptr));
+		std::vector<VkImage> swapChainImages(frameCount);
+		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &frameCount, swapChainImages.data()));
 
-		m_swapChainImageViews.resize(imageCount);
-		for (size_t i = 0; i < imageCount; ++i)
+		m_frameobjects.resize(frameCount);
+		for (size_t i = 0; i < frameCount; ++i)
 		{
-			m_swapChainImageViews[i] = _createImageView(m_swapChainImages[i], m_swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			m_frameobjects[i].swapChainImage = swapChainImages[i];
+			m_frameobjects[i].swapChainImageView = _createImageView(swapChainImages[i], m_swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 		YAE_VERBOSE_CAT("vulkan", "Created Swap Chain Images");
 	}
@@ -1345,17 +1434,14 @@ void VulkanWrapper::_createSwapChain()
 
 		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-		m_uniformBuffers.resize(m_swapChainImages.size());
-		m_uniformBuffersMemory.resize(m_swapChainImages.size());
-
-		for (size_t i = 0; i < m_swapChainImages.size(); ++i)
+		for (size_t i = 0; i < frameCount; ++i)
 		{
 			_createBuffer(
 				bufferSize,
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				m_uniformBuffers[i],
-				m_uniformBuffersMemory[i]
+				m_frameobjects[i].uniformBuffer,
+				m_frameobjects[i].uniformBufferMemory
 			);
 		}
 		YAE_VERBOSE_CAT("vulkan", "Created Uniform Buffers");
@@ -1365,42 +1451,51 @@ void VulkanWrapper::_createSwapChain()
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Descriptor Sets...");
 
-		u32 descriptorSetCount = u32(m_swapChainImages.size());
+		const u32 POOL_SIZE = 1000;
+		VkDescriptorPoolSize pool_sizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, POOL_SIZE },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, POOL_SIZE }
+		};
+		VkDescriptorPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets = POOL_SIZE * u32(countof(pool_sizes));
+		pool_info.poolSizeCount = u32(countof(pool_sizes));
+		pool_info.pPoolSizes = pool_sizes;
+		VK_VERIFY(vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_descriptorPool));
 
-		VkDescriptorPoolSize poolSizes[2] = {};
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = descriptorSetCount;
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = descriptorSetCount;
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = u32(countof(poolSizes));
-		poolInfo.pPoolSizes = poolSizes;
-		poolInfo.maxSets = descriptorSetCount;
-
-		VK_VERIFY(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool));
-
-		std::vector<VkDescriptorSetLayout> layouts(descriptorSetCount, m_descriptorSetLayout);
+		std::vector<VkDescriptorSetLayout> layouts(frameCount, m_descriptorSetLayout);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = m_descriptorPool;
-		allocInfo.descriptorSetCount = descriptorSetCount;
+		allocInfo.descriptorSetCount = u32(layouts.size());
 		allocInfo.pSetLayouts = layouts.data();
 
-		m_descriptorSets.resize(descriptorSetCount);
-		VK_VERIFY(vkAllocateDescriptorSets(m_device, &allocInfo, m_descriptorSets.data()));
+		std::vector<VkDescriptorSet> descriptorSets(frameCount);
+		VK_VERIFY(vkAllocateDescriptorSets(m_device, &allocInfo, descriptorSets.data()));
 
-		for (u32 i = 0; i < descriptorSetCount; ++i)
+		for (u32 i = 0; i < frameCount; ++i)
 		{
+			m_frameobjects[i].descriptorSet = descriptorSets[i];
+
 			VkWriteDescriptorSet descriptorWrites[2] = {};
 
 			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = m_uniformBuffers[i];
+			bufferInfo.buffer = m_frameobjects[i].uniformBuffer;
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(UniformBufferObject);
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[0].dstSet = m_descriptorSets[i];
+			descriptorWrites[0].dstSet = descriptorSets[i];
 			descriptorWrites[0].dstBinding = 0;
 			descriptorWrites[0].dstArrayElement = 0;
 			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1414,7 +1509,7 @@ void VulkanWrapper::_createSwapChain()
 			imageInfo.imageView = m_textureImageView;
 			imageInfo.sampler = m_textureSampler;
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[1].dstSet = m_descriptorSets[i];
+			descriptorWrites[1].dstSet = descriptorSets[i];
 			descriptorWrites[1].dstBinding = 1;
 			descriptorWrites[1].dstArrayElement = 0;
 			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1432,11 +1527,10 @@ void VulkanWrapper::_createSwapChain()
 	// Create Frame Buffers
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Frame Buffers...");
-		m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
-		for (size_t i = 0; i < m_swapChainImageViews.size(); ++i)
+		for (size_t i = 0; i < m_frameobjects.size(); ++i)
 		{
 			VkImageView attachments[] = {
-				m_swapChainImageViews[i],
+				m_frameobjects[i].swapChainImageView,
 				m_depthImageView
 			};
 
@@ -1449,7 +1543,7 @@ void VulkanWrapper::_createSwapChain()
 			framebufferInfo.height = m_swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			VK_VERIFY(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]));
+			VK_VERIFY(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameobjects[i].frameBuffer));
 		}
 		YAE_VERBOSE_CAT("vulkan", "Created Frame Buffers");
 	}
@@ -1457,91 +1551,49 @@ void VulkanWrapper::_createSwapChain()
 	// Allocate command buffers
 	{
 		YAE_VERBOSE_CAT("vulkan", "Allocating Command Buffers...");
-		m_commandBuffers.resize(m_swapChainFramebuffers.size());
+		std::vector<VkCommandBuffer> commandBuffers(m_frameobjects.size());
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.commandPool = m_commandPool;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = u32(m_commandBuffers.size());
+		allocInfo.commandBufferCount = u32(commandBuffers.size());
 
-		VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data()));
+		VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, commandBuffers.data()));
+		for (size_t i = 0; i < frameCount; ++i)
+		{
+			m_frameobjects[i].commandBuffer = commandBuffers[i];
+		}
 		YAE_VERBOSE_CAT("vulkan", "Allocated Command Buffers");
 	}
 
-	// Create Command Buffers
-	{
-		YAE_VERBOSE_CAT("vulkan", "Filling Command Buffers...");
-
-		for (size_t i = 0; i < m_commandBuffers.size(); ++i)
-		{
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = 0; // Optional
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			VK_VERIFY(vkBeginCommandBuffer(m_commandBuffers[i], &beginInfo));
-
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_renderPass;
-			renderPassInfo.framebuffer = m_swapChainFramebuffers[i];
-
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = m_swapChainExtent;
-
-			VkClearValue clearValues[2];
-			clearValues[0].color = { 0.f, 0.f, 0.f, 1.f };
-			clearValues[1].depthStencil = { 1.f, 0 };
-
-			renderPassInfo.clearValueCount = u32(countof(clearValues));
-			renderPassInfo.pClearValues = clearValues;
-
-			vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-
-			VkBuffer vertexBuffers[] = { m_vertexBuffer };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
-
-			vkCmdDrawIndexed(m_commandBuffers[i], u32(m_indices.size()), 1, 0, 0, 0);
-			vkCmdEndRenderPass(m_commandBuffers[i]);
-
-			VK_VERIFY(vkEndCommandBuffer(m_commandBuffers[i]));
-		}
-
-		YAE_VERBOSE_CAT("vulkan", "Filled command buffers");
-	}
-
-	m_imagesInFlight.resize(m_swapChainImages.size(), VK_NULL_HANDLE);
+	m_imagesInFlight.resize(frameCount, VK_NULL_HANDLE);
 }
 
 void VulkanWrapper::_destroySwapChain()
 {
 	m_imagesInFlight.clear();
+	u32 frameCount = u32(m_frameobjects.size());
 
-	for (size_t i = 0; i < m_swapChainImages.size(); ++i)
+	for (size_t i = 0; i < frameCount; ++i)
 	{
-		_destroyBuffer(m_uniformBuffers[i], m_uniformBuffersMemory[i]);
+		_destroyBuffer(m_frameobjects[i].uniformBuffer, m_frameobjects[i].uniformBufferMemory);
 	}
-	m_uniformBuffers.clear();
-	m_uniformBuffersMemory.clear();
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Uniform Buffers");
 
-	vkFreeCommandBuffers(m_device, m_commandPool, static_cast<u32>(m_commandBuffers.size()), m_commandBuffers.data());
-	m_commandBuffers.clear();
+	for (size_t i = 0; i < frameCount; ++i)
+	{
+		vkFreeCommandBuffers(m_device, m_commandPool, 1, &m_frameobjects[i].commandBuffer);
+	}
 	YAE_VERBOSE_CAT("vulkan", "Freed Command Buffers");
 
-	for (VkFramebuffer framebuffer : m_swapChainFramebuffers) {
-		vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+	for (size_t i = 0; i < frameCount; ++i)
+	{
+		vkDestroyFramebuffer(m_device, m_frameobjects[i].frameBuffer, nullptr);
 	}
-	m_swapChainFramebuffers.clear();
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Frame Buffers");
 
 	vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
-	m_descriptorSets.clear();
 	m_descriptorPool = VK_NULL_HANDLE;
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Descriptor Sets");
 
@@ -1558,11 +1610,13 @@ void VulkanWrapper::_destroySwapChain()
 	vkDestroyImageView(m_device, m_depthImageView, nullptr);
 	_destroyImage(m_depthImage, m_depthImageMemory);
 
-	for (VkImageView imageView : m_swapChainImageViews) {
-		vkDestroyImageView(m_device, imageView, nullptr);
+	for (size_t i = 0; i < frameCount; ++i)
+	{
+		vkDestroyImageView(m_device, m_frameobjects[i].swapChainImageView, nullptr);
 	}
-	m_swapChainImages.clear();
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain Images");
+
+	m_frameobjects.clear();
 
 	vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
 	m_swapChain = VK_NULL_HANDLE;
@@ -1803,9 +1857,9 @@ void VulkanWrapper::_updateUniformBuffer(u32 _imageIndex)
 	ubo.proj[1][1] *= -1;
 
 	void* data;
-	VK_VERIFY(vkMapMemory(m_device, m_uniformBuffersMemory[_imageIndex], 0, sizeof(ubo), 0, &data));
+	VK_VERIFY(vkMapMemory(m_device, m_frameobjects[_imageIndex].uniformBufferMemory, 0, sizeof(ubo), 0, &data));
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(m_device, m_uniformBuffersMemory[_imageIndex]);
+	vkUnmapMemory(m_device, m_frameobjects[_imageIndex].uniformBufferMemory);
 }
 
 VkCommandBuffer VulkanWrapper::_beginSingleTimeCommands()

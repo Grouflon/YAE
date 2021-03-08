@@ -7,11 +7,11 @@
 
 #include <00-Type/IntTypes.h>
 
+struct ImDrawData;
+
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace yae {
-
-class FileResource;
 
 struct Vertex {
 	glm::vec3 pos;
@@ -23,12 +23,37 @@ struct Vertex {
 	}
 };
 
+extern const u32 INVALID_QUEUE;
+struct QueueFamilyIndices
+{
+	u32 graphicsFamily = INVALID_QUEUE;
+	u32 presentFamily = INVALID_QUEUE;
+
+	bool isComplete() const
+	{
+		if (graphicsFamily == INVALID_QUEUE)
+			return false;
+
+		if (presentFamily == INVALID_QUEUE)
+			return false;
+
+		return true;
+	}
+};
+
 class VulkanWrapper
 {
 public:
 	bool init(GLFWwindow* _window, bool _validationLayersEnabled = false);
-	void draw();
+	void beginDraw();
+	void drawMesh();
+	void drawImGui(ImDrawData* _drawData);
+	void endDraw();
+	void waitIdle();
 	void shutdown();
+
+	void initImGui();
+	void shutdownImGui();
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
@@ -71,12 +96,23 @@ private:
 	VkDevice m_device = VK_NULL_HANDLE;
 	VkQueue m_graphicsQueue = VK_NULL_HANDLE;
 	VkQueue m_presentQueue = VK_NULL_HANDLE;
+	QueueFamilyIndices m_queueIndices;
 
 	VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-	std::vector<VkImage> m_swapChainImages;
 	VkFormat m_swapChainImageFormat;
 	VkExtent2D m_swapChainExtent;
-	std::vector<VkImageView> m_swapChainImageViews;
+
+	struct VulkanFrameObjects
+	{
+		VkImage swapChainImage;
+		VkImageView swapChainImageView;
+		VkBuffer uniformBuffer;
+		VkDeviceMemory uniformBufferMemory;
+		VkDescriptorSet descriptorSet;
+		VkFramebuffer frameBuffer;
+		VkCommandBuffer commandBuffer;
+	};
+	std::vector<VulkanFrameObjects> m_frameobjects;
 
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
 	VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
@@ -90,15 +126,9 @@ private:
 	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
 
-	std::vector<VkBuffer> m_uniformBuffers;
-	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
 	VkDescriptorPool m_descriptorPool;
-	std::vector<VkDescriptorSet> m_descriptorSets;
-
-	std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
-	std::vector<VkCommandBuffer> m_commandBuffers;
 
 	VkFormat m_depthFormat;
 	VkImage m_depthImage;
@@ -114,7 +144,8 @@ private:
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;
 	std::vector<VkFence> m_inFlightFences;
 	std::vector<VkFence> m_imagesInFlight;
-	size_t m_currentFrame = 0;
+	size_t m_currentFlightFrame = 0;
+	u32 m_currentFrameIndex = ~0;
 
 	bool m_validationLayersEnabled = false;
 	bool m_framebufferResized = false;
