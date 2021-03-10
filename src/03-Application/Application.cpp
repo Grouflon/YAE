@@ -6,10 +6,9 @@
 #include <00-Macro/Assert.h>
 #include <02-Log/Log.h>
 #include <03-Resource/ResourceManager.h>
+#include <03-Renderer/VulkanRenderer.h>
 #include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
 
-#include <VulkanWrapper.h>
 
 namespace yae {
 
@@ -27,7 +26,7 @@ namespace yae {
 		m_resourceManager = new ResourceManager();
 
 		// Init Vulkan
-		m_vulkanWrapper = new VulkanWrapper();
+		m_vulkanWrapper = new VulkanRenderer();
 
 #ifdef NDEBUG
 		const bool enableValidationLayers = false;
@@ -60,14 +59,11 @@ namespace yae {
 			glfwPollEvents();
 
 			ImGui_ImplGlfw_NewFrame();
-			ImGui_ImplVulkan_NewFrame();
+			m_vulkanWrapper->beginFrame();
 			ImGui::NewFrame();
 
 			ImGui::ShowDemoWindow(&s_showDemoWindow);
 
-			
-
-			m_vulkanWrapper->beginDraw();
 			m_vulkanWrapper->drawMesh();
 
 			// Rendering
@@ -77,15 +73,9 @@ namespace yae {
 			if (!isMinimized)
 			{
 				m_vulkanWrapper->drawImGui(imguiDrawData);
-				/*wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-				wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-				wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-				wd->ClearValue.color.float32[3] = clear_color.w;
-				FrameRender(wd, draw_data);
-				FramePresent(wd);*/
 			}
 
-			m_vulkanWrapper->endDraw();
+			m_vulkanWrapper->endFrame();
 		}
 		m_vulkanWrapper->waitIdle();
 	}

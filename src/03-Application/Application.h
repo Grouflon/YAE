@@ -10,7 +10,7 @@ struct ImGuiContext;
 namespace yae {
 
 class ResourceManager;
-class VulkanWrapper;
+class VulkanRenderer;
 
 class Application
 {
@@ -23,7 +23,7 @@ private:
 	std::string m_name;
 
 	ResourceManager* m_resourceManager = nullptr;
-	VulkanWrapper* m_vulkanWrapper = nullptr;
+	VulkanRenderer* m_vulkanWrapper = nullptr;
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
 };

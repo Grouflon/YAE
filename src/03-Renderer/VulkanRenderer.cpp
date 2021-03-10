@@ -1,4 +1,4 @@
-#include "VulkanWrapper.h"
+#include "VulkanRenderer.h"
 
 #include <set>
 #include <vector>
@@ -9,7 +9,8 @@
 #include <stb_image.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
-#include <backends/imgui_impl_vulkan.h>
+
+#include <03-Renderer/imgui_impl_vulkan.h>
 
 #include <00-Macro/Assert.h>
 #include <00-Type/IntTypes.h>
@@ -200,7 +201,7 @@ VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, GLFWw
 	}
 }
 
-bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
+bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 {
 	m_window = _window;
 	m_validationLayersEnabled = _validationLayersEnabled;
@@ -492,6 +493,20 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	}
 	YAE_ASSERT(m_device != VK_NULL_HANDLE);
 
+	// Create Allocator
+	{
+		YAE_VERBOSE_CAT("vulkan", "Creating Allocator...");
+
+		VmaAllocatorCreateInfo allocatorInfo{};
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+		allocatorInfo.physicalDevice = m_physicalDevice;
+		allocatorInfo.device = m_device;
+		allocatorInfo.instance = m_instance;
+		VK_VERIFY(vmaCreateAllocator(&allocatorInfo, &m_allocator));
+
+		YAE_VERBOSE_CAT("vulkan", "Created Allocator");
+	}
+
 	// Get Queues
 	vkGetDeviceQueue(m_device, m_queueIndices.graphicsFamily, 0, &m_graphicsQueue);
 	vkGetDeviceQueue(m_device, m_queueIndices.presentFamily, 0, &m_presentQueue);
@@ -502,8 +517,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = m_queueIndices.graphicsFamily;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
+		poolInfo.flags = 0;
 		VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool));
 		YAE_VERBOSE_CAT("vulkan", "Created Command Pool");
 	}
@@ -518,18 +532,20 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		VkDeviceSize imageSize = textureWidth * textureHeight * 4;
 
 		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
+		VmaAllocation stagingBufferMemory;
 		_createBuffer(
 			imageSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer, stagingBufferMemory
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer,
+			stagingBufferMemory
 		);
 
+
 		void* data;
-		vkMapMemory(m_device, stagingBufferMemory, 0, imageSize, 0, &data);
+		VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
 		memcpy(data, pixels, static_cast<size_t>(imageSize));
-		vkUnmapMemory(m_device, stagingBufferMemory);
+		vmaUnmapMemory(m_allocator, stagingBufferMemory);
 
 		stbi_image_free(pixels);
 
@@ -594,7 +610,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
+		VmaAllocation stagingBufferMemory;
 		_createBuffer(
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -605,9 +621,9 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		{
 			void* data;
-			VK_VERIFY(vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data));
+			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
 			memcpy(data, m_vertices.data(), bufferSize);
-			vkUnmapMemory(m_device, stagingBufferMemory);
+			vmaUnmapMemory(m_allocator, stagingBufferMemory);
 		}
 		_createBuffer(
 			bufferSize,
@@ -627,7 +643,7 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		YAE_VERBOSE_CAT("vulkan", "Creating Index Buffer...");
 		VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
 		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
+		VmaAllocation stagingBufferMemory;
 		_createBuffer(
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -638,9 +654,9 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		{
 			void* data;
-			VK_VERIFY(vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data));
+			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
 			memcpy(data, m_indices.data(), bufferSize);
-			vkUnmapMemory(m_device, stagingBufferMemory);
+			vmaUnmapMemory(m_allocator, stagingBufferMemory);
 		}
 		_createBuffer(
 			bufferSize,
@@ -716,8 +732,10 @@ bool VulkanWrapper::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	return true;
 }
 
-void VulkanWrapper::beginDraw()
+void VulkanRenderer::beginFrame()
 {
+	ImGui_ImplVulkan_NewFrame();
+
 	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFlightFrame], VK_TRUE, UINT64_MAX));
 	VK_VERIFY(vkResetFences(m_device, 1, &m_inFlightFences[m_currentFlightFrame]));
 
@@ -741,16 +759,14 @@ void VulkanWrapper::beginDraw()
 		VK_VERIFY(vkWaitForFences(m_device, 1, &m_imagesInFlight[m_currentFrameIndex], VK_TRUE, UINT64_MAX))
 	}
 	m_imagesInFlight[m_currentFrameIndex] = m_inFlightFences[m_currentFlightFrame];
-
-	_updateUniformBuffer(m_currentFrameIndex);
-
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 
-	vkResetCommandBuffer(frame.commandBuffer, 0);
+	_updateUniformBuffer(m_currentFrameIndex);
+	vkResetCommandPool(m_device, frame.commandPool, 0);
 
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0; // Optional
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	beginInfo.pInheritanceInfo = nullptr; // Optional
 	VK_VERIFY(vkBeginCommandBuffer(frame.commandBuffer, &beginInfo));
 
@@ -770,7 +786,7 @@ void VulkanWrapper::beginDraw()
 	vkCmdBeginRenderPass(frame.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void VulkanWrapper::drawMesh()
+void VulkanRenderer::drawMesh()
 {
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 
@@ -785,14 +801,14 @@ void VulkanWrapper::drawMesh()
 	vkCmdDrawIndexed(frame.commandBuffer, u32(m_indices.size()), 1, 0, 0, 0);
 }
 
-void VulkanWrapper::drawImGui(ImDrawData* _drawData)
+void VulkanRenderer::drawImGui(ImDrawData* _drawData)
 {
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 
 	ImGui_ImplVulkan_RenderDrawData(_drawData, frame.commandBuffer);
 }
 
-void VulkanWrapper::endDraw()
+void VulkanRenderer::endFrame()
 {
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 	
@@ -841,12 +857,12 @@ void VulkanWrapper::endDraw()
 	m_currentFrameIndex = ~0;
 }
 
-void VulkanWrapper::waitIdle()
+void VulkanRenderer::waitIdle()
 {
 	VK_VERIFY(vkDeviceWaitIdle(m_device));
 }
 
-void VulkanWrapper::shutdown()
+void VulkanRenderer::shutdown()
 {
 	_destroySwapChain();
 
@@ -874,6 +890,7 @@ void VulkanWrapper::shutdown()
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Sampler");
 
 	vkDestroyImageView(m_device, m_textureImageView, nullptr);
+	m_textureImageView = VK_NULL_HANDLE;
 	_destroyImage(m_textureImage, m_textureImageMemory);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Image");
 
@@ -883,6 +900,10 @@ void VulkanWrapper::shutdown()
 
 	m_presentQueue = VK_NULL_HANDLE;
 	m_graphicsQueue = VK_NULL_HANDLE;
+
+	vmaDestroyAllocator(m_allocator);
+	m_allocator = VK_NULL_HANDLE;
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Allocator");
 
 	vkDestroyDevice(m_device, nullptr);
 	m_device = VK_NULL_HANDLE;
@@ -909,7 +930,7 @@ void VulkanWrapper::shutdown()
 	m_window = nullptr;
 }
 
-void VulkanWrapper::initImGui()
+void VulkanRenderer::initImGui()
 {
 	YAE_ASSERT(m_window);
 
@@ -928,6 +949,7 @@ void VulkanWrapper::initImGui()
 	initInfo.ImageCount = u32(m_frameobjects.size());		// >= MinImageCount
 	initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;           // >= VK_SAMPLE_COUNT_1_BIT
 	initInfo.Allocator = nullptr;
+	initInfo.VmaAllocator = m_allocator;
 	initInfo.CheckVkResultFn = [](VkResult _err) { VK_VERIFY(_err); };
 
 	bool ret = ImGui_ImplVulkan_Init(&initInfo, m_renderPass);
@@ -936,7 +958,6 @@ void VulkanWrapper::initImGui()
 	// Upload Fonts
 	{
 		// Use any command queue
-		//VK_VERIFY(vkResetCommandPool(m_device, m_commandPool, 0));
 		VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
 		ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
 		_endSingleTimeCommands(commandBuffer);
@@ -946,13 +967,13 @@ void VulkanWrapper::initImGui()
 	YAE_VERBOSE_CAT("imgui", "Initialized ImGui");
 }
 
-void VulkanWrapper::shutdownImGui()
+void VulkanRenderer::shutdownImGui()
 {
 	ImGui_ImplVulkan_Shutdown();
 	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 }
 
-bool VulkanWrapper::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount)
+bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount)
 {
 	u32 deviceExtensionCount;
 	VK_VERIFY(vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &deviceExtensionCount, nullptr));
@@ -978,7 +999,7 @@ bool VulkanWrapper::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice
 	return true;
 }
 
-VkFormat VulkanWrapper::FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features)
+VkFormat VulkanRenderer::FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features)
 {
 	for (size_t i = 0; i < _candidateCount; ++i)
 	{
@@ -998,18 +1019,18 @@ VkFormat VulkanWrapper::FindSupportedFormat(VkPhysicalDevice _physicalDevice, Vk
 	return VK_FORMAT_UNDEFINED;
 }
 
-bool VulkanWrapper::HasStencilComponent(VkFormat _format)
+bool VulkanRenderer::HasStencilComponent(VkFormat _format)
 {
 	return _format == VK_FORMAT_D32_SFLOAT_S8_UINT || _format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void VulkanWrapper::FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height)
+void VulkanRenderer::FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height)
 {
-	VulkanWrapper* vulkanWrapper = reinterpret_cast<VulkanWrapper*>(glfwGetWindowUserPointer(_window));
+	VulkanRenderer* vulkanWrapper = reinterpret_cast<VulkanRenderer*>(glfwGetWindowUserPointer(_window));
 	vulkanWrapper->m_framebufferResized = true;
 }
 
-bool VulkanWrapper::LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices)
+bool VulkanRenderer::LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices)
 {
 	YAE_ASSERT(_outVertices.empty());
 	YAE_ASSERT(_outIndices.empty());
@@ -1058,7 +1079,7 @@ bool VulkanWrapper::LoadModel(const char* _path, std::vector<Vertex>& _outVertic
 	return true;
 }
 
-void VulkanWrapper::_createSwapChain()
+void VulkanRenderer::_createSwapChain()
 {
 	// Create Swap Chain
 	{
@@ -1548,21 +1569,23 @@ void VulkanWrapper::_createSwapChain()
 		YAE_VERBOSE_CAT("vulkan", "Created Frame Buffers");
 	}
 
-	// Allocate command buffers
+	// Create pool and allocate command buffers
 	{
 		YAE_VERBOSE_CAT("vulkan", "Allocating Command Buffers...");
-		std::vector<VkCommandBuffer> commandBuffers(m_frameobjects.size());
-
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = m_commandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = u32(commandBuffers.size());
-
-		VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, commandBuffers.data()));
 		for (size_t i = 0; i < frameCount; ++i)
 		{
-			m_frameobjects[i].commandBuffer = commandBuffers[i];
+			VkCommandPoolCreateInfo poolInfo{};
+			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			poolInfo.queueFamilyIndex = m_queueIndices.graphicsFamily;
+			poolInfo.flags = 0;
+			VK_VERIFY(vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_frameobjects[i].commandPool));
+
+			VkCommandBufferAllocateInfo allocInfo{};
+			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			allocInfo.commandPool = m_frameobjects[i].commandPool;
+			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			allocInfo.commandBufferCount = 1;
+			VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocInfo, &m_frameobjects[i].commandBuffer));
 		}
 		YAE_VERBOSE_CAT("vulkan", "Allocated Command Buffers");
 	}
@@ -1570,7 +1593,7 @@ void VulkanWrapper::_createSwapChain()
 	m_imagesInFlight.resize(frameCount, VK_NULL_HANDLE);
 }
 
-void VulkanWrapper::_destroySwapChain()
+void VulkanRenderer::_destroySwapChain()
 {
 	m_imagesInFlight.clear();
 	u32 frameCount = u32(m_frameobjects.size());
@@ -1583,7 +1606,8 @@ void VulkanWrapper::_destroySwapChain()
 
 	for (size_t i = 0; i < frameCount; ++i)
 	{
-		vkFreeCommandBuffers(m_device, m_commandPool, 1, &m_frameobjects[i].commandBuffer);
+		vkFreeCommandBuffers(m_device, m_frameobjects[i].commandPool, 1, &m_frameobjects[i].commandBuffer);
+		vkDestroyCommandPool(m_device, m_frameobjects[i].commandPool, nullptr);
 	}
 	YAE_VERBOSE_CAT("vulkan", "Freed Command Buffers");
 
@@ -1608,6 +1632,7 @@ void VulkanWrapper::_destroySwapChain()
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Render Pass");
 
 	vkDestroyImageView(m_device, m_depthImageView, nullptr);
+	m_depthImageView = VK_NULL_HANDLE;
 	_destroyImage(m_depthImage, m_depthImageMemory);
 
 	for (size_t i = 0; i < frameCount; ++i)
@@ -1623,7 +1648,7 @@ void VulkanWrapper::_destroySwapChain()
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Swap Chain");
 }
 
-void VulkanWrapper::_recreateSwapChain()
+void VulkanRenderer::_recreateSwapChain()
 {
 	int width = 0, height = 0;
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -1639,37 +1664,27 @@ void VulkanWrapper::_recreateSwapChain()
 	_createSwapChain();
 }
 
-void VulkanWrapper::_createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VkDeviceMemory& _outBufferMemory)
+void VulkanRenderer::_createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VmaAllocation& _allocation)
 {
 	VkBufferCreateInfo bufferInfo{};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = _size;
 	bufferInfo.usage = _usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	VK_VERIFY(vkCreateBuffer(m_device, &bufferInfo, nullptr, &_outBuffer));
 
-	VkMemoryRequirements memoryRequirements;
-	vkGetBufferMemoryRequirements(m_device, _outBuffer, &memoryRequirements);
-	VkMemoryAllocateInfo allocateInfo{};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocateInfo.allocationSize = memoryRequirements.size;
-	u32 memoryType = FindMemoryType(m_physicalDevice, memoryRequirements.memoryTypeBits, _properties);
-	YAE_ASSERT(memoryType != INVALID_MEMORY_TYPE);
-	allocateInfo.memoryTypeIndex = memoryType;
-	VK_VERIFY(vkAllocateMemory(m_device, &allocateInfo, nullptr, &_outBufferMemory));
-
-	VK_VERIFY(vkBindBufferMemory(m_device, _outBuffer, _outBufferMemory, 0));
+	VmaAllocationCreateInfo allocInfo = {};
+	allocInfo.preferredFlags = _properties;
+	VK_VERIFY(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &_outBuffer, &_allocation, nullptr));
 }
 
-void VulkanWrapper::_destroyBuffer(VkBuffer& _inOutBuffer, VkDeviceMemory& _inOutBufferMemory)
+void VulkanRenderer::_destroyBuffer(VkBuffer& _inOutBuffer, VmaAllocation& _inOutAllocation)
 {
-	vkDestroyBuffer(m_device, _inOutBuffer, nullptr);
+	vmaDestroyBuffer(m_allocator, _inOutBuffer, _inOutAllocation);
 	_inOutBuffer = VK_NULL_HANDLE;
-	vkFreeMemory(m_device, _inOutBufferMemory, nullptr);
-	_inOutBufferMemory = VK_NULL_HANDLE;
+	_inOutAllocation = VK_NULL_HANDLE;
 }
 
-void VulkanWrapper::_copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size)
+void VulkanRenderer::_copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size)
 {
 	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
 	
@@ -1682,7 +1697,7 @@ void VulkanWrapper::_copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDevi
 	_endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanWrapper::_createImage(u32 _width, u32 _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VkDeviceMemory& _outImageMemory)
+void VulkanRenderer::_createImage(u32 _width, u32 _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VmaAllocation& _outImageMemory)
 {
 	VkImageCreateInfo imageInfo{};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1699,29 +1714,21 @@ void VulkanWrapper::_createImage(u32 _width, u32 _height, VkFormat _format, VkIm
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageInfo.flags = 0;
-	VK_VERIFY(vkCreateImage(m_device, &imageInfo, nullptr, &_outImage));
 
-	VkMemoryRequirements memoryRequirements;
-	vkGetImageMemoryRequirements(m_device, _outImage, &memoryRequirements);
-
-	VkMemoryAllocateInfo allocateInfo{};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocateInfo.allocationSize = memoryRequirements.size;
-	allocateInfo.memoryTypeIndex = FindMemoryType(m_physicalDevice, memoryRequirements.memoryTypeBits, _properties);
-	VK_VERIFY(vkAllocateMemory(m_device, &allocateInfo, nullptr, &_outImageMemory));
-
-	vkBindImageMemory(m_device, _outImage, _outImageMemory, 0);
+	VmaAllocationCreateInfo allocCreateInfo{};
+	allocCreateInfo.preferredFlags = _properties;
+	VmaAllocationInfo allocInfo;
+	VK_VERIFY(vmaCreateImage(m_allocator, &imageInfo, &allocCreateInfo, &_outImage, &_outImageMemory, &allocInfo));
 }
 
-void VulkanWrapper::_destroyImage(VkImage& _inOutImage, VkDeviceMemory& _inOutImageMemory)
+void VulkanRenderer::_destroyImage(VkImage& _inOutImage, VmaAllocation& _inOutImageMemory)
 {
-	vkDestroyImage(m_device, _inOutImage, nullptr);
+	vmaDestroyImage(m_allocator, _inOutImage, _inOutImageMemory);
 	_inOutImage = VK_NULL_HANDLE;
-	vkFreeMemory(m_device, _inOutImageMemory, nullptr);
 	_inOutImageMemory = VK_NULL_HANDLE;
 }
 
-void VulkanWrapper::_transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
+void VulkanRenderer::_transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
 {
 	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
 
@@ -1793,7 +1800,7 @@ void VulkanWrapper::_transitionImageLayout(VkImage _image, VkFormat _format, VkI
 	_endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanWrapper::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _width, u32 _height)
+void VulkanRenderer::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _width, u32 _height)
 {
 	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
 
@@ -1821,7 +1828,7 @@ void VulkanWrapper::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _wi
 	_endSingleTimeCommands(commandBuffer);
 }
 
-VkImageView VulkanWrapper::_createImageView(VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags)
+VkImageView VulkanRenderer::_createImageView(VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags)
 {
 	VkImageViewCreateInfo viewInfo{};
 	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1843,7 +1850,7 @@ VkImageView VulkanWrapper::_createImageView(VkImage _image, VkFormat _format, Vk
 	return imageView;
 }
 
-void VulkanWrapper::_updateUniformBuffer(u32 _imageIndex)
+void VulkanRenderer::_updateUniformBuffer(u32 _imageIndex)
 {
 	static auto s_startTime = std::chrono::high_resolution_clock::now();
 
@@ -1857,13 +1864,15 @@ void VulkanWrapper::_updateUniformBuffer(u32 _imageIndex)
 	ubo.proj[1][1] *= -1;
 
 	void* data;
-	VK_VERIFY(vkMapMemory(m_device, m_frameobjects[_imageIndex].uniformBufferMemory, 0, sizeof(ubo), 0, &data));
+	VK_VERIFY(vmaMapMemory(m_allocator, m_frameobjects[_imageIndex].uniformBufferMemory, &data));
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(m_device, m_frameobjects[_imageIndex].uniformBufferMemory);
+	vmaUnmapMemory(m_allocator, m_frameobjects[_imageIndex].uniformBufferMemory);
 }
 
-VkCommandBuffer VulkanWrapper::_beginSingleTimeCommands()
+VkCommandBuffer VulkanRenderer::_beginSingleTimeCommands()
 {
+	VK_VERIFY(vkResetCommandPool(m_device, m_commandPool, 0));
+
 	VkCommandBufferAllocateInfo allocateInfo{};
 	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -1879,7 +1888,7 @@ VkCommandBuffer VulkanWrapper::_beginSingleTimeCommands()
 	return commandBuffer;
 }
 
-void VulkanWrapper::_endSingleTimeCommands(VkCommandBuffer _commandBuffer)
+void VulkanRenderer::_endSingleTimeCommands(VkCommandBuffer _commandBuffer)
 {
 	VK_VERIFY(vkEndCommandBuffer(_commandBuffer));
 

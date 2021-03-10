@@ -48,10 +48,7 @@ file(GLOB IMGUI_SRC
 	"./extern/imgui/*.cpp"
 	"./extern/imgui/backends/imgui_impl_glfw.cpp"
 	"./extern/imgui/backends/imgui_impl_glfw.h"
-	"./extern/imgui/backends/imgui_impl_vulkan.cpp"
-	"./extern/imgui/backends/imgui_impl_vulkan.h"
 )
-#file(GLOB IMGUI_SRC "./extern/imgui/*.h" "./extern/imgui/*.cpp")
 
 add_compile_definitions(
 	_CRT_SECURE_NO_WARNINGS
@@ -76,6 +73,7 @@ include_directories(
 	./extern/stb/
 	./extern/tinyobjloader/
 	./extern/imgui/
+	./extern/VulkanMemoryAllocator/
 	$ENV{VK_SDK_PATH}/include/
 )
 
