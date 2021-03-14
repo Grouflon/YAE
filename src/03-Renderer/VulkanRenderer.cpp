@@ -942,7 +942,7 @@ void VulkanRenderer::initImGui()
 	initInfo.Device = m_device;
 	initInfo.QueueFamily = m_queueIndices.graphicsFamily;
 	initInfo.Queue = m_graphicsQueue;
-	initInfo.PipelineCache = nullptr;
+	initInfo.PipelineCache = VK_NULL_HANDLE;
 	initInfo.DescriptorPool = m_descriptorPool;
 	initInfo.Subpass = 0;
 	initInfo.MinImageCount = MAX_FRAMES_IN_FLIGHT;          // >= 2
