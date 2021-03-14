@@ -1,6 +1,6 @@
 #include "Path.h"
 
-#include <filesystem>
+//#include <filesystem>
 
 #include <01-String/StringTools.h>
 
@@ -20,7 +20,7 @@ void Path::NormalizePath(std::string& _path)
 	ReplaceInline(_path, "\\", "/");
 }
 
-const Path Path::WORKING_DIRECTORY = Path(Narrow(std::filesystem::current_path().c_str()).c_str(), true);
+//const Path Path::WORKING_DIRECTORY = Path(Narrow(std::filesystem::current_path().c_str()).c_str(), true);
 
 }
 

@@ -15,7 +15,7 @@ struct Path
 
 	static void NormalizePath(std::string& _path);
 
-	static const Path WORKING_DIRECTORY;
+	//static const Path WORKING_DIRECTORY;
 
 private:
 

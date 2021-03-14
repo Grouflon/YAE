@@ -3,3 +3,6 @@ build
 obj
 **.spv
 imgui.ini
+.vs
+*.vcxproj*
+*.sln
