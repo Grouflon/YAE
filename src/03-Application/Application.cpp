@@ -2,12 +2,14 @@
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
 
 #include <00-Macro/Assert.h>
+#include <01-Serialization/JsonSerializer.h>
 #include <02-Log/Log.h>
 #include <03-Resource/ResourceManager.h>
 #include <03-Renderer/VulkanRenderer.h>
-#include <backends/imgui_impl_glfw.h>
+#include <03-Resource/FileResource.h>
 
 
 namespace yae {
@@ -49,6 +51,29 @@ namespace yae {
 			YAE_ASSERT(ret);
 		}
 		m_vulkanWrapper->initImGui();
+
+		//
+		{
+			FileResource* configFile = FindOrCreateResource<FileResource>("./config.json");
+			configFile->useLoad();
+
+			//for (int i = 0; i < 10000; ++i)
+			ConfigData config;
+			JsonSerializer serializer;
+			serializer.beginRead(configFile->getContent(), configFile->getContentSize());
+			serializer.serialize(&config, ConfigData::GetClass());
+			serializer.endRead();
+
+			const void* buffer;
+			size_t bufferSize;
+			serializer.beginWrite();
+			serializer.serialize(&config, ConfigData::GetClass());
+			serializer.endWrite(&buffer, &bufferSize);
+
+			printf("%s", (const char*)buffer);
+
+			configFile->releaseUnuse();
+		}
 	}
 
 	void Application::run()
