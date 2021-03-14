@@ -21,7 +21,7 @@ void yae::Resource::use()
 	++m_useCount;
 }
 
-void yae::Resource::load()
+bool yae::Resource::load()
 {
 	if (m_loadCount == 0)
 	{
@@ -38,12 +38,13 @@ void yae::Resource::load()
 		}
 	}
 	++m_loadCount;
+	return m_error == ERROR_NONE;
 }
 
-void yae::Resource::useLoad()
+bool yae::Resource::useLoad()
 {
 	use();
-	load();
+	return load();
 }
 
 void yae::Resource::unuse()

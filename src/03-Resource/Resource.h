@@ -24,8 +24,8 @@ public:
 	const char* getName() const { return m_name.c_str(); }
 
 	void use();
-	void load();
-	void useLoad();
+	bool load();
+	bool useLoad();
 	void unuse();
 	void release();
 	void releaseUnuse();
