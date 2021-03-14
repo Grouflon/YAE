@@ -3,7 +3,7 @@ local TARGET_FOLDER_NAME = "%{cfg.system}_%{cfg.architecture}_%{cfg.buildcfg}"
 
 workspace "yae"
 	configurations { "Debug", "Release" }
-	platforms { "Win64" }
+	platforms { "Win32", "Win64" }
 
 project "yae"
 	kind "ConsoleApp"
@@ -11,6 +11,7 @@ project "yae"
 	cppdialect "C++14"
 	targetdir("bin/"..TARGET_FOLDER_NAME.."/")
 	objdir("obj/"..TARGET_FOLDER_NAME.."/")
+	ignoredefaultlibraries { "MSVCRT" }
 
 	filter { "platforms:Win32" }
 		system "Windows"
@@ -73,9 +74,19 @@ project "yae"
 	}
 
 	libdirs {
-		"./extern/GLFW/lib-vc2019/",
-		VK_SDK_PATH.."/Lib/",
+		"./extern/GLFW/lib/%{cfg.platform}/",
 	}
+	filter { "platforms:Win32" }
+		libdirs {
+			VK_SDK_PATH.."/Lib32/"
+		}
+
+	filter { "platforms:Win64" }
+		libdirs {
+			VK_SDK_PATH.."/Lib/"
+		}
+
+	filter {}
 
 	links {
 		"glfw3",
