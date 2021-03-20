@@ -1,8 +1,12 @@
 bin
 build
 obj
+lib
+data/code
 **.spv
 imgui.ini
 .vs
 *.vcxproj*
 *.sln
+*.sublime-workspace
+*.rdbg

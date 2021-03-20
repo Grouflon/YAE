@@ -1,0 +1,58 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"index_exclude_patterns": ["obj", "bin", "lib"],
+			"folder_exclude_patterns":
+			[
+				"obj",
+				".vs",
+				"lib",
+				"bin"
+			]
+		},
+		{
+			"name": "VulkanSDK",
+			"path": "C:/VulkanSDK/1.2.162.1/Include"
+		}
+	],
+	"build_systems":
+	[
+		{
+			"name": "yae",
+			"working_dir": "${project_path}",
+			//"file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$" // clang regex
+			"file_regex": "\\\\Yae\\\\(.[^\\(]*)\\(([0-9]+),([0-9]+)",// vs regex
+			"env":
+			{
+				//"ComSpec": "cmd.exe" // for the makefile to detect that is is not in posix mode
+				"VSLANG": "1033", // Switches compiler to english
+			},
+
+			"variants":
+			[
+				{
+					"name": "generate_project",
+					"cmd": "generate_vs2019_project_files.bat"
+				},
+				{
+					"name": "clean",
+					"shell_cmd": "msbuild yae.sln -t:clean -p:Configuration=Debug;Platform=Win64",
+				},
+				{
+					"name": "compile debug_win64",
+					"shell_cmd": "msbuild yae.sln -t:build -p:Configuration=Debug;Platform=Win64",
+				},
+				{
+					"name": "debug",
+					"shell_cmd": "remedybg session.rdbg"
+				},
+				{
+					"name": "debug visual",
+					"shell_cmd": "devenv /DebugExe \"bin/Win64_Debug/yae.exe\""
+				}
+			]
+		},
+	]
+}
