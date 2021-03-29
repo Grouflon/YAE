@@ -1,5 +1,7 @@
 #pragma once
 
+#include <export.h>
+
 #include <vector>
 #include <ctime>
 
@@ -38,7 +40,7 @@ struct LogCategory
   LogVerbosity verbosity;
 };
 
-class Logger
+class YAELIB_API Logger
 {
 public:
   Logger(const char* _logFilePath = nullptr, u32 _outputTargets = LogOutputTargetFlag_Stdout|LogOutputTargetFlag_File);
@@ -66,7 +68,5 @@ private:
   std::unordered_map<StringHash, LogCategory> m_categories;
   //std::vector<LogLine> m_lines;
 };
-
-extern Logger g_logger;
 
 };
