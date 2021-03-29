@@ -14,7 +14,7 @@ YAELIB_API std::wstring Widen(const char* _s);
 YAELIB_API std::wstring Widen(const std::string& _s);
 
 template<typename ... Args>
-YAELIB_API std::string StdStringFormat(const char* _fmt, Args ..._args)
+std::string StdStringFormat(const char* _fmt, Args ..._args)
 {
     size_t size = snprintf(nullptr, 0, _fmt, _args...);
     YAE_ASSERT(size > 0);
@@ -27,7 +27,7 @@ YAELIB_API std::string StdStringFormat(const char* _fmt, Args ..._args)
 }
 
 template<typename ... Args>
-YAELIB_API String StringFormat(const char* _fmt, Args ..._args)
+String StringFormat(const char* _fmt, Args ..._args)
 {
     size_t size = snprintf(nullptr, 0, _fmt, _args...);
     YAE_ASSERT(size > 0);
