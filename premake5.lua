@@ -51,6 +51,9 @@ workspace "yae"
 		defines { "NDEBUG" }
 		optimize "On"
 
+	filter "system:Windows"
+		buildoptions("/w44251") -- disable class '...' needs to have dll-interface to be used by clients of class '...'
+
 	filter {}
 
 project "yaeLib"
