@@ -4,14 +4,16 @@
 
 namespace yae {
 
+class Allocator;
+
 class YAELIB_API String
 {
 public:
 	static const size_t INVALID_POS;
 
-	String();
-	String(const char* _str);
-	String(const String& _str);
+	String(Allocator* _allocator = nullptr);
+	String(const char* _str, Allocator* _allocator = nullptr);
+	String(const String& _str, Allocator* _allocator = nullptr);
 	~String();
 
 	String(String&& _str);
@@ -34,6 +36,7 @@ private:
 	char* m_buffer = nullptr;
 	size_t m_bufferSize = 0;
 	size_t m_length = 0;
+	Allocator* m_allocator = nullptr;
 };
 
 }

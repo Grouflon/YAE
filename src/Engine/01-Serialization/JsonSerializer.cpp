@@ -6,6 +6,7 @@
 #include <mirror.h>
 
 #include <00-Type/IntTypes.h>
+#include <00-Type/GlobalContext.h>
 #include <00-Macro/Assert.h>
 #include <00-Type/TypeTools.h>
 
@@ -13,10 +14,14 @@ using namespace mirror;
 
 namespace yae {
 
-	JsonSerializer::JsonSerializer()
-		:m_allocator(1024 * 8)
+	JsonSerializer::JsonSerializer(Allocator* _allocator)
+		: m_allocator(_allocator)
 	{
-
+		if (m_allocator == nullptr)
+		{
+			m_allocator = GetGlobalContext()->scratchAllocator;
+		}
+		YAE_ASSERT(m_allocator != nullptr);
 	}
 
 	JsonSerializer::~JsonSerializer()
@@ -331,7 +336,7 @@ namespace yae {
 
 	json_value_s* JsonSerializer::_allocateValue()
 	{
-		json_value_s* value = (json_value_s*)m_allocator.allocate(sizeof(json_value_s));
+		json_value_s* value = (json_value_s*)m_allocator->allocate(sizeof(json_value_s));
 		*value = {};
 		value->type = json_type_null;
 		return value;
@@ -350,11 +355,11 @@ namespace yae {
 	void JsonSerializer::_allocateNumberPayload(json_value_s* _value, i64 _payload)
 	{
 		_value->type = json_type_number;
-		json_number_s* number = (json_number_s*)m_allocator.allocate(sizeof(json_number_s));
+		json_number_s* number = (json_number_s*)m_allocator->allocate(sizeof(json_number_s));
 		char buffer[64];
 		snprintf(buffer, countof(buffer) - 1, "%lld", _payload);
 		size_t numberSize = strlen(buffer);
-		number->number = (char*)m_allocator.allocate(numberSize + 1);
+		number->number = (char*)m_allocator->allocate(numberSize + 1);
 		strcpy((char*)number->number, buffer);
 		number->number_size = numberSize;
 		_value->payload = number;
@@ -363,11 +368,11 @@ namespace yae {
 	void JsonSerializer::_allocateNumberPayload(json_value_s* _value, u64 _payload)
 	{
 		_value->type = json_type_number;
-		json_number_s* number = (json_number_s*)m_allocator.allocate(sizeof(json_number_s));
+		json_number_s* number = (json_number_s*)m_allocator->allocate(sizeof(json_number_s));
 		char buffer[64];
 		snprintf(buffer, countof(buffer) - 1, "%llu", _payload);
 		size_t numberSize = strlen(buffer);
-		number->number = (char*)m_allocator.allocate(numberSize + 1);
+		number->number = (char*)m_allocator->allocate(numberSize + 1);
 		strcpy((char*)number->number, buffer);
 		number->number_size = numberSize;
 		_value->payload = number;
@@ -376,11 +381,11 @@ namespace yae {
 	void JsonSerializer::_allocateNumberPayload(json_value_s* _value, double _payload)
 	{
 		_value->type = json_type_number;
-		json_number_s* number = (json_number_s*)m_allocator.allocate(sizeof(json_number_s));
+		json_number_s* number = (json_number_s*)m_allocator->allocate(sizeof(json_number_s));
 		char buffer[64];
 		snprintf(buffer, countof(buffer) - 1, "%f", _payload);
 		size_t numberSize = strlen(buffer);
-		number->number = (char*)m_allocator.allocate(numberSize + 1);
+		number->number = (char*)m_allocator->allocate(numberSize + 1);
 		strcpy((char*)number->number, buffer);
 		number->number_size = numberSize;
 		_value->payload = number;
@@ -388,9 +393,9 @@ namespace yae {
 
 	json_string_s* JsonSerializer::_allocateString(const char* _str)
 	{
-		json_string_s* str = (json_string_s*)m_allocator.allocate(sizeof(json_string_s));
+		json_string_s* str = (json_string_s*)m_allocator->allocate(sizeof(json_string_s));
 		size_t strSize = strlen(_str);
-		str->string = (char*)m_allocator.allocate(strSize + 1);
+		str->string = (char*)m_allocator->allocate(strSize + 1);
 		strcpy((char*)str->string, _str);
 		str->string_size = strSize;
 		return str;
@@ -398,8 +403,8 @@ namespace yae {
 
 	void JsonSerializer::_deallocateString(json_string_s* _str)
 	{
-		m_allocator.deallocate((void*)_str->string);
-		m_allocator.deallocate(_str);
+		m_allocator->deallocate((void*)_str->string);
+		m_allocator->deallocate(_str);
 	}
 
 	void JsonSerializer::_allocateStringPayload(json_value_s* _value, const char* _payload)
@@ -411,7 +416,7 @@ namespace yae {
 	json_object_s* JsonSerializer::_allocateObjectPayload(json_value_s* _value)
 	{
 		_value->type = json_type_object;
-		json_object_s* object = (json_object_s*)m_allocator.allocate(sizeof(json_object_s));
+		json_object_s* object = (json_object_s*)m_allocator->allocate(sizeof(json_object_s));
 		*object = {};
 		_value->payload = object;
 		return object;
@@ -419,7 +424,7 @@ namespace yae {
 
 	json_object_element_s* JsonSerializer::_allocateObjectElement(json_object_s* _object, const char* _name, json_object_element_s* _lastElement)
 	{
-		json_object_element_s* element = (json_object_element_s*)m_allocator.allocate(sizeof(json_object_element_s));
+		json_object_element_s* element = (json_object_element_s*)m_allocator->allocate(sizeof(json_object_element_s));
 		*element = {};
 		if (_lastElement != nullptr)
 		{
@@ -439,7 +444,7 @@ namespace yae {
 	void JsonSerializer::_deallocateValue(json_value_s* _value)
 	{
 		_deallocatePayload(_value);
-		m_allocator.deallocate(_value);
+		m_allocator->deallocate(_value);
 	}
 
 	void JsonSerializer::_deallocatePayload(json_value_s* _value)
@@ -449,13 +454,13 @@ namespace yae {
 		case json_type_number:
 		{
 			json_number_s* number = (json_number_s*)_value->payload;
-			m_allocator.deallocate((void*)number->number);
+			m_allocator->deallocate((void*)number->number);
 		}
 		break;
 		case json_type_string:
 		{
 			json_string_s* str = (json_string_s*)_value->payload;
-			m_allocator.deallocate((void*)str->string);
+			m_allocator->deallocate((void*)str->string);
 		}
 		break;
 
@@ -468,12 +473,12 @@ namespace yae {
 				json_object_element_s* nextElement = element->next;
 				_deallocateString(element->name);
 				_deallocateValue(element->value);
-				m_allocator.deallocate(element);
+				m_allocator->deallocate(element);
 				element = nextElement;
 			}
 		}
 		}
-		m_allocator.deallocate(_value->payload);
+		m_allocator->deallocate(_value->payload);
 	}
 
 }

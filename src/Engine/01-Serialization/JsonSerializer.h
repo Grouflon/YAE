@@ -4,6 +4,7 @@
 
 #include <export.h>
 
+#include <00-Type/IntTypes.h>
 #include <00-Memory/Allocator.h>
 
 struct json_value_s;
@@ -18,7 +19,7 @@ namespace yae {
 class YAELIB_API JsonSerializer
 {
 public:
-	JsonSerializer();
+	JsonSerializer(Allocator* _allocator = nullptr);
 	~JsonSerializer();
 
 	void beginRead(const void* _buffer, size_t _bufferSize);
@@ -54,7 +55,7 @@ private:
 	void* m_writeData = nullptr;
 	size_t m_writeDataSize = 0;
 
-	Allocator m_allocator;
+	Allocator* m_allocator = nullptr;
 };
 
 }

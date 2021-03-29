@@ -5,16 +5,25 @@
 #include <algorithm>
 
 #include <00-Macro/Assert.h>
+#include <00-Memory/Allocator.h>
+#include <00-Type/GlobalContext.h>
 
 namespace yae {
 
 const size_t String::INVALID_POS = size_t(-1);
 
-String::String()
+String::String(Allocator* _allocator)
+	: m_allocator(_allocator)
 {
+	if (m_allocator == nullptr)
+	{
+		m_allocator = GetGlobalContext()->defaultAllocator;
+	}
+	YAE_ASSERT(m_allocator);
 }
 
-String::String(const char* _str)
+String::String(const char* _str, Allocator* _allocator)
+	:String(_allocator)
 {
 	size_t len = strlen(_str);
 	reserve(len);
@@ -22,15 +31,15 @@ String::String(const char* _str)
 	m_length = len;
 }
 
-String::String(const String& _str)
-	: String(_str.c_str())
+String::String(const String& _str, Allocator* _allocator)
+	: String(_str.c_str(), _allocator)
 {
 
 }
 
 String::~String()
 {
-	free(m_buffer);
+	m_allocator->deallocate(m_buffer);
 }
 
 String::String(String&& _str)
@@ -38,6 +47,8 @@ String::String(String&& _str)
 	m_buffer = _str.m_buffer;
 	m_bufferSize = _str.m_bufferSize;
 	m_length = _str.m_length;
+	m_allocator = _str.m_allocator;
+	
 	_str.m_buffer = nullptr;
 }
 
@@ -46,7 +57,10 @@ void String::reserve(size_t _size)
 	size_t sizeRequired = _size + 1;
 	if (sizeRequired > m_bufferSize)
 	{
-		m_buffer = (char*)realloc(m_buffer, sizeRequired);
+		void* buffer = m_allocator->allocate(sizeRequired);
+		memcpy(buffer, m_buffer, m_bufferSize);
+		m_allocator->deallocate(m_buffer);
+		m_buffer = (char*)buffer;
 		m_bufferSize = sizeRequired;
 		YAE_ASSERT_MSG(m_buffer != nullptr, "Allocation failed");
 	}
