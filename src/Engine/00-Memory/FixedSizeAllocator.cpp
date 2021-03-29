@@ -1,4 +1,4 @@
-#include "Allocator.h"
+#include "FixedSizeAllocator.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -7,7 +7,7 @@
 
 namespace yae {
 
-Allocator::Allocator(size_t _size)
+FixedSizeAllocator::FixedSizeAllocator(size_t _size)
 {
 	m_allocableSize = _size;
 	m_memorySize = _size + _getHeaderSize();
@@ -24,12 +24,13 @@ Allocator::Allocator(size_t _size)
 	m_firstBlock->used = false;
 }
 
-Allocator::~Allocator()
+FixedSizeAllocator::~FixedSizeAllocator()
 {
+	YAE_ASSERT_MSGF(m_allocationCount == 0, "Allocations count == %d, memory leak detected", m_allocationCount);
 	free(m_memory);
 }
 
-void* Allocator::allocate(size_t _size)
+void* FixedSizeAllocator::allocate(size_t _size)
 {
 	YAE_ASSERT(_size <= m_allocableSize);
 
@@ -47,7 +48,7 @@ void* Allocator::allocate(size_t _size)
 			availableSize = block->size;
 			streakStartBlock = block;
 			streakEndBlock = streakStartBlock;
-			while (streakEndBlock->next != nullptr && !streakEndBlock->used && availableSize < requestedSize)
+			while (streakEndBlock->next != nullptr && !streakEndBlock->next->used && availableSize < requestedSize)
 			{
 				streakEndBlock = streakEndBlock->next;
 				size_t allocationSize = _getAllocationSize(streakEndBlock->size);
@@ -68,7 +69,7 @@ void* Allocator::allocate(size_t _size)
 		}
 		block = block->next;
 	}
-	YAE_ASSERT(streakStartBlock != nullptr) // OOM;
+	YAE_ASSERT_MSGF(streakStartBlock != nullptr, "Out of memory! %d / %d, %d requested", );
 
 	size_t remainingSize = availableSize - requestedSize;
 	if (remainingSize < _getMinimumBlockSize())
@@ -78,17 +79,17 @@ void* Allocator::allocate(size_t _size)
 	}
 	else
 	{
+		Block* nextBlock = (Block*)(streakStartBlock->data + requestedSize);
+		nextBlock->next = streakEndBlock->next;
+		nextBlock->size = remainingSize - _getHeaderSize();
+		nextBlock->used = false;
+
 		streakStartBlock->size = requestedSize;
-		streakStartBlock->next = (Block*)(streakStartBlock->data + requestedSize);
-		if (streakStartBlock != streakEndBlock)
-		{
-			streakStartBlock->next->next = streakEndBlock->next;
-		}
-		streakStartBlock->next->size = remainingSize - _getHeaderSize();
-		streakStartBlock->next->used = false;
+		streakStartBlock->next = nextBlock;
 	}
 	streakStartBlock->used = true;
 	YAE_ASSERT(!streakStartBlock->next || streakStartBlock->next == (Block*)(streakStartBlock->data + streakStartBlock->size));
+	m_allocatedMemory = m_allocatedMemory + _getAllocationSize(streakStartBlock->size);
 	++m_allocationCount;
 
 #if YAE_DEBUG
@@ -97,7 +98,7 @@ void* Allocator::allocate(size_t _size)
 	return streakStartBlock->data;
 }
 
-void Allocator::deallocate(void* _memory)
+void FixedSizeAllocator::deallocate(void* _memory)
 {
 	if (_memory == nullptr)
 		return;
@@ -110,9 +111,10 @@ void Allocator::deallocate(void* _memory)
 			YAE_ASSERT(block->used);
 			block->used = false;
 			--m_allocationCount;
+			m_allocatedMemory = m_allocatedMemory - _getAllocationSize(block->size);
 
 #if YAE_DEBUG
-			memset(block->data, 0, block->size);
+			memset(block->data, 0xDD, block->size);
 			_check();
 #endif
 			return;
@@ -122,7 +124,7 @@ void Allocator::deallocate(void* _memory)
 	YAE_ASSERT(false);
 }
 
-void Allocator::_check()
+void FixedSizeAllocator::_check()
 {
 	size_t totalSize = 0;
 	Block* block = m_firstBlock;
