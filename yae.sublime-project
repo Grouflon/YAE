@@ -50,7 +50,7 @@
 				},
 				{
 					"name": "debug visual",
-					"shell_cmd": "devenv /DebugExe \"bin/Win64_Debug/yae.exe\""
+					"shell_cmd": "devenv yae.sln /DebugExe \"bin/Win64_Debug/yae.exe\""
 				}
 			]
 		},
