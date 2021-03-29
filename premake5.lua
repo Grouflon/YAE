@@ -45,6 +45,7 @@ workspace "yae"
 	filter "configurations:Debug"
 		defines { "DEBUG", "YAE_DEBUG" }
 		optimize "Debug"
+		linkoptions { "/DEBUG:FULL" }
 
 	filter "configurations:Release"
 		defines { "NDEBUG" }
