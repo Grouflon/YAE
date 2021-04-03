@@ -7,7 +7,9 @@ namespace yae {
 class YAELIB_API Allocator
 {
 public:
-	virtual void* allocate(size_t _size) = 0;
+	static const u8 DEFAULT_ALIGN = 4;
+
+	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) = 0;
 	virtual void deallocate(void* _memory) = 0;
 
 	template <typename T, typename ...Args>
@@ -33,25 +35,27 @@ class YAELIB_API FixedSizeAllocator : public Allocator
 {
 public:
 	FixedSizeAllocator(size_t _size);
-	~FixedSizeAllocator();
+	virtual ~FixedSizeAllocator();
 
-	virtual void* allocate(size_t _size) override;
+	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
 	virtual void deallocate(void* _memory) override;
 
 private:
-	struct Block
+	struct Header
 	{
 		size_t size;
-		Block* next;
+		Header* next;
+		u8 alignment;
 		bool used;
-		alignas(sizeof(size_t)) u8 data[1];
 	};
 
-	constexpr inline static size_t _align(size_t _n) { return (_n + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1); }
-	constexpr inline static size_t _getHeaderSize() { return sizeof(Block) - sizeof(size_t); }
-	constexpr inline static size_t _getAllocationSize(size_t _size) { return _size + _getHeaderSize(); }
-	constexpr inline static Block* _getHeader(void* _data) { return (Block*)((u8*)_data - _getHeaderSize()); }
-	constexpr inline static size_t _getMinimumBlockSize() { return _getAllocationSize(_align(1)); }
+	constexpr inline static size_t _getHeaderSize() { return sizeof(Header); }
+	constexpr inline static size_t _getMinimumBlockSize() { return _getHeaderSize() + 1; }
+
+	static Header* _getHeader(void* _data);
+	static u8* _getData(Header* _header);
+	static u8* _getDataStart(Header* _header);
+	static size_t _getBlockSize(Header* _header);
 
 	void _check();
 
@@ -61,7 +65,7 @@ private:
 	size_t m_allocationCount = 0;
 	size_t m_allocatedMemory = 0;
 
-	Block* m_firstBlock = nullptr;
+	Header* m_firstBlock = nullptr;
 };
 
 
@@ -69,8 +73,38 @@ private:
 class YAELIB_API MallocAllocator : public Allocator
 {
 public:
-	virtual void* allocate(size_t _size) override;
+	virtual ~MallocAllocator();
+
+	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
 	virtual void deallocate(void* _memory) override;
+
+private:
+	struct Header
+	{
+		size_t size;
+	};
+
+	static Header* _getHeader(void* _data);
+
+	size_t m_allocationCount = 0;
+	size_t m_allocatedMemory = 0;
 };
+
+
+
+namespace memory {
+
+constexpr inline YAELIB_API void* alignForward(void* _p, u8 _align)
+{
+	uintptr_t pi = uintptr_t(_p);
+	const uint32_t mod = pi % _align;
+	if (mod)
+	{
+		pi += (_align - mod);
+	}
+	return (void*)pi;
+}
+
+} // namespace memory
 
 } // namespace yae
