@@ -4,18 +4,18 @@
 
 #include <mirror.h>
 
-#include <00-Type/IntTypes.h>
+#include <types.h>
 
 #ifdef __cplusplus    // If used by C++ code, 
 extern "C" {          // we need to export the C interface
 #endif
 
-YAEGAME_API void OnLibraryLoaded();
-YAEGAME_API void OnLibraryUnloaded();
+YAEGAME_API void onLibraryLoaded();
+YAEGAME_API void onLibraryUnloaded();
 
-YAEGAME_API void InitGame();
-YAEGAME_API void UpdateGame();
-YAEGAME_API void ShutdownGame();
+YAEGAME_API void initGame();
+YAEGAME_API void updateGame();
+YAEGAME_API void shutdownGame();
 
 #ifdef __cplusplus
 }
@@ -23,10 +23,10 @@ YAEGAME_API void ShutdownGame();
 
 struct ConfigData
 {
-	yae::u16 windowX;
-	yae::u16 windowY;
-	yae::u16 windowWidth;
-	yae::u16 windowHeight;
+	u16 windowX;
+	u16 windowY;
+	u16 windowWidth;
+	u16 windowHeight;
 	bool fullscreen;
 	float someFloat;
 	double someDouble;

@@ -43,7 +43,7 @@ workspace "yae"
     	architecture "x86_64"
 
 	filter "configurations:Debug"
-		defines { "DEBUG", "YAE_DEBUG" }
+		defines { "DEBUG", "_DEBUG", "YAE_DEBUG" }
 		optimize "Debug"
 		linkoptions { "/DEBUG:FULL" }
 
@@ -81,11 +81,12 @@ project "yaeLib"
 		"./extern/json/json.h",
 	}
 	removefiles {
-		"./src/Engine/00-Platform/**.cpp"
+		"./src/Engine/platforms/**",
 	}
+
 	filter { "system:Windows"}
     	files {
-    		"./src/Engine/00-Platform/Windows_Platform.cpp"
+    		"./src/Engine/platforms/windows/**.cpp"
     	}
     	--[[links {
     		"vcruntime",

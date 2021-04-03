@@ -1,21 +1,30 @@
 #include "Game.h"
 
 #include <stdio.h>
+#include <vector>
 
-#include <00-Type/GlobalContext.h>
-#include <01-Hash/HashTools.h>
-#include <01-Serialization/JsonSerializer.h>
-#include <03-Resource/ResourceManager.h>
-#include <03-Resource/FileResource.h>
+#include <context.h>
+#include <hash.h>
+#include <serialization.h>
+#include <log.h>
 
+#include <resources/FileResource.h>
+
+
+MIRROR_CLASS_DEFINITION(ConfigData);
 
 using namespace yae;
 
-void OnLibraryLoaded()
+bool dummyFunction(float _a, const char* _b)
+{
+	return true;
+}
+
+void onLibraryLoaded()
 {
 	//
 	{
-		FileResource* configFile = FindOrCreateResource<FileResource>("./config.json");
+		FileResource* configFile = findOrCreateResource<FileResource>("./config.json");
 		configFile->useLoad();
 
 		//for (int i = 0; i < 10000; ++i)
@@ -35,22 +44,37 @@ void OnLibraryLoaded()
 
 		configFile->releaseUnuse();
 	}
+
+	mirror::PointerTypeDesc* pointerType = (mirror::PointerTypeDesc*)(mirror::GetTypeDesc<ConfigData*>());
+	mirror::TypeDesc* type = pointerType->getSubType();
+
+	mirror::TypeSet* typeSet = mirror::GetTypeSet();
+	std::vector<mirror::TypeDesc*> types;
+	for (auto& type : typeSet->getTypes())
+	{
+		YAE_LOG(type->getName());
+		types.push_back(type);
+	}
+
+	/*auto functionPtr = &dummyFunction;
+	auto functionType = mirror::GetTypeDesc(functionPtr);*/
+	int a = 0;
 }
 
-void OnLibraryUnloaded()
+void onLibraryUnloaded()
 {
 }
 
-void InitGame()
+void initGame()
 {
 }
 
-void UpdateGame()
+void updateGame()
 {
 	//printf("Hello again World!\n");
 }
 
-void ShutdownGame()
+void shutdownGame()
 {
 
 }
