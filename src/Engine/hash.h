@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <string.h>
 
 #include <types.h>
 #include <yae_string.h>
@@ -48,7 +49,7 @@ public:
 	const char* registerStringHash(u32 _hash, const char* _string);
 
 private:
-	std::unordered_map<u32, MallocString> m_stringMap;
+	std::unordered_map<u32, std::string> m_stringMap;
 };
 
 extern StringHashRepository g_stringHashRepository;

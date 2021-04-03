@@ -76,7 +76,7 @@ const char* StringHashRepository::registerStringHash(u32 _hash, const char* _str
 	auto it = m_stringMap.find(_hash);
 	if (it == m_stringMap.end())
 	{
-		auto ret = m_stringMap.insert(std::pair<u32, MallocString>(_hash, _string));
+		auto ret = m_stringMap.insert(std::pair<u32, std::string>(_hash, _string));
 		YAE_ASSERT(ret.second);
 		return ret.first->second.c_str();
 	}
