@@ -22,7 +22,7 @@ class YAELIB_API Logger
 public:
 	struct LogCategory
 	{
-		String name;
+		String128 name;
 		LogVerbosity verbosity;
 	};
 
