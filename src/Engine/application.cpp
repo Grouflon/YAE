@@ -154,9 +154,69 @@ void Application::run()
 	        	}
 	            ImGui::EndMenu();
 	        }
+
+	        if (ImGui::BeginMenu("Profiling"))
+	        {
+            	ImGui::MenuItem("Memory", NULL, &m_showMemoryProfiler);
+
+	            ImGui::EndMenu();
+	        }
+
 	        ImGui::EndMainMenuBar();
 	    }
 
+	    if (m_showMemoryProfiler)
+	    {
+	    	auto showAllocatorInfo = [](const char* _name, Allocator* _allocator)
+	    	{
+	    		char allocatedSizeBuffer[32];
+		    	char allocableSizeBuffer[32];
+		    	auto formatSize = [](size_t _size, char _buf[32])
+		    	{
+		    		if (_size == Allocator::SIZE_NOT_TRACKED)
+		    		{
+		    			snprintf(_buf, 31, "???");
+		    		}
+		    		else
+		    		{
+		    			const char* units[] =
+		    			{
+		    				"b",
+		    				"Kb",
+		    				"Mb",
+		    				"Gb",
+		    				"Tb"
+		    			};
+
+		    			u8 unit = 0;
+		    			u32 mod = 1024 * 10;
+		    			while (_size > mod)
+		    			{
+		    				_size = _size / mod;
+		    				++unit;
+		    			}
+
+		    			snprintf(_buf, 31, "%zu %s", _size, units[unit]);
+		    		}
+		    	};
+
+	    		formatSize(_allocator->getAllocatedSize(), allocatedSizeBuffer);
+	    		formatSize(_allocator->getAllocableSize(), allocableSizeBuffer);
+
+	    		ImGui::Text("%s: %s / %s, %zu allocations",
+		    		_name,
+		    		allocatedSizeBuffer,
+		    		allocableSizeBuffer,
+		    		_allocator->getAllocationCount()
+		    	);
+	    	};
+
+	    	ImGui::Begin("Memory Profiler", &m_showMemoryProfiler, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize);
+	    	showAllocatorInfo("Default", context().defaultAllocator);
+	    	showAllocatorInfo("Scratch", context().scratchAllocator);
+	    	showAllocatorInfo("Tool", context().toolAllocator);
+	    	ImGui::End();
+	    }
 		//ImGui::ShowDemoWindow(&s_showDemoWindow);
 
 		m_vulkanWrapper->drawMesh();

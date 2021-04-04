@@ -12,9 +12,11 @@
 
 int main(int _argc, char** _argv)
 {
-	yae::FixedSizeAllocator allocator(1024*1024*32);
+    yae::FixedSizeAllocator allocator(1024*1024*32);
+	yae::FixedSizeAllocator toolAllocator(1024*1024*32);
 	yae::context().defaultAllocator = &allocator;
-	yae::context().scratchAllocator = &allocator;
+    yae::context().scratchAllocator = &allocator;
+	yae::context().toolAllocator = &toolAllocator;
 
     yae::Logger logger;
     /*
@@ -27,12 +29,6 @@ int main(int _argc, char** _argv)
 
     yae::ResourceManager resourceManager;
     yae::context().resourceManager = &resourceManager;
-
-	/*mirror::TypeSet* typeSet = mirror::GetTypeSet();
-	for (auto& type : typeSet->getTypes())
-	{
-		YAE_LOG(type->getName());
-	}*/
 
     yae::Application application;
     application.init("yae", 800u, 600u, _argv, _argc);

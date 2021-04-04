@@ -32,6 +32,8 @@ private:
 	VulkanRenderer* m_vulkanWrapper = nullptr;
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
+
+	bool m_showMemoryProfiler = false;
 };
 
 } // namespace yae

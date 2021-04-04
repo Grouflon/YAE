@@ -12,6 +12,7 @@ struct YAELIB_API Context
 {
 	Allocator* defaultAllocator = nullptr;
 	Allocator* scratchAllocator = nullptr;
+	Allocator* toolAllocator = nullptr; // Will be null in standalone
 
 	Logger* logger = nullptr;
 	ResourceManager* resourceManager = nullptr;
