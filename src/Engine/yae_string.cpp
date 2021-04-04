@@ -11,8 +11,6 @@ namespace yae {
 
 const size_t String::INVALID_POS = size_t(-1);
 
-
-
 String::String(Allocator* _allocator)
 	: m_allocator(_allocator)
 {
@@ -153,7 +151,14 @@ String& String::replace(size_t _position, size_t _count, const char* _replacemen
 	return *this;
 }
 
-
+String& String::operator=(const char* _str)
+{
+	size_t length = strlen(_str);
+	reserve(length);
+	memcpy(m_buffer, _str, length + 1);
+	m_length = length;
+	return *this;
+}
 
 String& String::operator=(const String& _str)
 {
@@ -166,8 +171,8 @@ String& String::operator=(const String& _str)
 
 MallocAllocator s_mallocAllocator;
 MallocString::MallocString() : String(&s_mallocAllocator) {}
-MallocString::MallocString(const char* _str) : String(_str, &s_mallocAllocator) {}
-MallocString::MallocString(const String& _str) : String(_str, &s_mallocAllocator) {}
+/*MallocString::MallocString(const char* _str) : String(_str, &s_mallocAllocator) {}
+MallocString::MallocString(const String& _str) : String(_str, &s_mallocAllocator) {}*/
 
 
 namespace string {

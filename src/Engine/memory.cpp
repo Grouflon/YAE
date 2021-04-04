@@ -76,7 +76,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 		}
 		block = block->next;
 	}
-	YAE_ASSERT_MSGF(streakStartBlock != nullptr, "Out of memory! %d / %d, %d requested", );
+	YAE_ASSERT_MSGF(streakStartBlock != nullptr, "Out of memory! %d / %d, %d requested", m_allocatedSize, m_allocableSize, _size);
 	size_t remainingSize = availableSize - requestedSize;
 	u8* streakStartBlockData = _getData(streakStartBlock);
 
@@ -109,7 +109,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	memset(streakStartBlockData, HEADER_PAD_VALUE, dataStart - streakStartBlockData);
 
 	YAE_ASSERT(!streakStartBlock->next || streakStartBlock->next == (Header*)(streakStartBlockData + streakStartBlock->size));
-	m_allocatedMemory = m_allocatedMemory + _getBlockSize(streakStartBlock);
+	m_allocatedSize = m_allocatedSize + _getBlockSize(streakStartBlock);
 	++m_allocationCount;
 
 #if YAE_DEBUG
@@ -136,7 +136,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 			YAE_ASSERT(block->used);
 			block->used = false;
 			--m_allocationCount;
-			m_allocatedMemory = m_allocatedMemory - _getBlockSize(block);
+			m_allocatedSize = m_allocatedSize - _getBlockSize(block);
 
 #if YAE_DEBUG
 			memset(data, 0xDD, block->size);
@@ -225,7 +225,7 @@ void* MallocAllocator::allocate(size_t _size, u8 _align)
 	memset(data, HEADER_PAD_VALUE, dataStart - data);
 
 	++m_allocationCount;
-	m_allocatedMemory += blockSize;
+	m_allocatedSize += blockSize;
 
 	return dataStart;
 }
@@ -236,7 +236,7 @@ void MallocAllocator::deallocate(void* _memory)
 {
 	if (_memory == nullptr)
 		return;
-	
+
 	Header* block = _getHeader(_memory);
 	YAE_ASSERT(block != nullptr);
 
@@ -249,7 +249,7 @@ void MallocAllocator::deallocate(void* _memory)
 	free(block);
 
 	--m_allocationCount;
-	m_allocatedMemory -= blockSize;
+	m_allocatedSize -= blockSize;
 }
 
 

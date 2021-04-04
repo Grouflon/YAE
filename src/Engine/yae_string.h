@@ -1,6 +1,7 @@
 #pragma once
 
 #include <types.h>
+#include <memory.h>
 
 namespace yae {
 
@@ -30,6 +31,7 @@ public:
 	String& replace(const char* _toReplace, const char* _replacement);
 	String& replace(size_t _position, size_t _count, const char* _replacement);
 
+	String& operator=(const char* _str);
 	String& operator=(const String& _str);
 
 private:
@@ -45,9 +47,35 @@ class YAELIB_API MallocString : public String
 {
 public:
 	MallocString();
-	MallocString(const char* _str);
-	MallocString(const String& _str);
+	/*MallocString(const char* _str);
+	MallocString(const String& _str);*/
 };
+
+
+
+template <size_t INLINE_SIZE>
+class InlineString : public String
+{
+public:
+	InlineString() : String(&m_inlineAllocator) {}
+	InlineString(const char* _str) : String(&m_inlineAllocator)
+	{
+		String::operator=(_str);
+	}
+	InlineString(const String& _str) :String(&m_inlineAllocator)
+	{
+		String::operator=(_str);
+	}
+
+private:
+	InlineAllocator<INLINE_SIZE> m_inlineAllocator;
+};
+
+typedef InlineString<32> String32;
+typedef InlineString<64> String64;
+typedef InlineString<128> String128;
+typedef InlineString<256> String256;
+typedef InlineString<512> String512;
 
 
 // TOOLS
