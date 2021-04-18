@@ -4,6 +4,15 @@
 
 namespace yae {
 
+StringHash::StringHash()
+	: m_hash(0u)
+#if DEBUG_STRINGHASH
+	, m_string(nullptr)
+#endif
+{
+
+}
+
 StringHash::StringHash(const char* _str)
 {
 	m_hash = hash::hashString(_str);
@@ -68,6 +77,11 @@ bool StringHash::operator>=(const StringHash& _rhs) const
 	return m_hash >= _rhs.m_hash;
 }
 
+
+u32 StringHash::operator%(u32 _rhs) const
+{
+	return m_hash % _rhs;
+}
 
 
 #if DEBUG_STRINGHASH

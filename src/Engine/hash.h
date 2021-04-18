@@ -20,6 +20,7 @@ namespace yae {
 class YAELIB_API StringHash
 {
 public:
+	StringHash();
 	StringHash(const char* _str);
 	~StringHash();
 
@@ -32,6 +33,7 @@ public:
 	bool operator> (const StringHash& _rhs) const;
 	bool operator<=(const StringHash& _rhs) const;
 	bool operator>=(const StringHash& _rhs) const;
+	u32 operator%(u32 _rhs) const;
 
 private:
 	u32 m_hash;
