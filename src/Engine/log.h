@@ -33,7 +33,7 @@ public:
 	LogCategory& findCategory(const char* _categoryName);
 
 private:
-	std::unordered_map<StringHash, LogCategory> m_categories;
+	std::unordered_map<StringHash, LogCategory, std::hash<StringHash>, std::equal_to<StringHash>, yae::DefaultAllocator<std::pair<const StringHash,LogCategory>>> m_categories;
 };
 
 
