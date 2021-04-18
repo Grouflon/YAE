@@ -1,8 +1,8 @@
 #include "VulkanRenderer.h"
 
-#include <set>
-#include <vector>
-#include <chrono>
+#include <log.h>
+#include <resources/FileResource.h>
+#include <profiling.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
@@ -12,8 +12,8 @@
 
 #include <vulkan/imgui_impl_vulkan.h>
 
-#include <log.h>
-#include <resources/FileResource.h>
+#include <set>
+#include <vector>
 
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
@@ -167,7 +167,8 @@ VkPresentModeKHR ChooseSwapPresentMode(const VkPresentModeKHR* _availablePresent
 {
 	for (size_t i = 0; i < _availablePresentModeCount; ++i)
 	{
-		if (_availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+		//if (_availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR) // vsync
+		if (_availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) // no vsync
 		{
 			return _availablePresentModes[i];
 		}
@@ -725,6 +726,8 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	// Create Swap Chain
 	_createSwapChain();
 
+	m_clock.reset();
+
 	return true;
 }
 
@@ -784,6 +787,8 @@ void VulkanRenderer::beginFrame()
 
 void VulkanRenderer::drawMesh()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 
 	vkCmdBindPipeline(frame.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
@@ -799,6 +804,8 @@ void VulkanRenderer::drawMesh()
 
 void VulkanRenderer::drawImGui(ImDrawData* _drawData)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 
 	ImGui_ImplVulkan_RenderDrawData(_drawData, frame.commandBuffer);
@@ -806,6 +813,8 @@ void VulkanRenderer::drawImGui(ImDrawData* _drawData)
 
 void VulkanRenderer::endFrame()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
 	
 	vkCmdEndRenderPass(frame.commandBuffer);
@@ -855,6 +864,8 @@ void VulkanRenderer::endFrame()
 
 void VulkanRenderer::waitIdle()
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	VK_VERIFY(vkDeviceWaitIdle(m_device));
 }
 
@@ -1848,13 +1859,8 @@ VkImageView VulkanRenderer::_createImageView(VkImage _image, VkFormat _format, V
 
 void VulkanRenderer::_updateUniformBuffer(u32 _imageIndex)
 {
-	static auto s_startTime = std::chrono::high_resolution_clock::now();
-
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - s_startTime).count();
-
 	UniformBufferObject ubo{};
-	ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
+	ubo.model = glm::rotate(glm::mat4(1.f), m_clock.elapsed().asSeconds() * glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
 	ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
 	ubo.proj = glm::perspective(glm::radians(45.f), m_swapChainExtent.width / float(m_swapChainExtent.height), .1f, 10.f);
 	ubo.proj[1][1] *= -1;

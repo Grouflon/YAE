@@ -7,6 +7,7 @@
 #include <vk_mem_alloc.h>
 
 #include <types.h>
+#include <yae_time.h>
 
 struct ImDrawData;
 
@@ -152,6 +153,8 @@ private:
 
 	bool m_validationLayersEnabled = false;
 	bool m_framebufferResized = false;
+
+	Clock m_clock;
 };
 
 }

@@ -5,7 +5,9 @@
 #include <backends/imgui_impl_glfw.h>
 
 #include <platform.h>
+#include <profiling.h>
 #include <log.h>
+#include <yae_time.h>
 #include <vulkan/VulkanRenderer.h>
 
 typedef void (*GameFunctionPtr)();
@@ -28,6 +30,8 @@ struct GameAPI
 
 void loadGameAPI()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	bool ret = platform::duplicateFile(GAME_DLL_PATH, TMP_GAME_DLL_PATH);
 	YAE_ASSERT(ret);
 	s_gameAPI.lastWriteTime = platform::getFileLastWriteTime(GAME_DLL_PATH);
@@ -49,6 +53,8 @@ void loadGameAPI()
 
 void unloadGameAPI()
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	s_gameAPI.onLibraryUnloaded();
 	
 	platform::unloadDynamicLibrary(s_gameAPI.libraryHandle);
@@ -57,6 +63,8 @@ void unloadGameAPI()
 
 void watchGameAPI()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	u64 lastWriteTime = platform::getFileLastWriteTime(GAME_DLL_PATH);
 	if (lastWriteTime != s_gameAPI.lastWriteTime)
 	{
@@ -76,6 +84,9 @@ void onGlfwKeyEvent(GLFWwindow* window, int key, int scancode, int action, int m
 
 void Application::init(const char* _name, u32 _width, u32 _height, char** _args, int _arg_count)
 {
+	YAE_CAPTURE_START("init");
+	YAE_CAPTURE_FUNCTION();
+
 	m_name = _name;
 
 	m_exePath = Path(_args[0]);
@@ -87,6 +98,8 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 
 	// Init GLFW
 	{
+		YAE_CAPTURE_SCOPE("glfwInit");
+
 		int result = glfwInit();
 		YAE_ASSERT(result == GLFW_TRUE);
 		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
@@ -102,7 +115,7 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 	YAE_VERBOSE_CAT("glfw", "Created glfw window");
 
 	// Init Vulkan
-	m_vulkanWrapper = new VulkanRenderer();
+	m_vulkanWrapper = context().defaultAllocator->create<VulkanRenderer>();
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -129,18 +142,29 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 	loadGameAPI();
 
 	s_gameAPI.gameInit();
+
+	YAE_CAPTURE_STOP("init");
 }
 
 void Application::run()
 {
+	Clock clock;
+	clock.reset();
+
 	//static bool s_showDemoWindow = true;
 	while (!glfwWindowShouldClose(m_window))
 	{
-		glfwPollEvents();
+		YAE_CAPTURE_START("frame");
 
-		ImGui_ImplGlfw_NewFrame();
-		m_vulkanWrapper->beginFrame();
-		ImGui::NewFrame();
+		{
+			YAE_CAPTURE_SCOPE("beginFrame");
+
+			glfwPollEvents();
+			ImGui_ImplGlfw_NewFrame();
+			m_vulkanWrapper->beginFrame();
+			ImGui::NewFrame();	
+		}
+		
 
 		s_gameAPI.gameUpdate();
 
@@ -233,6 +257,15 @@ void Application::run()
 		m_vulkanWrapper->endFrame();
 
 		watchGameAPI();
+
+		/*Time frameTime = clock.reset();
+		printf("%f\n", 1.0 / frameTime.asSeconds64());*/
+
+#if YAE_PROFILING_ENABLED
+		context().profiler->update();
+#endif
+
+		YAE_CAPTURE_STOP("frame");
 	}
 	m_vulkanWrapper->waitIdle();
 }
@@ -248,7 +281,7 @@ void Application::shutdown()
 	m_imgui = nullptr;
 
 	m_vulkanWrapper->shutdown();
-	delete m_vulkanWrapper;
+	context().defaultAllocator->destroy<VulkanRenderer>(m_vulkanWrapper);
 	m_vulkanWrapper = nullptr;
 
 	glfwDestroyWindow(m_window);
