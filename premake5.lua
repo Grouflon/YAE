@@ -98,7 +98,8 @@ project "yaeLib"
 
 	defines {
 		"YAELIB_EXPORT",
-		"MIRROR_EXPORT"
+		"MIRROR_EXPORT",
+		"IMGUI_API=__declspec(dllexport)",
 	}
 
 	libdirs {
@@ -139,7 +140,8 @@ project "yaeGame"
 	}
 
 	defines {
-		"YAEGAME_EXPORT"
+		"YAEGAME_EXPORT",
+		"IMGUI_API=__declspec(dllimport)",
 	}
 
 	links {
@@ -154,6 +156,10 @@ project "yae"
 
 	files { 
 		"./src/main.cpp",
+	}
+
+	defines {
+		"IMGUI_API=__declspec(dllimport)",
 	}
 
 	links {
