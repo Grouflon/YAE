@@ -30,6 +30,7 @@ private:
 	Path m_baseDirectoryPath;
 
 	VulkanRenderer* m_vulkanWrapper = nullptr;
+
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
 
