@@ -36,6 +36,10 @@ FixedSizeAllocator::~FixedSizeAllocator()
 // @OPTIM: align all allocations on 4, so we can use a u32 as HEADER_PAD_VALUE and do less operations
 void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 {
+	if (_align < 4)
+	{
+		_align = 4;
+	}
 	YAE_ASSERT(_align % 4 == 0);
 	_size = ((_size + 3)/4)*4;
 	size_t requestedSize = _size;
