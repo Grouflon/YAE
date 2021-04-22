@@ -4,19 +4,18 @@
 #include <memory.h>
 
 #include <cstring>
+#include <type_traits>
 
 namespace yae {
 
 class Allocator;
 
 template <typename T>
-class Array
+class BaseArray
 {
 public:
-	Array(Allocator* _allocator = nullptr);
-	Array(const Array<T> &_other);
-	Array<T>& operator=(const Array<T>& _other);
-	~Array();
+	BaseArray(Allocator* _allocator = nullptr);
+	//~BaseArray();
 	// @TODO: move constructor ?
 
 	// Accessors
@@ -36,26 +35,65 @@ public:
 	T* end();
 	const T* end() const;
 
-	// Manipulation
-	void reserve(u32 _newCapacity);
-	void resize(u32 _newSize);
-	void clear();
-	void push_back(const T& _item);
-	void pop_back();
-	void erase(u32 _index, u32 _count);
-
 	// Misc
 	Allocator* allocator() const;
 
-private:
-	void _setCapacity(u32 _newCapacity);
-	void _grow(u32 _minCapacity);
+protected:
 
 	Allocator* m_allocator = nullptr;
 	u32 m_size = 0;
 	u32 m_capacity = 0;
 	T* m_data = nullptr;
 };
+
+
+template <typename T>
+class DataArray : public BaseArray<T>
+{
+	static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
+
+public:
+	DataArray(Allocator* _allocator = nullptr);
+	DataArray(const DataArray<T> &_other);
+	DataArray<T>& operator=(const DataArray<T>& _other);
+	~DataArray();
+
+	void resize(u32 _newSize);
+	void clear();
+	void push_back(const T& _item);
+	void pop_back();
+	void erase(u32 _index, u32 _count);
+	void reserve(u32 _newCapacity);
+
+protected:
+	void _setCapacity(u32 _newCapacity);
+	void _grow(u32 _minCapacity);
+};
+
+
+template <typename T>
+class Array : public BaseArray<T>
+{
+	static_assert(std::is_default_constructible<T>::value, "T must be default constructible");
+
+public:
+	Array(Allocator* _allocator = nullptr);
+	Array(const Array<T> &_other);
+	Array<T>& operator=(const Array<T>& _other);
+	~Array();
+
+	void resize(u32 _newSize);
+	void clear();
+	void push_back(const T& _item);
+	void pop_back();
+	void erase(u32 _index, u32 _count);
+	void reserve(u32 _newCapacity);
+
+protected:
+	void _setCapacity(u32 _newCapacity);
+	void _grow(u32 _minCapacity);
+};
+
 
 
 template <typename Key, typename T>
@@ -121,20 +159,266 @@ private:
 
 // Array
 template <typename T>
-Array<T>::Array(Allocator* _allocator)
+BaseArray<T>::BaseArray(Allocator* _allocator)
 	: m_allocator(_allocator)
 {
 }
 
 
 template <typename T>
-Array<T>::Array(const Array<T> &_other)
-	: Array(_other.m_allocator)
+T& BaseArray<T>::operator[](u32 _i)
+{
+	YAE_ASSERT(_i < m_size);
+	return m_data[_i];
+}
+
+
+template <typename T>
+const T& BaseArray<T>::operator[](u32 _i) const
+{
+	YAE_ASSERT(_i < m_size);
+	return m_data[_i];
+}
+
+
+template <typename T>
+T& BaseArray<T>::front()
+{
+	YAE_ASSERT(m_size > 0);
+	return m_data[0];
+}
+
+
+template <typename T>
+const T& BaseArray<T>::front() const
+{
+	YAE_ASSERT(m_size > 0);
+	return m_data[0];
+}
+
+
+template <typename T>
+T& BaseArray<T>::back()
+{
+	YAE_ASSERT(m_size > 0);
+	return m_data[m_size - 1];
+}
+
+
+template <typename T>
+const T& BaseArray<T>::back() const
+{
+	YAE_ASSERT(m_size > 0);
+	return m_data[m_size - 1];
+}
+
+
+template <typename T>
+u32 BaseArray<T>::size() const
+{
+	return m_size;
+}
+
+
+template <typename T>
+bool BaseArray<T>::empty() const
+{
+	return m_size == 0;
+}
+
+
+template <typename T>
+T* BaseArray<T>::data() const
+{
+	return m_data;
+}
+
+
+template <typename T>
+T* BaseArray<T>::begin()
+{
+	return m_data;
+}
+
+
+template <typename T>
+const T* BaseArray<T>::begin() const
+{
+	return m_data;
+}
+
+
+template <typename T>
+T* BaseArray<T>::end()
+{
+	return m_data + m_size;
+}
+
+
+template <typename T>
+const T* BaseArray<T>::end() const
+{
+	return m_data + m_size;
+}
+
+
+template <typename T>
+Allocator* BaseArray<T>::allocator() const
+{
+	return m_allocator;
+}
+
+// DataArray
+
+template <typename T>
+DataArray<T>::DataArray(Allocator* _allocator)
+	: BaseArray(_allocator)
+{
+
+}
+
+
+template <typename T>
+DataArray<T>::DataArray(const DataArray<T> &_other)
+	: BaseArray(_other.m_allocator)
 {
 	u32 size = _other.m_size;
 	_setCapacity(size);
-	memcpy(m_data, _other.m_data, size);
 	m_size = size;
+	memcpy(m_data, _other.m_data, m_size * sizeof(T));
+}
+
+
+template <typename T>
+DataArray<T>& DataArray<T>::operator=(const DataArray<T>& _other)
+{
+	if (m_allocator != _other.m_allocator)
+	{
+		this->~DataArray();
+		m_allocator = _other.m_allocator;
+	}
+	u32 size = _other.m_size;
+	resize(size);
+	memcpy(m_data, _other.m_data, m_size * sizeof(T));
+	return *this;
+}
+
+
+template <typename T>
+DataArray<T>::~DataArray()
+{
+	if (m_allocator)
+	{
+		m_allocator->deallocate(m_data);		
+	}
+}
+
+
+template <typename T>
+void DataArray<T>::reserve(u32 _newCapacity)
+{
+	if (_newCapacity > m_capacity)
+		_setCapacity(_newCapacity);
+}
+
+
+template <typename T>
+void DataArray<T>::resize(u32 _newSize)
+{
+	if (_newSize > m_capacity)
+	{
+		_grow(_newSize);
+	}
+
+	m_size = _newSize;
+}
+
+
+template <typename T>
+void DataArray<T>::clear()
+{
+	m_size = 0;
+}
+
+
+template <typename T>
+void DataArray<T>::push_back(const T& _item)
+{
+	resize(m_size + 1);
+	m_data[m_size - 1] = _item;
+}
+
+
+template <typename T>
+void DataArray<T>::pop_back()
+{
+	m_size = m_size - 1;
+}
+
+
+template <typename T>
+void DataArray<T>::erase(u32 _index, u32 _count)
+{
+	if (_count == 0)
+		return;
+
+	// @OPTIM: May use memcpy here since we are always moving memory backwards, but I'm not sure. This is still undefined behavior according to the c++ doc
+	std::memmove(m_data + _index, m_data + _index + _count, (m_size - (_index + _count)) * sizeof(T));
+	resize(m_size - _count);
+}
+
+template <typename T>
+void DataArray<T>::_setCapacity(u32 _newCapacity)
+{
+	if (m_capacity == _newCapacity)
+		return;
+
+	if (_newCapacity < m_capacity)
+		resize(_newCapacity);
+
+	T* newData = nullptr;
+	if (_newCapacity > 0)
+	{
+		newData = (T*)m_allocator->allocate(sizeof(T) * _newCapacity, alignof(T));
+		memcpy(newData, m_data, sizeof(T) * m_size);
+	}
+	m_allocator->deallocate(m_data);
+	m_data = newData;
+	m_capacity = _newCapacity;
+}
+
+
+template <typename T>
+void DataArray<T>::_grow(u32 _minCapacity)
+{
+	u32 newCapacity = m_capacity * 2 + 8;
+	if (newCapacity < _minCapacity)
+		newCapacity = _minCapacity;
+
+	_setCapacity(newCapacity);
+}
+
+// Array
+
+template <typename T>
+Array<T>::Array(Allocator* _allocator)
+	: BaseArray(_allocator)
+{
+
+}
+
+
+template <typename T>
+Array<T>::Array(const Array<T> &_other)
+	: BaseArray(_other.m_allocator)
+{
+	u32 size = _other.m_size;
+	_setCapacity(size);
+	m_size = size;
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		m_data[i] = _other.m_data[i];
+	}
 }
 
 
@@ -148,7 +432,10 @@ Array<T>& Array<T>::operator=(const Array<T>& _other)
 	}
 	u32 size = _other.m_size;
 	resize(size);
-	memcpy(m_data, _other.m_data, size);
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		m_data[i] = _other.m_data[i];
+	}
 	return *this;
 }
 
@@ -156,107 +443,11 @@ Array<T>& Array<T>::operator=(const Array<T>& _other)
 template <typename T>
 Array<T>::~Array()
 {
+	clear();
 	if (m_allocator)
 	{
 		m_allocator->deallocate(m_data);		
 	}
-}
-
-
-template <typename T>
-T& Array<T>::operator[](u32 _i)
-{
-	YAE_ASSERT(_i < m_size);
-	return m_data[_i];
-}
-
-
-template <typename T>
-const T& Array<T>::operator[](u32 _i) const
-{
-	YAE_ASSERT(_i < m_size);
-	return m_data[_i];
-}
-
-
-template <typename T>
-T& Array<T>::front()
-{
-	YAE_ASSERT(m_size > 0);
-	return m_data[0];
-}
-
-
-template <typename T>
-const T& Array<T>::front() const
-{
-	YAE_ASSERT(m_size > 0);
-	return m_data[0];
-}
-
-
-template <typename T>
-T& Array<T>::back()
-{
-	YAE_ASSERT(m_size > 0);
-	return m_data[m_size - 1];
-}
-
-
-template <typename T>
-const T& Array<T>::back() const
-{
-	YAE_ASSERT(m_size > 0);
-	return m_data[m_size - 1];
-}
-
-
-template <typename T>
-u32 Array<T>::size() const
-{
-	return m_size;
-}
-
-
-template <typename T>
-bool Array<T>::empty() const
-{
-	return m_size == 0;
-}
-
-
-template <typename T>
-T* Array<T>::data() const
-{
-	return m_data;
-}
-
-
-template <typename T>
-T* Array<T>::begin()
-{
-	return m_data;
-}
-
-
-template <typename T>
-const T* Array<T>::begin() const
-{
-	return m_data;
-}
-
-
-template <typename T>
-T* Array<T>::end()
-{
-	return m_data + m_size;
-}
-
-
-template <typename T>
-const T* Array<T>::end() const
-{
-	return m_data + m_size;
 }
 
 
@@ -271,10 +462,29 @@ void Array<T>::reserve(u32 _newCapacity)
 template <typename T>
 void Array<T>::resize(u32 _newSize)
 {
+	if (_newSize == m_size)
+		return;
+
 	if (_newSize > m_capacity)
 	{
 		_grow(_newSize);
 	}
+
+	if (_newSize > m_size)
+	{
+		for (u32 i = m_size; i < _newSize; ++i)
+		{
+			new (m_data + i) T();
+		}
+	}
+	else
+	{
+		for (u32 i = _newSize; i < m_size; ++i)
+		{
+			m_data[i].~T();
+		}
+	}
+
 	m_size = _newSize;
 }
 
@@ -282,6 +492,10 @@ void Array<T>::resize(u32 _newSize)
 template <typename T>
 void Array<T>::clear()
 {
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		m_data[i].~T();
+	}
 	m_size = 0;
 }
 
@@ -290,6 +504,7 @@ template <typename T>
 void Array<T>::push_back(const T& _item)
 {
 	resize(m_size + 1);
+	new (m_data + m_size - 1) T();
 	m_data[m_size - 1] = _item;
 }
 
@@ -297,28 +512,27 @@ void Array<T>::push_back(const T& _item)
 template <typename T>
 void Array<T>::pop_back()
 {
-	--m_size;
+	m_data[m_size - 1].~T();
+	m_size = m_size - 1;
 }
 
 
 template <typename T>
 void Array<T>::erase(u32 _index, u32 _count)
 {
-	if (_count == 0)
+	if (_count <= 0)
 		return;
 
+	i32 rangeEnd = _index + _count;
+	for (u32 i = _index; i < rangeEnd; ++i)
+	{
+		m_data[i].~T();
+	}
+
 	// @OPTIM: May use memcpy here since we are always moving memory backwards, but I'm not sure. This is still undefined behavior according to the c++ doc
-	std::memmove(m_data + _index, m_data + _index + _count, (m_size - (_index + _count)) * sizeof(T));
-	m_size -= _count;
+	std::memmove(m_data + _index, m_data + rangeEnd, (m_size - (rangeEnd)) * sizeof(T));
+	resize(m_size - _count);
 }
-
-
-template <typename T>
-Allocator* Array<T>::allocator() const
-{
-	return m_allocator;
-}
-
 
 template <typename T>
 void Array<T>::_setCapacity(u32 _newCapacity)
@@ -350,6 +564,7 @@ void Array<T>::_grow(u32 _minCapacity)
 
 	_setCapacity(newCapacity);
 }
+
 
 // HashMap
 
