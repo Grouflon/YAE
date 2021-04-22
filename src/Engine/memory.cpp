@@ -206,6 +206,10 @@ size_t FixedSizeAllocator::_getBlockSize(Header* _header)
 }
 
 
+MallocAllocator::MallocAllocator() : Allocator()
+{
+}
+
 
 MallocAllocator::~MallocAllocator()
 {

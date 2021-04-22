@@ -84,6 +84,7 @@ private:
 class YAELIB_API MallocAllocator : public Allocator
 {
 public:
+	MallocAllocator();
 	virtual ~MallocAllocator();
 
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
