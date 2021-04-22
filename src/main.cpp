@@ -25,8 +25,9 @@ int main(int _argc, char** _argv)
 {
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
-    yae::FixedSizeAllocator allocator(1024*1024*32);
-	yae::FixedSizeAllocator toolAllocator(1024*1024*32);
+    yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
+    yae::FixedSizeAllocator toolAllocator = yae::FixedSizeAllocator(1024*1024*32);
+
 	yae::context().defaultAllocator = &allocator;
     yae::context().scratchAllocator = &allocator;
 	yae::context().toolAllocator = &toolAllocator;
@@ -49,9 +50,36 @@ int main(int _argc, char** _argv)
     yae::Application application;
     yae::context().application = &application;
 
+    YAE_CAPTURE_START("init");
     application.init("yae", 800u, 600u, _argv, _argc);
+    YAE_CAPTURE_STOP("init");
+
+    {
+        yae::String dump;
+        profiler.dumpCapture("init", dump);
+        printf(dump.c_str());
+        printf("\n");
+    }
+
     application.run();
+
+    {
+        yae::String dump;
+        profiler.dumpCapture("frame", dump);
+        printf(dump.c_str());
+        printf("\n");
+    }
+
+    YAE_CAPTURE_START("shutdown");
     application.shutdown();
+    YAE_CAPTURE_STOP("shutdown");
+
+    {
+        yae::String dump;
+        profiler.dumpCapture("shutdown", dump);
+        printf(dump.c_str());
+        printf("\n");
+    }
 
     return EXIT_SUCCESS;
 }

@@ -200,6 +200,8 @@ VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, GLFWw
 
 bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	m_window = _window;
 	m_validationLayersEnabled = _validationLayersEnabled;
 
@@ -733,6 +735,8 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 void VulkanRenderer::beginFrame()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	ImGui_ImplVulkan_NewFrame();
 
 	VK_VERIFY(vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFlightFrame], VK_TRUE, UINT64_MAX));
@@ -871,6 +875,8 @@ void VulkanRenderer::waitIdle()
 
 void VulkanRenderer::shutdown()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	_destroySwapChain();
 
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
@@ -1088,6 +1094,8 @@ bool VulkanRenderer::LoadModel(const char* _path, std::vector<Vertex>& _outVerti
 
 void VulkanRenderer::_createSwapChain()
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	// Create Swap Chain
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Swap Chain...");
@@ -1602,6 +1610,8 @@ void VulkanRenderer::_createSwapChain()
 
 void VulkanRenderer::_destroySwapChain()
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	m_imagesInFlight.clear();
 	u32 frameCount = u32(m_frameobjects.size());
 

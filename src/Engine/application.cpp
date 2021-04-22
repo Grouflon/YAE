@@ -84,7 +84,6 @@ void onGlfwKeyEvent(GLFWwindow* window, int key, int scancode, int action, int m
 
 void Application::init(const char* _name, u32 _width, u32 _height, char** _args, int _arg_count)
 {
-	YAE_CAPTURE_START("init");
 	YAE_CAPTURE_FUNCTION();
 
 	m_name = _name;
@@ -143,7 +142,6 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 
 	s_gameAPI.gameInit();
 
-	YAE_CAPTURE_STOP("init");
 }
 
 void Application::run()
@@ -272,6 +270,8 @@ void Application::run()
 
 void Application::shutdown()
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	s_gameAPI.gameShutdown();
 	unloadGameAPI();
 
