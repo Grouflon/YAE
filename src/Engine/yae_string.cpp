@@ -9,10 +9,12 @@
 
 namespace yae {
 
+char* EMPTY_STRING = "";
 const size_t String::INVALID_POS = size_t(-1);
 
 String::String(Allocator* _allocator)
 	: m_allocator(_allocator)
+	, m_buffer(EMPTY_STRING)
 {
 	if (m_allocator == nullptr)
 	{
@@ -44,7 +46,10 @@ String::String(const String& _str, Allocator* _allocator)
 
 String::~String()
 {
-	m_allocator->deallocate(m_buffer);
+	if (m_buffer != EMPTY_STRING)
+	{
+		m_allocator->deallocate(m_buffer);		
+	}
 }
 
 
@@ -68,7 +73,10 @@ void String::reserve(size_t _size)
 	{
 		void* buffer = m_allocator->allocate(sizeRequired);
 		memcpy(buffer, m_buffer, m_bufferSize);
-		m_allocator->deallocate(m_buffer);
+		if (m_buffer != EMPTY_STRING)
+		{
+			m_allocator->deallocate(m_buffer);
+		}
 		m_buffer = (char*)buffer;
 		m_bufferSize = sizeRequired;
 		YAE_ASSERT_MSG(m_buffer != nullptr, "Allocation failed");
@@ -97,7 +105,7 @@ void String::resize(size_t _size, char _c)
 
 void String::clear()
 {
-	if (m_buffer != nullptr)
+	if (m_buffer != EMPTY_STRING)
 	{
 		m_length = 0;
 		m_buffer[m_length] = 0;
@@ -108,7 +116,7 @@ void String::clear()
 
 size_t String::find(const char* _str, size_t _startPosition) const
 {
-	if (m_buffer == nullptr || _str == nullptr)
+	if (m_buffer == EMPTY_STRING || _str == nullptr)
 		return INVALID_POS;
 
 	if (_startPosition >= m_length)
@@ -169,10 +177,67 @@ String& String::operator=(const String& _str)
 }
 
 
+String String::operator+(char _char) const
+{
+	String result = *this;
+	result += _char;
+	return result;
+}
+
+
+
+String String::operator+(const char* _str) const
+{
+	String result = *this;
+	result += _str;
+	return result;
+}
+
+
+String String::operator+(const String& _str) const
+{
+	String result = *this;
+	result += _str;
+	return result;
+}
+
+
+String& String::operator+=(char _char)
+{
+	reserve(m_length + 1);
+	m_buffer[m_length] = _char;
+	m_length = m_length + 1;
+	m_buffer[m_length] = 0;
+	return *this;
+}
+
+
+String& String::operator+=(const char* _str)
+{
+	size_t length = strlen(_str);
+	size_t newLength = m_length + length;
+	reserve(newLength);
+	memcpy(m_buffer + m_length, _str, length);
+	m_buffer[newLength] = 0;
+	m_length = newLength;
+	return *this;
+}
+
+
+String& String::operator+=(const String& _str)
+{
+	size_t length = _str.m_length;
+	size_t newLength = m_length + length;
+	reserve(newLength);
+	memcpy(m_buffer + m_length, _str.m_buffer, length);
+	m_buffer[newLength] = 0;
+	m_length = newLength;
+	return *this;
+}
+
+
 MallocAllocator s_mallocAllocator;
 MallocString::MallocString() : String(&s_mallocAllocator) {}
-/*MallocString::MallocString(const char* _str) : String(_str, &s_mallocAllocator) {}
-MallocString::MallocString(const String& _str) : String(_str, &s_mallocAllocator) {}*/
 
 
 namespace string {

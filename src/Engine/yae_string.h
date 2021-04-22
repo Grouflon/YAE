@@ -19,7 +19,7 @@ public:
 
 	String(String&& _str);
 
-	size_t getLength() const { return m_length; }
+	size_t size() const { return m_length; }
 	const char* c_str() const { return m_buffer; }
 	char* data() { return m_buffer; }
 
@@ -33,6 +33,12 @@ public:
 
 	String& operator=(const char* _str);
 	String& operator=(const String& _str);
+	String operator+(char _char) const;
+	String operator+(const char* _str) const;
+	String operator+(const String& _str) const;
+	String& operator+=(char _char);
+	String& operator+=(const char* _str);
+	String& operator+=(const String& _str);
 
 private:
 	char* m_buffer = nullptr;
