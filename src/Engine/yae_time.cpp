@@ -1,6 +1,7 @@
 #include "yae_time.h"
 
 #include <platform.h>
+#include <yae_string.h>
 
 #include <climits>
 
@@ -16,13 +17,13 @@ i64 getFrequency()
 
 namespace yae {
 
-Time Time::operator+(const Time& _rhs)
+Time Time::operator+(const Time& _rhs) const
 {
 	return Time(time + _rhs.time);
 }
 
 
-Time Time::operator-(const Time& _rhs)
+Time Time::operator-(const Time& _rhs) const
 {
 	return Time(time - _rhs.time);	
 }
@@ -61,6 +62,18 @@ bool Time::operator<=(const Time& _rhs) const
 bool Time::operator>=(const Time& _rhs) const
 {
 	return time >= _rhs.time;
+}
+
+
+double Time::asMilliSeconds64() const
+{
+	return time::timeToMilliSeconds64(time);
+}
+
+
+float Time::asMilliSeconds() const
+{
+	return time::timeToMilliSeconds(time);
 }
 
 
@@ -114,15 +127,45 @@ i64 timeToMicroSeconds(i64 _time)
 	return (_time * 1000000) / getFrequency();
 }
 
+double timeToMilliSeconds64(i64 _time)
+{
+	return double(timeToMicroSeconds(_time)) / 1000.0;
+}
+
+
+float timeToMilliSeconds(i64 _time)
+{
+	return float(timeToMicroSeconds(_time)) / 1000.f;
+}
+
 double timeToSeconds64(i64 _time)
 {
 	return double(timeToMicroSeconds(_time)) / 1000000.0;
 }
 
-
 float timeToSeconds(i64 _time)
 {
 	return float(timeToMicroSeconds(_time)) / 1000000.f;
+}
+
+void formatTime(Time _time, String& _outString)
+{
+	const char* units[] = {
+		"ns",
+		"us",
+		"ms",
+		"s"
+	};
+
+	double time = double(timeToNanoSeconds(_time.time));
+	u8 unit = 0;
+	while (unit < 3 && time > 1000.0)
+	{
+		time = time / 1000.0;
+		++unit;
+	}
+
+	_outString = string::format("%.2f%s", time, units[unit]);
 }
 
 } // namespace time
