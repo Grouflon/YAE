@@ -77,6 +77,56 @@ void Profiler::stopCapture(const char* _captureName)
 }
 
 
+void Profiler::dumpCapture(const char* _captureName, String& _outString) const
+{
+	StringHash nameHash(_captureName);
+	const Capture* capturePtr = m_captures.get(nameHash);
+
+	_outString += string::format("-- %s: ", _captureName);
+
+	if (!capturePtr)
+	{
+		_outString = "no capture";
+		return;
+	}
+
+	Time captureTime = capturePtr->stopTime - capturePtr->startTime;
+
+	String32 timeString;
+	time::formatTime(captureTime, timeString);
+	_outString += string::format("%s\n", timeString.c_str());
+
+	String64 tabs;
+	DataArray<u32> stack(context().scratchAllocator);
+	for (u32 i = 0; i < capturePtr->events.size(); ++i)
+	{
+		const Event& e = capturePtr->events[i];
+
+		for (i32 j = stack.size() - 1; j >= 0; --j)
+		{
+			if (e.startTime >= capturePtr->events[stack[j]].stopTime)
+			{
+				stack.pop_back();
+			}
+		}
+
+		stack.push_back(i);
+
+		tabs.clear();
+		for (u32 j = 1; j < stack.size(); ++j)
+		{
+			tabs += "  ";
+		}
+
+		Time eventTime = e.stopTime - e.startTime;
+
+		timeString.clear();
+		time::formatTime(eventTime, timeString);
+		_outString += string::format("%s%s: %s\n", tabs.c_str(), e.name, timeString.c_str());
+	}
+}
+
+
 void Profiler::update()
 {
 	YAE_CAPTURE_FUNCTION();

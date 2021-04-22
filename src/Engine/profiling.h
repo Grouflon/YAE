@@ -36,6 +36,8 @@ public:
 	void startCapture(const char* _captureName);
 	void stopCapture(const char* _captureName);
 
+	void dumpCapture(const char* _captureName, String& _outString) const;
+
 	void update();
 
 private:
@@ -57,13 +59,13 @@ private:
 		const char* name;
 		Time startTime;
 		Time stopTime;
-		Array<Event> events;
+		DataArray<Event> events;
 	};
 
 	Allocator* m_allocator = nullptr;
 
-	Array<Event> m_events;
-	Array<u16> m_eventsStack;
+	DataArray<Event> m_events;
+	DataArray<u16> m_eventsStack;
 
 	HashMap<StringHash, Capture> m_runningCaptures;
 	HashMap<StringHash, Capture> m_captures;
