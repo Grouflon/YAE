@@ -54,7 +54,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 		if (!block->used)
 		{
 			availableSize = block->size;
-			requestedSize = _size + size_t(_getDataStart(block) - _getData(block));
+			requestedSize = _size + size_t(_getDataStart(block, _align) - _getData(block));
 
 			streakStartBlock = block;
 			streakEndBlock = streakStartBlock;
@@ -109,15 +109,15 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 #endif
 
 	// Align data
-	u8* dataStart = _getDataStart(streakStartBlock);
+	u8* dataStart = _getDataStart(streakStartBlock, _align);
 	memset(streakStartBlockData, HEADER_PAD_VALUE, dataStart - streakStartBlockData);
-
+	YAE_ASSERT(((u8*)streakStartBlock->next) - dataStart >= i64(_size));
 	YAE_ASSERT(!streakStartBlock->next || streakStartBlock->next == (Header*)(streakStartBlockData + streakStartBlock->size));
 	m_allocatedSize = m_allocatedSize + _getBlockSize(streakStartBlock);
 	++m_allocationCount;
 
 #if YAE_DEBUG
-	_check();
+	check();
 #endif
 
 	return dataStart;
@@ -134,7 +134,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 	while (block != nullptr)
 	{
 		void* data = _getData(block);
-		void* dataStart = _getDataStart(block);
+		void* dataStart = _getDataStart(block, block->alignment);
 		if (dataStart == _memory)
 		{
 			YAE_ASSERT(block->used);
@@ -144,7 +144,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 
 #if YAE_DEBUG
 			memset(data, 0xDD, block->size);
-			_check();
+			check();
 #endif
 			return;
 		}
@@ -155,7 +155,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 
 
 
-void FixedSizeAllocator::_check()
+void FixedSizeAllocator::check()
 {
 	size_t totalSize = 0;
 	size_t currentBlock = 0;
@@ -193,9 +193,9 @@ u8* FixedSizeAllocator::_getData(Header* _header)
 
 
 
-u8* FixedSizeAllocator::_getDataStart(Header* _header)
+u8* FixedSizeAllocator::_getDataStart(Header* _header, u8 _alignment)
 {
-	return (u8*)memory::alignForward(_getData(_header), _header->alignment);
+	return (u8*)memory::alignForward(_getData(_header), _alignment);
 }
 
 

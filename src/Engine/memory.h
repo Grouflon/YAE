@@ -51,6 +51,8 @@ public:
 	virtual size_t getAllocatedSize() const override { return m_allocatedSize; }
 	virtual size_t getAllocableSize() const override { return m_allocableSize; }
 
+	void check();
+
 private:
 	struct Header
 	{
@@ -65,10 +67,9 @@ private:
 
 	static Header* _getHeader(void* _data);
 	static u8* _getData(Header* _header);
-	static u8* _getDataStart(Header* _header);
+	static u8* _getDataStart(Header* _header, u8 _alignment);
 	static size_t _getBlockSize(Header* _header);
 
-	void _check();
 
 	void* m_memory = nullptr;
 	size_t m_memorySize = 0;
