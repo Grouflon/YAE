@@ -1,14 +1,15 @@
 #include "Application.h"
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-
 #include <platform.h>
 #include <profiling.h>
 #include <log.h>
 #include <yae_time.h>
 #include <vulkan/VulkanRenderer.h>
+#include <input.h>
+
+#include <GLFW/glfw3.h>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
 
 typedef void (*GameFunctionPtr)();
 
@@ -73,15 +74,6 @@ void watchGameAPI()
 	}
 }
 
-void onGlfwKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (key == GLFW_KEY_R && action == GLFW_PRESS && mods & GLFW_MOD_CONTROL)
-	{
-		unloadGameAPI();
-		loadGameAPI();
-	}
-}
-
 void Application::init(const char* _name, u32 _width, u32 _height, char** _args, int _arg_count)
 {
 	YAE_CAPTURE_FUNCTION();
@@ -108,20 +100,28 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Disable OpenGL context creation
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	m_window = glfwCreateWindow(_width, _height, m_name.c_str(), nullptr, nullptr);
-	glfwSetKeyCallback(m_window, &onGlfwKeyEvent);
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
+	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
+	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
+	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
 
 	YAE_ASSERT(m_window);
 	YAE_VERBOSE_CAT("glfw", "Created glfw window");
 
+	// Init Input System
+	m_inputSystem = context().defaultAllocator->create<InputSystem>();
+	m_inputSystem->init(m_window);
+
 	// Init Vulkan
-	m_vulkanWrapper = context().defaultAllocator->create<VulkanRenderer>();
+	m_vulkanRenderer = context().defaultAllocator->create<VulkanRenderer>();
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
 	const bool enableValidationLayers = true;
 #endif
-	m_vulkanWrapper->init(m_window, enableValidationLayers);
+	m_vulkanRenderer->init(m_window, enableValidationLayers);
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -136,7 +136,7 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 		bool ret = ImGui_ImplGlfw_InitForVulkan(m_window, true);
 		YAE_ASSERT(ret);
 	}
-	m_vulkanWrapper->initImGui();
+	m_vulkanRenderer->initImGui();
 
 	loadGameAPI();
 
@@ -157,12 +157,18 @@ void Application::run()
 		{
 			YAE_CAPTURE_SCOPE("beginFrame");
 
-			glfwPollEvents();
+			//glfwPollEvents();
+			m_inputSystem->update();
 			ImGui_ImplGlfw_NewFrame();
-			m_vulkanWrapper->beginFrame();
+			m_vulkanRenderer->beginFrame();
 			ImGui::NewFrame();	
 		}
 		
+		if (getInputSystem().isCtrlDown() && getInputSystem().wasKeyJustPressed(GLFW_KEY_R))
+		{
+			unloadGameAPI();
+			loadGameAPI();
+		}
 
 		s_gameAPI.gameUpdate();
 
@@ -241,7 +247,7 @@ void Application::run()
 	    }
 		//ImGui::ShowDemoWindow(&s_showDemoWindow);
 
-		m_vulkanWrapper->drawMesh();
+		m_vulkanRenderer->drawMesh();
 
 		// Rendering
 		ImGui::Render();
@@ -249,10 +255,10 @@ void Application::run()
 		const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
 		if (!isMinimized)
 		{
-			m_vulkanWrapper->drawImGui(imguiDrawData);
+			m_vulkanRenderer->drawImGui(imguiDrawData);
 		}
 
-		m_vulkanWrapper->endFrame();
+		m_vulkanRenderer->endFrame();
 
 		watchGameAPI();
 
@@ -265,7 +271,7 @@ void Application::run()
 
 		YAE_CAPTURE_STOP("frame");
 	}
-	m_vulkanWrapper->waitIdle();
+	m_vulkanRenderer->waitIdle();
 }
 
 void Application::shutdown()
@@ -275,14 +281,18 @@ void Application::shutdown()
 	s_gameAPI.gameShutdown();
 	unloadGameAPI();
 
-	m_vulkanWrapper->shutdownImGui();
+	m_vulkanRenderer->shutdownImGui();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(m_imgui);
 	m_imgui = nullptr;
 
-	m_vulkanWrapper->shutdown();
-	context().defaultAllocator->destroy<VulkanRenderer>(m_vulkanWrapper);
-	m_vulkanWrapper = nullptr;
+	m_vulkanRenderer->shutdown();
+	context().defaultAllocator->destroy<VulkanRenderer>(m_vulkanRenderer);
+	m_vulkanRenderer = nullptr;
+
+	m_inputSystem->shutdown();
+	context().defaultAllocator->destroy<InputSystem>(m_inputSystem);
+	m_inputSystem = nullptr;
 
 	glfwDestroyWindow(m_window);
 	m_window = nullptr;
@@ -290,6 +300,46 @@ void Application::shutdown()
 
 	glfwTerminate();
 	YAE_VERBOSE_CAT("glfw", "Terminated glfw");
+}
+
+
+InputSystem& Application::getInputSystem() const
+{
+	return *m_inputSystem;
+}
+
+
+VulkanRenderer& Application::getRenderer() const
+{
+	return *m_vulkanRenderer;
+}
+
+
+void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
+{
+	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
+	application->m_vulkanRenderer->notifyFrameBufferResized(_width, _height);
+}
+
+
+void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
+{
+	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
+	application->m_inputSystem->notifyKeyEvent(_key, _scancode, _action, _mods);
+}
+
+
+void Application::_glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods)
+{
+	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
+	application->m_inputSystem->notifyMouseButtonEvent(_button, _action, _mods);
+}
+
+
+void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset)
+{
+	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
+	application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
 }
 
 } // namespace yae

@@ -3,6 +3,7 @@
 #include <log.h>
 #include <resources/FileResource.h>
 #include <profiling.h>
+#include <application.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
@@ -204,9 +205,6 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 	m_window = _window;
 	m_validationLayersEnabled = _validationLayersEnabled;
-
-	glfwSetWindowUserPointer(m_window, this);
-	glfwSetFramebufferSizeCallback(m_window, &FramebufferResizeCallback);
 
 	// Extensions
 	std::vector<const char*> extensions;
@@ -815,6 +813,11 @@ void VulkanRenderer::drawImGui(ImDrawData* _drawData)
 	ImGui_ImplVulkan_RenderDrawData(_drawData, frame.commandBuffer);
 }
 
+void VulkanRenderer::notifyFrameBufferResized(int _width, int _height)
+{
+	m_framebufferResized = true;
+}
+
 void VulkanRenderer::endFrame()
 {
 	YAE_CAPTURE_FUNCTION();
@@ -938,13 +941,13 @@ void VulkanRenderer::shutdown()
 	m_instance = VK_NULL_HANDLE;
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Vulkan instance");
 
-	glfwSetFramebufferSizeCallback(m_window, nullptr);
-	glfwSetWindowUserPointer(m_window, nullptr);
 	m_window = nullptr;
 }
 
 void VulkanRenderer::initImGui()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	YAE_ASSERT(m_window);
 
 	YAE_VERBOSE_CAT("imgui", "Initializing ImGui...");
@@ -982,6 +985,8 @@ void VulkanRenderer::initImGui()
 
 void VulkanRenderer::shutdownImGui()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	ImGui_ImplVulkan_Shutdown();
 	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 }
@@ -1037,14 +1042,10 @@ bool VulkanRenderer::HasStencilComponent(VkFormat _format)
 	return _format == VK_FORMAT_D32_SFLOAT_S8_UINT || _format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void VulkanRenderer::FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height)
-{
-	VulkanRenderer* vulkanWrapper = reinterpret_cast<VulkanRenderer*>(glfwGetWindowUserPointer(_window));
-	vulkanWrapper->m_framebufferResized = true;
-}
-
 bool VulkanRenderer::LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices)
 {
+	YAE_CAPTURE_FUNCTION();
+	
 	YAE_ASSERT(_outVertices.empty());
 	YAE_ASSERT(_outIndices.empty());
 

@@ -58,11 +58,12 @@ public:
 	void drawMesh();
 	void drawImGui(ImDrawData* _drawData);
 
+	void notifyFrameBufferResized(int _width, int _height);
+
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
 	static bool HasStencilComponent(VkFormat _format);
 
-	static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
 	static bool LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices);
 
 private:

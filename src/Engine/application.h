@@ -11,6 +11,7 @@ namespace yae {
 
 class ResourceManager;
 class VulkanRenderer;
+class InputSystem;
 
 class YAELIB_API Application
 {
@@ -22,14 +23,23 @@ public:
 	const Path& getExePath();
 	const Path& getBaseDirectoryPath();
 
+	InputSystem& getInputSystem() const;
+	VulkanRenderer& getRenderer() const;
+
 private:
+
+	static void _glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height);
+	static void _glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods);
+	static void _glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods);
+	static void _glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset);
 
 	String m_name;
 
 	Path m_exePath;
 	Path m_baseDirectoryPath;
 
-	VulkanRenderer* m_vulkanWrapper = nullptr;
+	InputSystem* m_inputSystem = nullptr;
+	VulkanRenderer* m_vulkanRenderer = nullptr;
 
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
