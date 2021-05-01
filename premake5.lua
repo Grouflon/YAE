@@ -96,6 +96,17 @@ project "yaeLib"
     		"Shell32",
     	}]]--
 
+    filter {"system:Windows", "configurations:Debug" }
+		includedirs {
+			"./extern/dbghelp/inc/"
+		}
+		libdirs {
+			"./extern/dbghelp/lib/%{cfg.architecture}/"
+		}
+		links {
+			"dbghelp"
+		}
+
 	defines {
 		"YAELIB_EXPORT",
 		"MIRROR_EXPORT",

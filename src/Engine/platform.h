@@ -7,17 +7,17 @@ namespace yae {
 
 namespace platform {
 
-i64 getTime();
-i64 getFrequency();
+YAELIB_API i64 getTime();
+YAELIB_API i64 getFrequency();
 
-void setWorkingDirectory(const char* _path);
-String getWorkingDirectory();
-bool duplicateFile(const char* _srcPath, const char* _dstPath);
-u64 getFileLastWriteTime(const char* _path);
+YAELIB_API void setWorkingDirectory(const char* _path);
+YAELIB_API String getWorkingDirectory();
+YAELIB_API bool duplicateFile(const char* _srcPath, const char* _dstPath);
+YAELIB_API u64 getFileLastWriteTime(const char* _path);
 
-void* loadDynamicLibrary(const char* _path);
-void unloadDynamicLibrary(void* _libraryHandle);
-void* getProcedureAddress(void* _libraryHandle, const char* _procedureName);
+YAELIB_API void* loadDynamicLibrary(const char* _path);
+YAELIB_API void unloadDynamicLibrary(void* _libraryHandle);
+YAELIB_API void* getProcedureAddress(void* _libraryHandle, const char* _procedureName);
 
 } // namespace platform
 

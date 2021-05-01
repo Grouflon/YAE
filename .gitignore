@@ -1,8 +1,8 @@
-bin
-build
-obj
-lib
-data/code
+/bin/
+/build/
+/obj/
+/lib/
+/data/code
 **.spv
 imgui.ini
 .vs
