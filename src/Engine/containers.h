@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <type_traits>
+#include <new>
 
 namespace yae {
 
