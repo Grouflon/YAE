@@ -9,10 +9,13 @@
 
 namespace yae {
 
+class Allocator;
+
 struct YAELIB_API Path
 {
-	Path();
-	Path(const char* _path, bool _normalize = true);
+	Path(Allocator* _allocator = nullptr);
+	Path(const char* _path, bool _normalize = true, Allocator* _allocator = nullptr);
+	~Path();
 
 	const String& getString() const { return m_path; }
 	const char* c_str() const { return m_path.c_str(); }
@@ -51,7 +54,7 @@ public:
 	const char* getPath() const;
 
 private:
-	String	m_path;
+	String256	m_path;
 	OpenMode	m_openMode;
 	std::FILE*	m_file;
 };
