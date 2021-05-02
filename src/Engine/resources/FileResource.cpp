@@ -1,19 +1,29 @@
 #include "FileResource.h"
 
 #include <filesystem.h>
+#include <context.h>
 
 namespace yae {
 
-yae::FileResource::FileResource(const char* _path)
-	: Resource(Path(_path, true).c_str())
+MIRROR_CLASS_DEFINITION(FileResource);
+
+FileResource::FileResource(const char* _path)
+	: Resource(ResourceID(Path(_path, true, context().scratchAllocator).c_str()))
+	, m_path(_path, true, context().defaultAllocator)
 {
+	setName(m_path.c_str());
 }
 
+
+FileResource::~FileResource()
+{
+	
+}
 
 
 Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 {
-	FileHandle file(getName());
+	FileHandle file(m_path.c_str());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
 		_outErrorDescription = "Could not open file.";
@@ -21,7 +31,7 @@ Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 	}
 
 	m_contentSize = file.getSize();
-	m_content = malloc(m_contentSize);
+	m_content = context().defaultAllocator->allocate(m_contentSize);
 	file.read(m_content, m_contentSize);
 
 	return ERROR_NONE;
@@ -31,7 +41,7 @@ Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 
 void yae::FileResource::onUnloaded()
 {
-	free(m_content);
+	context().defaultAllocator->deallocate(m_content);
 	m_content = nullptr;
 	m_contentSize = 0;
 }

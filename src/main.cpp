@@ -4,6 +4,7 @@
 #include <resource.h>
 #include <application.h>
 #include <profiling.h>
+#include <game_module.h>
 
 #include <mirror.h>
 #include <imgui.h>
@@ -26,10 +27,11 @@ int main(int _argc, char** _argv)
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
     yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
+    yae::FixedSizeAllocator scratchAllocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator toolAllocator = yae::FixedSizeAllocator(1024*1024*32);
 
 	yae::context().defaultAllocator = &allocator;
-    yae::context().scratchAllocator = &allocator;
+    yae::context().scratchAllocator = &scratchAllocator;
 	yae::context().toolAllocator = &toolAllocator;
 
     yae::Logger logger;
@@ -49,6 +51,8 @@ int main(int _argc, char** _argv)
 
     yae::Application application;
     yae::context().application = &application;
+
+    yae::loadGameAPI();
 
     YAE_CAPTURE_START("init");
     application.init("yae", 800u, 600u, _argv, _argc);
@@ -80,6 +84,10 @@ int main(int _argc, char** _argv)
         printf(dump.c_str());
         printf("\n");
     }
+
+    resourceManager.flushResources();
+
+    yae::unloadGameAPI();
 
     return EXIT_SUCCESS;
 }

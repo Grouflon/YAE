@@ -4,13 +4,14 @@
 
 namespace yae {
 
+MIRROR_CLASS_DEFINITION(Resource);
+
 const ResourceID UNDEFINED_RESOURCEID = ResourceID("");
 
 
 
-Resource::Resource(const char* _name)
-	: m_id(ResourceID(_name))
-	, m_name(_name)
+Resource::Resource(ResourceID _id)
+	: m_id(_id)
 {
 	YAE_ASSERT(m_id != UNDEFINED_RESOURCEID);
 }
@@ -93,6 +94,8 @@ void Resource::releaseUnuse()
 
 
 ResourceManager::ResourceManager()
+	: m_resources(context().defaultAllocator)
+	, m_resourcesByID(context().defaultAllocator)
 {
 	if (context().resourceManager == nullptr)
 	{
@@ -116,10 +119,10 @@ void ResourceManager::registerResource(Resource* _resource)
 {
 	YAE_ASSERT(_resource != nullptr);
 	YAE_ASSERT(std::find(m_resources.begin(), m_resources.end(), _resource) == m_resources.end());
-	YAE_ASSERT(m_resourcesByID.find(_resource->getID()) == m_resourcesByID.end());
+	YAE_ASSERT(m_resourcesByID.get(_resource->getID()) == nullptr);
 
 	m_resources.push_back(_resource);
-	m_resourcesByID.insert(std::make_pair(_resource->getID(), _resource));
+	m_resourcesByID.set(_resource->getID(), _resource);
 
 	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"...", _resource->getName());
 }
@@ -131,13 +134,12 @@ void ResourceManager::unregisterResource(Resource* _resource)
 	{
 		auto it = std::find(m_resources.begin(), m_resources.end(), _resource);
 		YAE_ASSERT(it != m_resources.end());
-		m_resources.erase(it);
+		m_resources.erase(u32(it - m_resources.begin()), 1);
 	}
 
 	{
-		auto it = m_resourcesByID.find(_resource->getID());
-		YAE_ASSERT(it != m_resourcesByID.end());
-		m_resourcesByID.erase(it);
+		YAE_ASSERT(m_resourcesByID.get(_resource->getID()) != nullptr);
+		m_resourcesByID.remove(_resource->getID());
 	}
 
 	YAE_VERBOSEF_CAT("resource", "Unregistered \"%s\"...", _resource->getName());
@@ -146,21 +148,22 @@ void ResourceManager::unregisterResource(Resource* _resource)
 void ResourceManager::flushResources()
 {
 	// Gather unused resources
+	DataArray<Resource*> toDeleteResources(context().scratchAllocator);
 	for (Resource* resource : m_resources)
 	{
 		if (!resource->isUsed())
 		{
-			m_toDeleteResources.push_back(resource);
+			toDeleteResources.push_back(resource);
 		}
 	}
 
 	// Unregister & delete
-	for (Resource* resource : m_toDeleteResources)
+	for (Resource* resource : toDeleteResources)
 	{
 		unregisterResource(resource);
-		delete resource;
+		context().defaultAllocator->destroy(resource);
 	}
-	m_toDeleteResources.clear();
+	toDeleteResources.clear();
 }
 
 

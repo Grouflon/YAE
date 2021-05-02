@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
-
 #include <types.h>
 #include <hash.h>
 #include <yae_string.h>
+#include <containers.h>
+
+#include <mirror.h>
 
 namespace yae {
 
@@ -14,9 +14,12 @@ typedef StringHash ResourceID;
 extern const ResourceID UNDEFINED_RESOURCEID;
 
 
-
 class YAELIB_API Resource
 {
+	MIRROR_CLASS(Resource)
+	(
+	);
+
 public:
 	enum Error
 	{
@@ -24,10 +27,11 @@ public:
 		ERROR_LOAD
 	};
 
-	Resource(const char* _name);
-	~Resource();
+	Resource(ResourceID _id);
+	virtual ~Resource();
 	
 	ResourceID getID() const { return m_id; }
+	void setName(const char* _name) { m_name = _name; }
 	const char* getName() const { return m_name.c_str(); }
 
 	void use();
@@ -71,37 +75,39 @@ public:
 	void flushResources();
 
 	template <typename T>
-	T* findOrCreateResource(const char* _name)
+	T* findResource(ResourceID _id)
 	{
-		ResourceID id(_name);
-		auto it = m_resourcesByID.find(id);
+		Resource** resourcePtr = m_resourcesByID.get(_id);
+		if (resourcePtr == nullptr)
+			return nullptr;
 
-		T* resource = nullptr;
-		if (it == m_resourcesByID.end())
-		{
-			resource = new T(_name);
-			registerResource(resource);
-		}
-		else
-		{
-			resource = reinterpret_cast<T*>(it->second);
-		}
-		return resource;
+		return mirror::Cast<T*>(*resourcePtr);
 	}
 
 private:
-	std::vector<Resource*> m_resources;
-	std::unordered_map<ResourceID, Resource*> m_resourcesByID;
-
-	std::vector<Resource*> m_toDeleteResources; // work buffer;
+	DataArray<Resource*> m_resources;
+	HashMap<ResourceID, Resource*> m_resourcesByID;
 };
 
-
-template <typename T>
-T* findOrCreateResource(const char* _name)
+template <typename T, typename ...Args>
+T* findOrCreateResource(Args... _args)
 {
-	return context().resourceManager->findOrCreateResource<T>(_name);
+	ResourceManager* resourceManager = context().resourceManager;
+	ResourceID id = ResourceIDGetter<T>::GetId(_args...);
+	T* resource = resourceManager->findResource<T>(id);
+	if (resource == nullptr)
+	{
+		resource = context().defaultAllocator->create<T>(_args...);
+		resourceManager->registerResource(resource);
+	}
+	return resource;
 }
+
+template <typename T, typename ...Args>
+struct ResourceIDGetter
+{
+	static ResourceID GetId(Args... _args) { return UNDEFINED_RESOURCEID; }
+};
 
 
 }

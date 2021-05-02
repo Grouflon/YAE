@@ -6,73 +6,13 @@
 #include <yae_time.h>
 #include <vulkan/VulkanRenderer.h>
 #include <input.h>
+#include <game_module.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 
-typedef void (*GameFunctionPtr)();
-
 namespace yae {
-
-const char* GAME_DLL_PATH = "./data/code/yaeGame.dll";
-const char* TMP_GAME_DLL_PATH = "./data/code/yaeGame_temp.dll";
-
-struct GameAPI
-{
-	u64 lastWriteTime = 0;
-	void* libraryHandle = nullptr;
-	GameFunctionPtr gameInit = nullptr;
-	GameFunctionPtr gameUpdate = nullptr;
-	GameFunctionPtr gameShutdown = nullptr;
-	GameFunctionPtr onLibraryLoaded = nullptr;
-	GameFunctionPtr onLibraryUnloaded = nullptr;
-} s_gameAPI;
-
-void loadGameAPI()
-{
-	YAE_CAPTURE_FUNCTION();
-
-	bool ret = platform::duplicateFile(GAME_DLL_PATH, TMP_GAME_DLL_PATH);
-	YAE_ASSERT(ret);
-	s_gameAPI.lastWriteTime = platform::getFileLastWriteTime(GAME_DLL_PATH);
-	s_gameAPI.libraryHandle = platform::loadDynamicLibrary(TMP_GAME_DLL_PATH);
-	YAE_ASSERT(s_gameAPI.libraryHandle);
-
-	s_gameAPI.gameInit = (GameFunctionPtr)platform::getProcedureAddress(s_gameAPI.libraryHandle, "initGame");
-	s_gameAPI.gameUpdate = (GameFunctionPtr)platform::getProcedureAddress(s_gameAPI.libraryHandle, "updateGame");
-	s_gameAPI.gameShutdown = (GameFunctionPtr)platform::getProcedureAddress(s_gameAPI.libraryHandle, "shutdownGame");
-	s_gameAPI.onLibraryLoaded = (GameFunctionPtr)platform::getProcedureAddress(s_gameAPI.libraryHandle, "onLibraryLoaded");
-	s_gameAPI.onLibraryUnloaded = (GameFunctionPtr)platform::getProcedureAddress(s_gameAPI.libraryHandle, "onLibraryUnloaded");
-
-	YAE_ASSERT(s_gameAPI.gameInit);
-	YAE_ASSERT(s_gameAPI.gameUpdate);
-	YAE_ASSERT(s_gameAPI.gameShutdown);
-
-	s_gameAPI.onLibraryLoaded();
-}
-
-void unloadGameAPI()
-{
-	YAE_CAPTURE_FUNCTION();
-	
-	s_gameAPI.onLibraryUnloaded();
-	
-	platform::unloadDynamicLibrary(s_gameAPI.libraryHandle);
-	s_gameAPI = {};
-}
-
-void watchGameAPI()
-{
-	YAE_CAPTURE_FUNCTION();
-
-	u64 lastWriteTime = platform::getFileLastWriteTime(GAME_DLL_PATH);
-	if (lastWriteTime != s_gameAPI.lastWriteTime)
-	{
-		unloadGameAPI();
-		loadGameAPI();
-	}
-}
 
 void Application::init(const char* _name, u32 _width, u32 _height, char** _args, int _arg_count)
 {
@@ -138,10 +78,8 @@ void Application::init(const char* _name, u32 _width, u32 _height, char** _args,
 	}
 	m_vulkanRenderer->initImGui();
 
-	loadGameAPI();
 
-	s_gameAPI.gameInit();
-
+	initGame();
 }
 
 void Application::run()
@@ -170,7 +108,7 @@ void Application::run()
 			loadGameAPI();
 		}
 
-		s_gameAPI.gameUpdate();
+		updateGame();
 
 		if (ImGui::BeginMainMenuBar())
 	    {
@@ -278,8 +216,7 @@ void Application::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
 	
-	s_gameAPI.gameShutdown();
-	unloadGameAPI();
+	shutdownGame();
 
 	m_vulkanRenderer->shutdownImGui();
 	ImGui_ImplGlfw_Shutdown();
