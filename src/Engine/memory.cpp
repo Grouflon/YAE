@@ -3,7 +3,23 @@
 #include <cstdlib>
 #include <cstring>
 
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE 0
+
+#if YAE_ALLOCATION_CALLSTACK_CAPTURE
+#include <callstack.h>
+#include <containers.h>
+#endif
+
 namespace yae {
+
+#if YAE_ALLOCATION_CALLSTACK_CAPTURE
+struct AllocationCallStack
+{
+	StackFrame frames[32];
+	u16 frameCount;
+};
+static HashMap<size_t, AllocationCallStack> g_allocationCaptures(&s_untrackedMallocAllocator);
+#endif
 
 const u8 HEADER_PAD_VALUE = 0xFAu;
 
@@ -29,6 +45,17 @@ FixedSizeAllocator::FixedSizeAllocator(size_t _size)
 
 FixedSizeAllocator::~FixedSizeAllocator()
 {
+#if YAE_ALLOCATION_CALLSTACK_CAPTURE
+	if (m_allocationCount > 0)
+	{
+		printf("%d Memory Leaks:\n", u32(m_allocationCount));
+		for(auto entry : g_allocationCaptures)
+		{
+			printCallstack(entry.value.frames, entry.value.frameCount);
+			printf("\n");
+		}
+	}
+#endif
 	YAE_ASSERT_MSGF(m_allocationCount == 0, "Allocations count == %d, memory leak detected", m_allocationCount);
 	free(m_memory);
 }
@@ -120,6 +147,14 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	check();
 #endif
 
+#if YAE_ALLOCATION_CALLSTACK_CAPTURE
+	{
+		AllocationCallStack capture;
+		capture.frameCount = captureCallstack(capture.frames, 32);
+		g_allocationCaptures.set(size_t(dataStart), capture);
+	}
+#endif
+
 	return dataStart;
 }
 
@@ -146,6 +181,13 @@ void FixedSizeAllocator::deallocate(void* _memory)
 			memset(data, 0xDD, block->size);
 			check();
 #endif
+
+#if YAE_ALLOCATION_CALLSTACK_CAPTURE
+			{
+				g_allocationCaptures.remove(size_t(dataStart));
+			}
+#endif
+
 			return;
 		}
 		block = block->next;
@@ -174,7 +216,6 @@ void FixedSizeAllocator::check()
 }
 
 
-
 FixedSizeAllocator::Header* FixedSizeAllocator::_getHeader(void* _data)
 {
 	u8* data = (u8*)_data;
@@ -190,7 +231,6 @@ u8* FixedSizeAllocator::_getData(Header* _header)
 {
 	return (u8*)_header + _getHeaderSize();
 }
-
 
 
 u8* FixedSizeAllocator::_getDataStart(Header* _header, u8 _alignment)
@@ -239,7 +279,6 @@ void* MallocAllocator::allocate(size_t _size, u8 _align)
 }
 
 
-
 void MallocAllocator::deallocate(void* _memory)
 {
 	if (_memory == nullptr)
@@ -261,7 +300,6 @@ void MallocAllocator::deallocate(void* _memory)
 }
 
 
-
 MallocAllocator::Header* MallocAllocator::_getHeader(void* _data)
 {
 	u8* data = (u8*)_data;
@@ -271,5 +309,16 @@ MallocAllocator::Header* MallocAllocator::_getHeader(void* _data)
 	}
 	return (Header*)(data - sizeof(Header));
 }
+
+namespace memory {
+
+MallocAllocator* mallocAllocator()
+{
+	return &g_mallocAllocator;
+}
+
+} // namespace memory
+
+MallocAllocator g_mallocAllocator;
 
 } // namespace yae
