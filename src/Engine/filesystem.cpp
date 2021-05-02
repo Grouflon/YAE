@@ -2,15 +2,15 @@
 
 namespace yae {
 
-Path::Path()
+Path::Path(Allocator* _allocator)
+	: m_path(_allocator)
 {
 	
 }
 
 
-
-Path::Path(const char* _path, bool _normalize)
-	: m_path(_path)
+Path::Path(const char* _path, bool _normalize, Allocator* _allocator)
+	: m_path(_path, _allocator)
 {
 	if (_normalize)
 	{
@@ -18,6 +18,11 @@ Path::Path(const char* _path, bool _normalize)
 	}
 }
 
+
+Path::~Path()
+{
+
+}
 
 
 void Path::NormalizePath(String& _path)
