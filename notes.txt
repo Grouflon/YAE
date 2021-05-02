@@ -1,1 +1,2 @@
-global functions vs member functions: this is purely an esthetic decision and does not change anything about anything. Should not be subject to a big debate.
+- global functions vs member functions: this is purely an esthetic decision and does not change anything about anything. Should not be subject to a big debate.
+- I should try to go away from global scopes, especially global ctors/dtors as much as possible. Not having control over init/deinit order is a big issue.

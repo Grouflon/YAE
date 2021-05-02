@@ -1,7 +1,7 @@
 local VK_SDK_PATH = os.getenv("VK_SDK_PATH")
 local TARGET_FOLDER_NAME = "%{cfg.platform}_%{cfg.buildcfg}"
 
-workspace "yae"
+workspace "yaeApplication"
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
 
@@ -11,15 +11,12 @@ workspace "yae"
 	objdir("./obj/"..TARGET_FOLDER_NAME.."/")
 
 	includedirs {
-		"./src/Engine/",
+		"./src/",
 		"./extern/GLFW/include/",
-		"./extern/glm/",
-		"./extern/stb/",
-		"./extern/tinyobjloader/",
 		"./extern/imgui/",
+		"./extern/glm/",
 		"./extern/VulkanMemoryAllocator/",
-		"./extern/mirror/",
-		"./extern/json/",
+		"./extern/",
 		VK_SDK_PATH.."/include/",
 	}
 
@@ -56,7 +53,7 @@ workspace "yae"
 
 	filter {}
 
-project "yaeLib"
+project "yae"
 	kind "SharedLib"
 	targetdir("lib/"..TARGET_FOLDER_NAME.."/")
 	ignoredefaultlibraries { "MSVCRT" }
@@ -65,8 +62,8 @@ project "yaeLib"
 	symbols "On"
 
 	files { 
-		"./src/Engine/**.h",
-		"./src/Engine/**.cpp",
+		"./src/yae/**.h",
+		"./src/yae/**.cpp",
 
 		"./extern/imgui/*.h",
 		"./extern/imgui/*.cpp",
@@ -133,21 +130,21 @@ project "yaeLib"
 		"vulkan-1",
 	}
 
-project "yaeGame"
+project "game"
 	kind "SharedLib"
 	targetdir("lib/"..TARGET_FOLDER_NAME.."/")
 	--targetdir("data/code/")
-	dependson { "yaeLib" }
+	dependson { "yae" }
 	optimize "Debug"
 	symbols "On"
 
 	files { 
-		"./src/Game/**.h",
-		"./src/Game/**.cpp",
+		"./src/game/**.h",
+		"./src/game/**.cpp",
 	}
 
 	includedirs {
-		"./src/Game/",
+		"./src/game/",
 	}
 
 	defines {
@@ -156,14 +153,15 @@ project "yaeGame"
 	}
 
 	links {
-		"yaeLib",
+		"yae",
 	}
 
-project "yae"
+project "application"
 	kind "ConsoleApp"
-	dependson { "yaeLib", "yaeGame" }
+	dependson { "yae", "game" }
 	optimize "Debug"
 	symbols "On"
+	targetname "yae"
 
 	files { 
 		"./src/main.cpp",
@@ -174,10 +172,10 @@ project "yae"
 	}
 
 	links {
-		"yaeLib",
+		"yae",
 	}
 
 	postbuildcommands {
-		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/yaeLib.dll ./bin/"..TARGET_FOLDER_NAME.."/",
-		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/yaeGame.dll ./data/code/",
+		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/yae.dll ./bin/"..TARGET_FOLDER_NAME.."/",
+		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/game.dll ./data/code/",
 	}

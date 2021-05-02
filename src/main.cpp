@@ -1,13 +1,13 @@
-#include <context.h>
-#include <memory.h>
-#include <log.h>
-#include <resource.h>
-#include <application.h>
-#include <profiling.h>
-#include <game_module.h>
+#include <yae/context.h>
+#include <yae/memory.h>
+#include <yae/log.h>
+#include <yae/resource.h>
+#include <yae/application.h>
+#include <yae/profiling.h>
+#include <yae/game_module.h>
 
-#include <mirror.h>
-#include <imgui.h>
+#include <mirror/mirror.h>
+#include <imgui/imgui.h>
 
 #include <stdio.h>
 #include <cstdlib>

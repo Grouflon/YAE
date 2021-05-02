@@ -1,15 +1,13 @@
 #include "Game.h"
 
+#include <yae/context.h>
+#include <yae/hash.h>
+#include <yae/serialization.h>
+#include <yae/log.h>
+#include <yae/resources/FileResource.h>
+
 #include <stdio.h>
 #include <vector>
-
-#include <context.h>
-#include <hash.h>
-#include <serialization.h>
-#include <log.h>
-
-#include <resources/FileResource.h>
-
 
 MIRROR_CLASS_DEFINITION(ConfigData);
 

@@ -2,9 +2,9 @@
 
 #include "export.h"
 
-#include <mirror.h>
+#include <mirror/mirror.h>
 
-#include <types.h>
+#include <yae/types.h>
 
 #ifdef __cplusplus    // If used by C++ code, 
 extern "C" {          // we need to export the C interface

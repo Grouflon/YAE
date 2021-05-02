@@ -38,11 +38,11 @@
 				},
 				{
 					"name": "clean",
-					"shell_cmd": "msbuild yae.sln -t:clean -p:Configuration=Debug;Platform=Win64",
+					"shell_cmd": "msbuild yaeApplication.sln -t:clean -p:Configuration=Debug;Platform=Win64",
 				},
 				{
 					"name": "compile debug_win64",
-					"shell_cmd": "msbuild yae.sln -t:build -p:Configuration=Debug;Platform=Win64",
+					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Debug;Platform=Win64",
 				},
 				{
 					"name": "debug",
@@ -50,7 +50,7 @@
 				},
 				{
 					"name": "debug visual",
-					"shell_cmd": "devenv yae.sln /DebugExe \"bin/Win64_Debug/yae.exe\""
+					"shell_cmd": "devenv yaeApplication.sln /DebugExe \"bin/Win64_Debug/yae.exe\""
 				}
 			]
 		},
