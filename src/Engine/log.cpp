@@ -1,12 +1,14 @@
 #include "log.h"
 
+#include <context.h>
+
 namespace yae {
 
 const char* DEFAULT_CATEGORY_NAME = "Default";
 
 
-
 Logger::Logger()
+	: m_categories(context().defaultAllocator)
 {
     if (g_context.logger == nullptr)
     {
@@ -42,18 +44,15 @@ Logger::LogCategory& Logger::findCategory(const char* _categoryName)
 	}
 
 	StringHash hash = _categoryName;
-	auto it = m_categories.find(hash);
-	if (it == m_categories.end())
+	LogCategory* categoryPtr = m_categories.get(hash);
+	if (categoryPtr == nullptr)
 	{
 		LogCategory category;
 		category.name = _categoryName;
 		category.verbosity = LogVerbosity_Log;
-		auto result = m_categories.insert(std::make_pair(hash, category));
-		YAE_ASSERT(result.second);
-		it = result.first;
+		categoryPtr = &m_categories.set(hash, category);
 	}
-
-	return it->second;
+	return *categoryPtr;
 }
 
 } // namespace yae

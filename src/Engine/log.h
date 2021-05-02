@@ -5,6 +5,7 @@
 #include <types.h>
 #include <context.h>
 #include <hash.h>
+#include <containers.h>
 
 namespace yae {
 
@@ -33,7 +34,7 @@ public:
 	LogCategory& findCategory(const char* _categoryName);
 
 private:
-	std::unordered_map<StringHash, LogCategory, std::hash<StringHash>, std::equal_to<StringHash>, yae::DefaultAllocator<std::pair<const StringHash,LogCategory>>> m_categories;
+	HashMap<StringHash, LogCategory> m_categories;
 };
 
 
