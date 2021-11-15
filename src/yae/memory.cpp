@@ -312,13 +312,12 @@ MallocAllocator::Header* MallocAllocator::_getHeader(void* _data)
 
 namespace memory {
 
-MallocAllocator* mallocAllocator()
+MallocAllocator& mallocAllocator()
 {
-	return &g_mallocAllocator;
+	static MallocAllocator s_mallocAllocator;
+	return s_mallocAllocator;
 }
 
 } // namespace memory
-
-MallocAllocator g_mallocAllocator;
 
 } // namespace yae

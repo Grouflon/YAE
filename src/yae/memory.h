@@ -158,10 +158,8 @@ constexpr inline YAELIB_API void* alignForward(void* _p, u8 _align)
 	return (void*)pi;
 }
 
-YAELIB_API MallocAllocator* mallocAllocator();
+YAELIB_API MallocAllocator& mallocAllocator();
 
 } // namespace memory
-
-extern MallocAllocator g_mallocAllocator;
 
 } // namespace yae
