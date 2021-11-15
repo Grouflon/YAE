@@ -130,6 +130,10 @@ project "yae"
 		"vulkan-1",
 	}
 
+	postbuildcommands {
+		"xcopy \"./lib/"..TARGET_FOLDER_NAME.."/yae.dll\" \"./bin/"..TARGET_FOLDER_NAME.."/yae.dll\" /f /e /d /y "
+	}
+
 project "game"
 	kind "SharedLib"
 	targetdir("lib/"..TARGET_FOLDER_NAME.."/")
@@ -149,6 +153,7 @@ project "game"
 
 	defines {
 		"YAEGAME_EXPORT",
+		"MIRROR_IMPORT",
 		"IMGUI_API=__declspec(dllimport)",
 	}
 
@@ -168,14 +173,10 @@ project "application"
 	}
 
 	defines {
+		"MIRROR_IMPORT",
 		"IMGUI_API=__declspec(dllimport)",
 	}
 
 	links {
 		"yae",
-	}
-
-	postbuildcommands {
-		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/yae.dll ./bin/"..TARGET_FOLDER_NAME.."/",
-		"{COPY} ./lib/"..TARGET_FOLDER_NAME.."/game.dll ./data/code/",
 	}
