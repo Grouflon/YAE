@@ -29,7 +29,7 @@ public:
 	~Logger();
 
 	void setCategoryVerbosity(const char* _categoryName, LogVerbosity _verbosity);
-	LogCategory& findCategory(const char* _categoryName);
+	LogCategory& findOrAddCategory(const char* _categoryName);
 
 private:
 	HashMap<StringHash, LogCategory> m_categories;
@@ -44,7 +44,7 @@ void log(yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _ver
 {
 	YAE_ASSERT(_fmt);
 
-	Logger::LogCategory& category = _logger.findCategory(_categoryName);
+	Logger::LogCategory& category = _logger.findOrAddCategory(_categoryName);
 	if (category.verbosity >= _verbosity)
 	{
 		String msg = string::format(_fmt, _args...);
