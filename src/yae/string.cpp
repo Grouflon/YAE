@@ -150,6 +150,21 @@ String& String::replace(const char* _toReplace, const char* _replacement)
 
 
 
+String String::slice(size_t _startPosition, size_t _count) const
+{
+	String str = String(m_allocator);
+
+	if (_startPosition > m_length)
+		return str;
+
+	_count = std::min(_count, m_length - _startPosition);
+	str.resize(_count);
+	memcpy(str.m_buffer, m_buffer + _startPosition, _count);
+	return str;
+}
+
+
+
 String& String::replace(size_t _position, size_t _count, const char* _replacement)
 {
 	size_t baseLength = m_length;
@@ -239,6 +254,30 @@ String& String::operator+=(const String& _str)
 	return *this;
 }
 
+
+char& String::operator[](size_t _pos)
+{
+	YAE_ASSERT(_pos < m_length);
+	return m_buffer[_pos];
+}
+
+
+const char& String::operator[](size_t _pos) const
+{
+	YAE_ASSERT(_pos < m_length);
+	return m_buffer[_pos];
+}
+
+bool String::operator==(const char* _str) const
+{
+	YAE_ASSERT(_str != nullptr);
+	return strcmp(_str, m_buffer) == 0;
+}
+
+bool String::operator==(const String& _str) const
+{
+	return strcmp(_str.m_buffer, m_buffer) == 0;
+}
 
 MallocAllocator s_mallocAllocator;
 MallocString::MallocString() : String(&s_mallocAllocator) {}
