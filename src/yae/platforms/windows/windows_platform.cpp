@@ -1,6 +1,8 @@
 #include <yae/platform.h>
+#include <yae/log.h>
 
 #include <windows.h>
+#include <atlstr.h>
 
 namespace yae {
 
@@ -61,7 +63,19 @@ bool duplicateFile(const char* _srcPath, const char* _dstPath)
 			0, NULL);
 
 		LPCTSTR msg = (LPCTSTR)lpMsgBuf;
-		int a = 0;
+		YAE_ERRORF("Failed to copy %s -> %s: %s", _srcPath, _dstPath, CStringA(msg));
+		return false;
+	}
+	return true;
+}
+
+
+bool doesPathExists(const char* _path)
+{
+	DWORD fileAttributes = GetFileAttributesA(_path);
+	if(INVALID_FILE_ATTRIBUTES == fileAttributes && GetLastError() == ERROR_FILE_NOT_FOUND)
+	{
+	    return false;
 	}
 	return true;
 }
@@ -77,7 +91,17 @@ u64 getFileLastWriteTime(const char* _path)
 	{
 		filetime = fileData.ftLastWriteTime;
 		FindClose(handle);
+		return u64(filetime.dwLowDateTime) | u64(filetime.dwHighDateTime) >> 32;
 	}
+	return 0;
+}
+
+
+
+u64 getSystemTime()
+{
+	FILETIME filetime = {};
+	GetSystemTimeAsFileTime(&filetime);
 	return u64(filetime.dwLowDateTime) | u64(filetime.dwHighDateTime) >> 32;
 }
 
