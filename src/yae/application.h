@@ -13,6 +13,8 @@ class ResourceManager;
 class VulkanRenderer;
 class InputSystem;
 
+// @TODO: 2 notions en fait à partir de celle ci: Process/Application/Program qui est lié à l'instance unique de ce processus, et Instance/Contexte qui peut être en plusieurs exemplaires dans le programme.
+
 class YAELIB_API Application
 {
 public:
