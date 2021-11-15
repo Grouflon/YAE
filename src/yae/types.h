@@ -40,13 +40,19 @@ typedef uint64_t	u64;
 
 // ASSERTS
 #ifdef _DEBUG
-#define YAE_ASSERT(_cond) if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_ASSERT_MSG(_cond, _msg) if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_ASSERT_MSGF(cond, _fmt, ...) if (!(cond)) YAE_DEBUG_BREAK;
+#define YAE_ASSERT(_cond)					if (!(_cond)) YAE_DEBUG_BREAK;
+#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) YAE_DEBUG_BREAK;
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) YAE_DEBUG_BREAK;
+#define YAE_VERIFY(_cond) 					if (!(_cond)) YAE_DEBUG_BREAK;
+#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) YAE_DEBUG_BREAK;
+#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) YAE_DEBUG_BREAK;
 #else
 #define YAE_ASSERT(cond)
 #define YAE_ASSERT_MSG(_cond, _msg)
-#define YAE_ASSERT_MSGF(cond, _fmt, ...)
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)
+#define YAE_VERIFY(_cond) 					_cond
+#define YAE_VERIFY_MSG(_cond)				_cond
+#define YAE_VERIFY_MSGF(_cond)				_cond
 #endif
 
 // BASE EXTENSIONS
