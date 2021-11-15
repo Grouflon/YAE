@@ -18,7 +18,10 @@ struct YAELIB_API Path
 	~Path();
 
 	const String& getString() const { return m_path; }
+	String toString() const { return m_path; }
 	const char* c_str() const { return m_path.c_str(); }
+
+	Path getDirectory() const;
 
 	static void NormalizePath(String& _path);
 

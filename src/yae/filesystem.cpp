@@ -1,5 +1,7 @@
 #include "filesystem.h"
 
+#include <yae/context.h>
+
 namespace yae {
 
 Path::Path(Allocator* _allocator)
@@ -22,6 +24,20 @@ Path::Path(const char* _path, bool _normalize, Allocator* _allocator)
 Path::~Path()
 {
 
+}
+
+Path Path::getDirectory() const
+{
+	size_t size = m_path.size();
+	for (size_t i = 0; i < size; ++i)
+	{
+		size_t pos = size - 1 - i;
+		if (m_path[pos] == '/')
+		{
+			return Path(m_path.slice(0, pos + 1).c_str(), false, context().scratchAllocator);
+		}
+	}
+	return Path(context().scratchAllocator);
 }
 
 
