@@ -521,17 +521,24 @@ void Array<T>::pop_back()
 template <typename T>
 void Array<T>::erase(u32 _index, u32 _count)
 {
+	YAE_ASSERT(_index + _count <= m_size);
+
 	if (_count <= 0)
 		return;
 
-	i32 rangeEnd = _index + _count;
+	u32 rangeEnd = _index + _count;
 	for (u32 i = _index; i < rangeEnd; ++i)
 	{
-		m_data[i].~T();
+		u32 nextValidIndex = i + _count;
+		if (nextValidIndex < m_size)
+		{
+			m_data[i] = m_data[nextValidIndex];
+		}
+		else
+		{
+			m_data[i].~T();
+		}
 	}
-
-	// @OPTIM: May use memcpy here since we are always moving memory backwards, but I'm not sure. This is still undefined behavior according to the c++ doc
-	std::memmove(m_data + _index, m_data + rangeEnd, (m_size - (rangeEnd)) * sizeof(T));
 	resize(m_size - _count);
 }
 
@@ -548,7 +555,11 @@ void Array<T>::_setCapacity(u32 _newCapacity)
 	if (_newCapacity > 0)
 	{
 		newData = (T*)m_allocator->allocate(sizeof(T) * _newCapacity, alignof(T));
-		memcpy(newData, m_data, sizeof(T) * m_size);
+		for (u32 i = 0; i < m_size; ++i)
+		{
+			new (newData + i) T();
+			newData[i] = m_data[i];
+		}
 	}
 	m_allocator->deallocate(m_data);
 	m_data = newData;
