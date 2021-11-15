@@ -20,6 +20,10 @@ String::String(Allocator* _allocator)
 	{
 		m_allocator = context().defaultAllocator;
 	}
+	if (m_allocator == nullptr)
+	{
+		m_allocator = &memory::mallocAllocator();
+	}
 	YAE_ASSERT(m_allocator);
 }
 
