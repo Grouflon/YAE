@@ -16,7 +16,6 @@ class BaseArray
 {
 public:
 	BaseArray(Allocator* _allocator = nullptr);
-	//~BaseArray();
 	// @TODO: move constructor ?
 
 	// Accessors
@@ -88,7 +87,11 @@ public:
 	void push_back(const T& _item);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
+	void erase(T* _item);
 	void reserve(u32 _newCapacity);
+
+	const T* find(const T& _item) const;
+	T* find(const T& _item);
 
 protected:
 	void _setCapacity(u32 _newCapacity);
@@ -163,6 +166,10 @@ template <typename T>
 BaseArray<T>::BaseArray(Allocator* _allocator)
 	: m_allocator(_allocator)
 {
+	if (m_allocator == nullptr)
+	{
+		m_allocator = &defaultAllocator();
+	}
 }
 
 
@@ -281,7 +288,7 @@ DataArray<T>::DataArray(Allocator* _allocator)
 
 template <typename T>
 DataArray<T>::DataArray(const DataArray<T> &_other)
-	: BaseArray(_other.m_allocator)
+	: BaseArray()
 {
 	u32 size = _other.m_size;
 	_setCapacity(size);
@@ -293,11 +300,6 @@ DataArray<T>::DataArray(const DataArray<T> &_other)
 template <typename T>
 DataArray<T>& DataArray<T>::operator=(const DataArray<T>& _other)
 {
-	if (m_allocator != _other.m_allocator)
-	{
-		this->~DataArray();
-		m_allocator = _other.m_allocator;
-	}
 	u32 size = _other.m_size;
 	resize(size);
 	memcpy(m_data, _other.m_data, m_size * sizeof(T));
@@ -411,7 +413,7 @@ Array<T>::Array(Allocator* _allocator)
 
 template <typename T>
 Array<T>::Array(const Array<T> &_other)
-	: BaseArray(_other.m_allocator)
+	: BaseArray()
 {
 	u32 size = _other.m_size;
 	_setCapacity(size);
@@ -426,11 +428,6 @@ Array<T>::Array(const Array<T> &_other)
 template <typename T>
 Array<T>& Array<T>::operator=(const Array<T>& _other)
 {
-	if (m_allocator != _other.m_allocator)
-	{
-		this->~Array();
-		m_allocator = _other.m_allocator;
-	}
 	u32 size = _other.m_size;
 	resize(size);
 	for (u32 i = 0; i < m_size; ++i)
@@ -541,6 +538,40 @@ void Array<T>::erase(u32 _index, u32 _count)
 	}
 	resize(m_size - _count);
 }
+
+
+template <typename T>
+void Array<T>::erase(T* _item)
+{
+	YAE_ASSERT(_item != nullptr);
+	YAE_ASSERT(_item >= m_data && _item < (m_data + m_size));
+	erase(u32(_item - m_data), 1);
+}
+
+
+template <typename T>
+const T* Array<T>::find(const T& _item) const
+{
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		if (m_data[i] == _item)
+			return m_data + i;
+	}
+	return nullptr;
+}
+
+
+template <typename T>
+T* Array<T>::find(const T& _item)
+{
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		if (m_data[i] == _item)
+			return m_data + i;
+	}
+	return nullptr;
+}
+
 
 template <typename T>
 void Array<T>::_setCapacity(u32 _newCapacity)

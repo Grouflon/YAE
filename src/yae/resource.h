@@ -92,13 +92,13 @@ private:
 template <typename T, typename ...Args>
 T* findOrCreateResource(Args... _args)
 {
-	ResourceManager* resourceManager = context().resourceManager;
+	ResourceManager& manager = resourceManager();
 	ResourceID id = ResourceIDGetter<T>::GetId(_args...);
-	T* resource = resourceManager->findResource<T>(id);
+	T* resource = manager.findResource<T>(id);
 	if (resource == nullptr)
 	{
-		resource = context().defaultAllocator->create<T>(_args...);
-		resourceManager->registerResource(resource);
+		resource = defaultAllocator().create<T>(_args...);
+		manager.registerResource(resource);
 	}
 	return resource;
 }

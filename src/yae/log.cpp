@@ -1,6 +1,6 @@
 #include "log.h"
 
-#include <yae/context.h>
+#include <yae/program.h>
 
 namespace yae {
 
@@ -8,24 +8,14 @@ const char* DEFAULT_CATEGORY_NAME = "Default";
 
 
 Logger::Logger()
-	: m_categories(context().defaultAllocator)
+	: m_categories(&toolAllocator())
 {
-    if (g_context.logger == nullptr)
-    {
-        g_context.logger = this;
-    }
 }
-
 
 
 Logger::~Logger()
 {
-	if (g_context.logger == this)
-	{
-		g_context.logger = nullptr;
-	}
 }
-
 
 
 void Logger::setCategoryVerbosity(const char* _categoryName, LogVerbosity _verbosity)
@@ -33,7 +23,6 @@ void Logger::setCategoryVerbosity(const char* _categoryName, LogVerbosity _verbo
 	LogCategory& category = findOrAddCategory(_categoryName);
 	category.verbosity = _verbosity;
 }
-
 
 
 Logger::LogCategory& Logger::findOrAddCategory(const char* _categoryName)
@@ -54,5 +43,6 @@ Logger::LogCategory& Logger::findOrAddCategory(const char* _categoryName)
 	}
 	return *categoryPtr;
 }
+
 
 } // namespace yae

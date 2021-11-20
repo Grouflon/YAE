@@ -1,7 +1,6 @@
 #include "string.h"
 
-#include <yae/memory.h>
-#include <yae/context.h>
+#include <yae/program.h>
 
 #include <cstring>
 #include <string>
@@ -18,11 +17,7 @@ String::String(Allocator* _allocator)
 {
 	if (m_allocator == nullptr)
 	{
-		m_allocator = context().defaultAllocator;
-	}
-	if (m_allocator == nullptr)
-	{
-		m_allocator = &memory::mallocAllocator();
+		m_allocator = &defaultAllocator();
 	}
 	YAE_ASSERT(m_allocator);
 }
@@ -152,7 +147,7 @@ String& String::replace(const char* _toReplace, const char* _replacement)
 
 String String::slice(size_t _startPosition, size_t _count) const
 {
-	String str = String(context().scratchAllocator);
+	String str = String(&scratchAllocator());
 
 	if (_startPosition > m_length)
 		return str;

@@ -2,6 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/string.h>
+#include <yae/time.h>
 #include <yae/filesystem.h>
 
 struct GLFWwindow;
@@ -9,24 +10,21 @@ struct ImGuiContext;
 
 namespace yae {
 
-class ResourceManager;
 class VulkanRenderer;
 class InputSystem;
-
-// @TODO: 2 notions en fait à partir de celle ci: Process/Application/Program qui est lié à l'instance unique de ce processus, et Instance/Contexte qui peut être en plusieurs exemplaires dans le programme.
 
 class YAELIB_API Application
 {
 public:
-	void init(const char* _name, u32 _width, u32 _height, char** _args, int _arg_count);
+	Application(const char* _name, u32 _width, u32 _height);
+
+	void init(char** _args, int _argCount);
+	bool doFrame();
 	void run();
 	void shutdown();
 
-	const Path& getExePath();
-	const Path& getBaseDirectoryPath();
-
-	InputSystem& getInputSystem() const;
-	VulkanRenderer& getRenderer() const;
+	InputSystem& input() const;
+	VulkanRenderer& renderer() const;
 
 private:
 
@@ -36,15 +34,16 @@ private:
 	static void _glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset);
 
 	String m_name;
-
-	Path m_exePath;
-	Path m_baseDirectoryPath;
+	u32 m_width = 0;
+	u32 m_height = 0;
 
 	InputSystem* m_inputSystem = nullptr;
 	VulkanRenderer* m_vulkanRenderer = nullptr;
 
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
+
+	Clock m_clock;
 
 	bool m_showMemoryProfiler = false;
 };

@@ -97,7 +97,7 @@ void Profiler::dumpCapture(const char* _captureName, String& _outString) const
 	_outString += string::format("%s\n", timeString.c_str());
 
 	String64 tabs;
-	DataArray<u32> stack(context().scratchAllocator);
+	DataArray<u32> stack(&scratchAllocator());
 	for (u32 i = 0; i < capturePtr->events.size(); ++i)
 	{
 		const Event& e = capturePtr->events[i];
@@ -187,6 +187,19 @@ void Profiler::_cleanEvents()
 	{
 		m_eventsStack[i] -= removedEvents;
 	}
+}
+
+
+CaptureScope::CaptureScope(const char* _name)
+	: m_name(_name)
+{
+	profiler().pushEvent(_name);
+}
+
+
+CaptureScope::~CaptureScope()
+{
+	profiler().popEvent(m_name);
 }
 
 

@@ -1,15 +1,15 @@
 #include "FileResource.h"
 
 #include <yae/filesystem.h>
-#include <yae/context.h>
+#include <yae/program.h>
 
 namespace yae {
 
 MIRROR_CLASS_DEFINITION(FileResource);
 
 FileResource::FileResource(const char* _path)
-	: Resource(ResourceID(Path(_path, true, context().scratchAllocator).c_str()))
-	, m_path(_path, true, context().defaultAllocator)
+	: Resource(ResourceID(Path(_path, true, &scratchAllocator()).c_str()))
+	, m_path(_path, true, &defaultAllocator())
 {
 	setName(m_path.c_str());
 }
@@ -31,7 +31,7 @@ Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 	}
 
 	m_contentSize = file.getSize();
-	m_content = context().defaultAllocator->allocate(m_contentSize);
+	m_content = defaultAllocator().allocate(m_contentSize);
 	file.read(m_content, m_contentSize);
 
 	return ERROR_NONE;
@@ -41,7 +41,7 @@ Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 
 void yae::FileResource::onUnloaded()
 {
-	context().defaultAllocator->deallocate(m_content);
+	defaultAllocator().deallocate(m_content);
 	m_content = nullptr;
 	m_contentSize = 0;
 }

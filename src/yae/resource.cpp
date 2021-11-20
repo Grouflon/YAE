@@ -1,13 +1,13 @@
 #include "resource.h"
 
 #include <yae/log.h>
+#include <yae/program.h>
 
 namespace yae {
 
 MIRROR_CLASS_DEFINITION(Resource);
 
 const ResourceID UNDEFINED_RESOURCEID = ResourceID("");
-
 
 
 Resource::Resource(ResourceID _id)
@@ -17,7 +17,6 @@ Resource::Resource(ResourceID _id)
 }
 
 
-
 Resource::~Resource()
 {
 	YAE_ASSERT(m_useCount == 0);
@@ -25,12 +24,10 @@ Resource::~Resource()
 }
 
 
-
 void Resource::use()
 {
 	++m_useCount;
 }
-
 
 
 bool Resource::load()
@@ -54,7 +51,6 @@ bool Resource::load()
 }
 
 
-
 bool Resource::useLoad()
 {
 	use();
@@ -62,13 +58,11 @@ bool Resource::useLoad()
 }
 
 
-
 void Resource::unuse()
 {
 	YAE_ASSERT_MSG(m_useCount > 0, "Asymetric use/unuse detected");
 	--m_useCount;
 }
-
 
 
 void Resource::release()
@@ -84,7 +78,6 @@ void Resource::release()
 }
 
 
-
 void Resource::releaseUnuse()
 {
 	release();
@@ -92,28 +85,20 @@ void Resource::releaseUnuse()
 }
 
 
-
 ResourceManager::ResourceManager()
-	: m_resources(context().defaultAllocator)
-	, m_resourcesByID(context().defaultAllocator)
+	: m_resources(&defaultAllocator())
+	, m_resourcesByID(&defaultAllocator())
 {
-	if (context().resourceManager == nullptr)
-	{
-		context().resourceManager = this;
-	}
 }
+
 
 ResourceManager::~ResourceManager()
 {
 	flushResources();
 
 	YAE_ASSERT_MSG(m_resources.size() == 0, "Resources list must be empty when the manager gets destroyed");
-
-	if (context().resourceManager == this)
-	{
-		context().resourceManager = nullptr;
-	}
 }
+
 
 void ResourceManager::registerResource(Resource* _resource)
 {
@@ -126,6 +111,7 @@ void ResourceManager::registerResource(Resource* _resource)
 
 	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"...", _resource->getName());
 }
+
 
 void ResourceManager::unregisterResource(Resource* _resource)
 {
@@ -145,10 +131,11 @@ void ResourceManager::unregisterResource(Resource* _resource)
 	YAE_VERBOSEF_CAT("resource", "Unregistered \"%s\"...", _resource->getName());
 }
 
+
 void ResourceManager::flushResources()
 {
 	// Gather unused resources
-	DataArray<Resource*> toDeleteResources(context().scratchAllocator);
+	DataArray<Resource*> toDeleteResources(&scratchAllocator());
 	for (Resource* resource : m_resources)
 	{
 		if (!resource->isUsed())
@@ -161,11 +148,10 @@ void ResourceManager::flushResources()
 	for (Resource* resource : toDeleteResources)
 	{
 		unregisterResource(resource);
-		context().defaultAllocator->destroy(resource);
+		defaultAllocator().destroy(resource);
 	}
 	toDeleteResources.clear();
 }
-
 
 
 } // namespace yae

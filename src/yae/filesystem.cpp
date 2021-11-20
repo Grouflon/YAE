@@ -1,6 +1,6 @@
 #include "filesystem.h"
 
-#include <yae/context.h>
+#include <yae/program.h>
 
 namespace yae {
 
@@ -34,10 +34,10 @@ Path Path::getDirectory() const
 		size_t pos = size - 1 - i;
 		if (m_path[pos] == '/')
 		{
-			return Path(m_path.slice(0, pos + 1).c_str(), false, context().scratchAllocator);
+			return Path(m_path.slice(0, pos + 1).c_str(), false, &scratchAllocator());
 		}
 	}
-	return Path(context().scratchAllocator);
+	return Path(&scratchAllocator());
 }
 
 

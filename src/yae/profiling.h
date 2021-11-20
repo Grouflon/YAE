@@ -1,16 +1,16 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/context.h>
 #include <yae/time.h>
 #include <yae/containers.h>
 #include <yae/hash.h>
+#include <yae/program.h>
 
 #define YAE_PROFILING_ENABLED 1
 
 #if YAE_PROFILING_ENABLED
-#define YAE_CAPTURE_START(_captureName) yae::context().profiler->startCapture(_captureName)
-#define YAE_CAPTURE_STOP(_captureName) yae::context().profiler->stopCapture(_captureName)
+#define YAE_CAPTURE_START(_captureName) yae::profiler().startCapture(_captureName)
+#define YAE_CAPTURE_STOP(_captureName) yae::profiler().stopCapture(_captureName)
 #define YAE_CAPTURE_SCOPE(_scopeName) CaptureScope __scope##__LINE__(_scopeName)
 #define YAE_CAPTURE_FUNCTION() YAE_CAPTURE_SCOPE(__FUNCTION__)
 #else
@@ -73,19 +73,11 @@ private:
 
 struct CaptureScope
 {
-	CaptureScope(const char* _name)
-		: m_name(_name)
-	{
-		yae::context().profiler->pushEvent(_name);
-	}
+	CaptureScope(const char* _name);
+	~CaptureScope();
 
-	~CaptureScope()
-	{
-		yae::context().profiler->popEvent(m_name);
-	}
-
-private:
 	const char* m_name;
 };
+
 
 } // namespace yae

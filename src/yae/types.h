@@ -61,3 +61,31 @@ constexpr size_t countof(const T(&_array)[N])
 {
 	return N;
 }
+
+
+// Global getters
+namespace yae {
+
+class Allocator;
+class Program;
+class Application;
+class ResourceManager;
+class Logger;
+class Profiler;
+class VulkanRenderer;
+class InputSystem;
+
+YAELIB_API Program& program();
+YAELIB_API Application& app();
+YAELIB_API Allocator& defaultAllocator();
+YAELIB_API Allocator& scratchAllocator();
+YAELIB_API Allocator& toolAllocator();
+YAELIB_API Profiler& profiler();
+YAELIB_API Logger& logger();
+YAELIB_API ResourceManager& resourceManager();
+YAELIB_API InputSystem& input();
+YAELIB_API VulkanRenderer& renderer();
+
+} // namespace yae
+
+

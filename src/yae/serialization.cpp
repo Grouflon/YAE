@@ -5,7 +5,7 @@
 #include <json/json.h>
 #include <mirror/mirror.h>
 
-#include <yae/context.h>
+#include <yae/program.h>
 #include <yae/memory.h>
 
 using namespace mirror;
@@ -169,7 +169,7 @@ JsonSerializer::JsonSerializer(Allocator* _allocator)
 {
 	if (m_allocator == nullptr)
 	{
-		m_allocator = context().scratchAllocator;
+		m_allocator = &scratchAllocator();
 	}
 	YAE_ASSERT(m_allocator != nullptr);
 }
