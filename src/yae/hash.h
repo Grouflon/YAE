@@ -1,17 +1,19 @@
 #pragma once
 
-#include <unordered_map>
-#include <string.h>
-
-#include <yae/types.h>
-#include <yae/string.h>
-
 #ifndef DEBUG_STRINGHASH
 	#ifdef YAE_DEBUG
 		#define DEBUG_STRINGHASH 1
 	#else
 		#define DEBUG_STRINGHASH 0
 	#endif
+#endif
+
+#include <yae/types.h>
+#include <yae/string.h>
+
+#if DEBUG_STRINGHASH
+#include <unordered_map>
+#include <string.h>
 #endif
 
 
