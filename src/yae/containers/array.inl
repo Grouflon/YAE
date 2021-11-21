@@ -192,10 +192,12 @@ void DataArray<T>::clear()
 
 
 template <typename T>
-void DataArray<T>::push_back(const T& _item)
+T& DataArray<T>::push_back(const T& _item)
 {
 	resize(m_size + 1);
-	m_data[m_size - 1] = _item;
+	T& item = m_data[m_size - 1];
+	item = _item;
+	return item;
 }
 
 
@@ -346,11 +348,13 @@ void Array<T>::clear()
 
 
 template <typename T>
-void Array<T>::push_back(const T& _item)
+T& Array<T>::push_back(const T& _item)
 {
 	resize(m_size + 1);
 	new (m_data + m_size - 1) T();
-	m_data[m_size - 1] = _item;
+	T& item = m_data[m_size - 1];
+	item = _item;
+	return item;
 }
 
 
@@ -455,4 +459,4 @@ void Array<T>::_grow(u32 _minCapacity)
 	_setCapacity(newCapacity);
 }
 
-} // !namespace yae
+} // namespace yae

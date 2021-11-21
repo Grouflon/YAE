@@ -61,7 +61,7 @@ public:
 
 	void resize(u32 _newSize);
 	void clear();
-	void push_back(const T& _item);
+	T& push_back(const T& _item);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
 	void reserve(u32 _newCapacity);
@@ -85,7 +85,7 @@ public:
 
 	void resize(u32 _newSize);
 	void clear();
-	void push_back(const T& _item);
+	T& push_back(const T& _item);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
 	void erase(T* _item);
@@ -101,4 +101,4 @@ protected:
 
 } // !namespace yae
 
-#include <yae/containers/array.inl>
+#include "Array.inl"
