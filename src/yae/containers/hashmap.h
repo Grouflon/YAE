@@ -1,6 +1,6 @@
 #pragma once
 
-#include <yae/containers/array.h>
+#include <yae/containers/Array.h>
 
 namespace yae {
 
@@ -66,4 +66,4 @@ private:
 
 } // !namespace yae
 
-#include <yae/containers/hashmap.inl>
+#include "HashMap.inl"

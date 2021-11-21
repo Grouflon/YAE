@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/filesystem.h>
-#include <yae/containers/array.h>
+#include <yae/containers/Array.h>
 
 namespace yae {
 

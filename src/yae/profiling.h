@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/time.h>
-#include <yae/containers/hashmap.h>
+#include <yae/containers/HashMap.h>
 #include <yae/hash.h>
 #include <yae/program.h>
 

@@ -3,7 +3,7 @@
 #include <yae/types.h>
 #include <yae/hash.h>
 #include <yae/string.h>
-#include <yae/containers/hashmap.h>
+#include <yae/containers/HashMap.h>
 
 #include <mirror/mirror.h>
 
