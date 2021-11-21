@@ -69,6 +69,13 @@ u32 BaseArray<T>::size() const
 
 
 template <typename T>
+u32 BaseArray<T>::capacity() const
+{
+	return m_capacity;
+}
+
+
+template <typename T>
 bool BaseArray<T>::empty() const
 {
 	return m_size == 0;

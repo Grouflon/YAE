@@ -26,6 +26,7 @@ public:
 	T& back();
 	const T& back() const;
 	u32 size() const;
+	u32 capacity() const;
 	bool empty() const;
 	T* data() const;
 
