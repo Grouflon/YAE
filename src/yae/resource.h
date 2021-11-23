@@ -94,6 +94,7 @@ T* findOrCreateResource(Args... _args)
 {
 	ResourceManager& manager = resourceManager();
 	ResourceID id = ResourceIDGetter<T>::GetId(_args...);
+	YAE_ASSERT_MSG(id != UNDEFINED_RESOURCEID, "Unknown Resource Type");
 	T* resource = manager.findResource<T>(id);
 	if (resource == nullptr)
 	{

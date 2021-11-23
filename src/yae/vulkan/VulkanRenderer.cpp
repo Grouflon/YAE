@@ -2,13 +2,12 @@
 
 #include <yae/log.h>
 #include <yae/resources/FileResource.h>
+#include <yae/resources/TextureResource.h>
 #include <yae/profiling.h>
 #include <yae/application.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
 
 #include <glm/gtc/matrix_transform.hpp>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
@@ -20,7 +19,6 @@
 namespace yae {
 
 const char* MODEL_PATH = "./data/models/viking_room.obj";
-const char* TEXTURE_PATH = "./data/textures/viking_room.png";
 
 const u32 INVALID_QUEUE = ~0u;
 
@@ -520,49 +518,13 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 	// Create Texture Image
 	{
-		YAE_VERBOSE_CAT("vulkan", "Creating Texture Image...");
-		int textureWidth, textureHeight, textureChannels;
-		stbi_uc* pixels = stbi_load(TEXTURE_PATH, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
-		YAE_ASSERT(pixels);
+		m_texture1 = findOrCreateResource<TextureResource>("./data/textures/viking_room.png");
+		m_texture1->useLoad();
+		YAE_ASSERT(m_texture1->getError() == Resource::ERROR_NONE);
 
-		VkDeviceSize imageSize = textureWidth * textureHeight * 4;
-
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferMemory;
-		_createBuffer(
-			imageSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
-		);
-
-
-		void* data;
-		VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
-		memcpy(data, pixels, static_cast<size_t>(imageSize));
-		vmaUnmapMemory(m_allocator, stagingBufferMemory);
-
-		stbi_image_free(pixels);
-
-		_createImage(
-			textureWidth,
-			textureHeight,
-			VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_TILING_OPTIMAL,
-			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			m_textureImage,
-			m_textureImageMemory
-		);
-
-		_transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		_copyBufferToImage(stagingBuffer, m_textureImage, textureWidth, textureHeight);
-		_transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		_destroyBuffer(stagingBuffer, stagingBufferMemory);
-
-		m_textureImageView = _createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-		YAE_VERBOSE_CAT("vulkan", "Created Texture Image");
+		m_texture2 = findOrCreateResource<TextureResource>("./data/textures/oro_avatar.png");
+		m_texture2->useLoad();
+		YAE_ASSERT(m_texture2->getError() == Resource::ERROR_NONE);
 	}
 
 	// Create Texture Sampler
@@ -817,6 +779,55 @@ void VulkanRenderer::notifyFrameBufferResized(int _width, int _height)
 	m_framebufferResized = true;
 }
 
+
+bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
+{
+	VkDeviceSize imageSize = _width * _height * 4;
+
+	VkBuffer stagingBuffer;
+	VmaAllocation stagingBufferMemory;
+	_createBuffer(
+		imageSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer,
+		stagingBufferMemory
+	);
+
+	void* data;
+	VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
+	memcpy(data, _data, static_cast<size_t>(imageSize));
+	vmaUnmapMemory(m_allocator, stagingBufferMemory);
+
+	_createImage(
+		_width,
+		_height,
+		VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_outTextureHandle.image,
+		_outTextureHandle.memory
+	);
+
+	_transitionImageLayout(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	_copyBufferToImage(stagingBuffer, _outTextureHandle.image, _width, _height);
+	_transitionImageLayout(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	_destroyBuffer(stagingBuffer, stagingBufferMemory);
+
+	_outTextureHandle.view = _createImageView(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+	return true;
+}
+
+
+void VulkanRenderer::destroyTexture(TextureHandle& _inTextureHandle)
+{
+	vkDestroyImageView(m_device, _inTextureHandle.view, nullptr);
+	_inTextureHandle.view = VK_NULL_HANDLE;
+	_destroyImage(_inTextureHandle.image, _inTextureHandle.memory);
+}
+
+
 void VulkanRenderer::endFrame()
 {
 	YAE_CAPTURE_FUNCTION();
@@ -904,10 +915,13 @@ void VulkanRenderer::shutdown()
 	vkDestroySampler(m_device, m_textureSampler, nullptr);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Sampler");
 
-	vkDestroyImageView(m_device, m_textureImageView, nullptr);
-	m_textureImageView = VK_NULL_HANDLE;
-	_destroyImage(m_textureImage, m_textureImageMemory);
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Image");
+	{
+		m_texture1->releaseUnuse();
+		m_texture1 = nullptr;
+
+		m_texture2->releaseUnuse();
+		m_texture2 = nullptr;
+	}
 
 	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 	m_commandPool = VK_NULL_HANDLE;
@@ -1542,7 +1556,7 @@ void VulkanRenderer::_createSwapChain()
 
 			VkDescriptorImageInfo imageInfo{};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = m_textureImageView;
+			imageInfo.imageView = m_texture1->getHandle().view;
 			imageInfo.sampler = m_textureSampler;
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = descriptorSets[i];

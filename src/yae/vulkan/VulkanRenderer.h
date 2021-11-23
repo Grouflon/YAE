@@ -15,6 +15,8 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace yae {
 
+class TextureResource;
+
 struct Vertex {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -43,6 +45,13 @@ struct QueueFamilyIndices
 	}
 };
 
+struct TextureHandle
+{
+	VkImage image = VK_NULL_HANDLE;
+	VmaAllocation memory = VK_NULL_HANDLE;
+	VkImageView view = VK_NULL_HANDLE;
+};
+
 class VulkanRenderer
 {
 public:
@@ -59,6 +68,9 @@ public:
 	void drawImGui(ImDrawData* _drawData);
 
 	void notifyFrameBufferResized(int _width, int _height);
+
+	bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle);
+	void destroyTexture(TextureHandle& _inTextureHandle);
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
@@ -140,9 +152,8 @@ private:
 	VmaAllocation m_depthImageMemory;
 	VkImageView m_depthImageView;
 
-	VkImage m_textureImage;
-	VmaAllocation m_textureImageMemory;
-	VkImageView m_textureImageView;
+	TextureResource* m_texture1 = nullptr;
+	TextureResource* m_texture2 = nullptr;
 	VkSampler m_textureSampler;
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
