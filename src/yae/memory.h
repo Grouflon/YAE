@@ -15,6 +15,7 @@ public:
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) = 0;
 	virtual void deallocate(void* _memory) = 0;
 
+	virtual size_t getAllocationSize(void* _memory) const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocationCount() const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocatedSize() const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocableSize() const { return SIZE_NOT_TRACKED; }
@@ -47,6 +48,7 @@ public:
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
 	virtual void deallocate(void* _memory) override;
 
+	virtual size_t getAllocationSize(void* _memory) const override;
 	virtual size_t getAllocationCount() const override { return m_allocationCount; }
 	virtual size_t getAllocatedSize() const override { return m_allocatedSize; }
 	virtual size_t getAllocableSize() const override { return m_allocableSize; }

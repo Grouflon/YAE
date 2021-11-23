@@ -196,6 +196,26 @@ void FixedSizeAllocator::deallocate(void* _memory)
 }
 
 
+size_t FixedSizeAllocator::getAllocationSize(void* _memory) const
+{
+	if (_memory == nullptr)
+		return SIZE_NOT_TRACKED;
+
+	Header* block = m_firstBlock;
+	while (block != nullptr)
+	{
+		void* data = _getData(block);
+		void* dataStart = _getDataStart(block, block->alignment);
+		if (dataStart == _memory)
+		{
+			return block->size - size_t((u8*)(dataStart) - (u8*)(data));
+		}
+		block = block->next;
+	}
+
+	return SIZE_NOT_TRACKED;
+}
+
 
 void FixedSizeAllocator::check()
 {
