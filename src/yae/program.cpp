@@ -1,13 +1,14 @@
 #include "program.h"
 
 #include <imgui/imgui.h>
-#include <yae/log.h>
 #include <yae/platform.h>
+#include <yae/filesystem.h>
 #include <yae/game_module.h>
 #include <yae/resource.h>
-#include <yae/profiling.h>
 #include <yae/application.h>
 #include <yae/input.h>
+#include <yae/profiler.h>
+#include <yae/logger.h>
 #include <yae/vulkan/VulkanRenderer.h>
 
 // anonymous functions
@@ -60,11 +61,9 @@ void Program::init(char** _args, int _argCount)
 
     m_logger = m_defaultAllocator->create<Logger>();
 
-    m_exePath = Path(m_args[0], m_scratchAllocator);
+    m_exePath = filesystem::normalizePath(m_args[0]);
 	YAE_LOG(m_exePath.c_str());
-	String workingDirectory = platform::getWorkingDirectory();
-	Path workingDirectoryPath(workingDirectory.c_str());
-	YAE_LOG(workingDirectoryPath.c_str());
+	YAE_LOG(filesystem::normalizePath(platform::getWorkingDirectory()).c_str());
 
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
@@ -209,9 +208,9 @@ void Program::unregisterApplication(Application* _application)
 }
 
 
-const Path& Program::getExePath() const
+const char* Program::getExePath() const
 {
-	return m_exePath;
+	return m_exePath.c_str();
 }
 
 

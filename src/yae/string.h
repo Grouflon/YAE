@@ -1,11 +1,10 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/memory.h>
+
+#include <cstdio>
 
 namespace yae {
-
-class Allocator;
 
 // @TODO: use explicit types of sizes (u32?)
 
@@ -66,56 +65,13 @@ public:
 };
 
 
-
-template <size_t INLINE_SIZE>
-class InlineString : public String
-{
-public:
-	InlineString() : String(&m_inlineAllocator) {}
-	InlineString(const char* _str) : String(&m_inlineAllocator)
-	{
-		String::operator=(_str);
-	}
-	InlineString(const String& _str) :String(&m_inlineAllocator)
-	{
-		String::operator=(_str);
-	}
-
-private:
-	InlineAllocator<INLINE_SIZE> m_inlineAllocator;
-};
-
-typedef InlineString<32> String32;
-typedef InlineString<64> String64;
-typedef InlineString<128> String128;
-typedef InlineString<256> String256;
-typedef InlineString<512> String512;
-
-
 // TOOLS
 namespace string {
-
-/*YAELIB_API std::string Narrow(const wchar_t* _s);
-YAELIB_API std::string Narrow(const std::wstring& _s);
-YAELIB_API std::wstring Widen(const char* _s);
-YAELIB_API std::wstring Widen(const std::string& _s);
-
-template<typename ... Args>
-std::string StdStringFormat(const char* _fmt, Args ..._args)
-{
-    size_t size = snprintf(nullptr, 0, _fmt, _args...);
-    YAE_ASSERT(size > 0);
-
-	std::string result;
-    result.resize(size);
-    snprintf(const_cast<char*>(result.data()), size + 1, _fmt, _args...);
-
-    return result;
-}*/
 
 template<typename ... Args>
 String format(const char* _fmt, Args ..._args)
 {
+    YAE_ASSERT(_fmt != nullptr);
     size_t size = snprintf(nullptr, 0, _fmt, _args...);
     YAE_ASSERT(size > 0);
 

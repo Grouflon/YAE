@@ -1,7 +1,7 @@
 #pragma once
 
+#include <yae/types.h>
 #include <yae/resource.h>
-#include <yae/filesystem.h>
 
 #include <mirror/mirror.h>
 
@@ -18,16 +18,15 @@ public:
 	FileResource(const char* _path);
 	virtual~ FileResource();
 
-	virtual Error onLoaded(String& _outErrorDescription) override;
-	virtual void onUnloaded() override;
-
 	const void* getContent() const { return m_content; }
 	size_t getContentSize() const { return m_contentSize; }
 
-private:
+// private:
+	virtual Error _doLoad(String& _outErrorDescription) override;
+	virtual void _doUnload() override;
+
 	void* m_content = nullptr;
 	size_t m_contentSize = 0;
-	Path m_path;
 };
 
 template <>

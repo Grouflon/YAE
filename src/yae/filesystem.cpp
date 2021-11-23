@@ -4,48 +4,39 @@
 
 namespace yae {
 
-Path::Path(Allocator* _allocator)
-	: m_path(_allocator)
+namespace filesystem {
+
+String normalizePath(const char* _path)
 {
-	
+	String path(_path, &scratchAllocator());
+	return normalizePath(path);
 }
 
 
-Path::Path(const char* _path, bool _normalize, Allocator* _allocator)
-	: m_path(_path, _allocator)
+String& normalizePath(String& _path)
 {
-	if (_normalize)
-	{
-		NormalizePath(m_path);
-	}
+	_path.replace("\\", "/");
+	return _path;
 }
 
 
-Path::~Path()
+String getDirectory(const char* _path)
 {
-
-}
-
-Path Path::getDirectory() const
-{
-	size_t size = m_path.size();
+	String path(_path, &scratchAllocator());
+	normalizePath(_path);
+	size_t size = path.size();
 	for (size_t i = 0; i < size; ++i)
 	{
 		size_t pos = size - 1 - i;
-		if (m_path[pos] == '/')
+		if (path[pos] == '/')
 		{
-			return Path(m_path.slice(0, pos + 1).c_str(), false, &scratchAllocator());
+			return path.slice(0, pos + 1);
 		}
 	}
-	return Path(&scratchAllocator());
+	return path;
 }
 
-
-void Path::NormalizePath(String& _path)
-{
-	_path.replace("\\", "/");
-}
-
+} // namespace filesystem
 
 
 FileHandle::FileHandle(const char* path)

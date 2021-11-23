@@ -1,9 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/string.h>
 #include <yae/time.h>
-#include <yae/filesystem.h>
 
 struct GLFWwindow;
 struct ImGuiContext;

@@ -1,6 +1,5 @@
 #include "resource.h"
 
-#include <yae/log.h>
 #include <yae/program.h>
 
 namespace yae {
@@ -12,6 +11,13 @@ const ResourceID UNDEFINED_RESOURCEID = ResourceID("");
 
 Resource::Resource(ResourceID _id)
 	: m_id(_id)
+{
+	YAE_ASSERT(m_id != UNDEFINED_RESOURCEID);
+}
+
+Resource::Resource(const char* _name)
+	: m_id(ResourceID(_name))
+	, m_name(_name)
 {
 	YAE_ASSERT(m_id != UNDEFINED_RESOURCEID);
 }
@@ -36,7 +42,7 @@ bool Resource::load()
 	{
 		YAE_VERBOSEF_CAT("resource", "Loading \"%s\"...", getName());
 		m_errorDescription = "";
-		m_error = onLoaded(m_errorDescription);
+		m_error = _doLoad(m_errorDescription);
 		if (m_error != ERROR_NONE)
 		{
 			YAE_ERRORF_CAT("resource", "Failed to load \"%s\": %s", getName(), m_errorDescription.c_str());
@@ -72,7 +78,7 @@ void Resource::release()
 	if (m_loadCount == 0)
 	{
 		YAE_VERBOSEF_CAT("resource", "Releasing \"%s\"...", getName());
-		onUnloaded();
+		_doUnload();
 		YAE_LOGF_CAT("resource", "Released \"%s\"", getName());
 	}
 }

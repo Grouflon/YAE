@@ -1,7 +1,6 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/filesystem.h>
 #include <yae/containers/Array.h>
 
 namespace yae {
@@ -26,7 +25,7 @@ public:
 	void registerApplication(Application* _application);
 	void unregisterApplication(Application* _application);
 
-	const Path& getExePath() const;
+	const char* getExePath() const;
 
 	Application& currentApplication();
 	Allocator& defaultAllocator();
@@ -49,7 +48,7 @@ public:
 
 	int m_argCount = 0;
 	char** m_args = nullptr;
-	Path m_exePath;
+	String m_exePath;
 
 	static Program* s_programInstance;
 };

@@ -1,8 +1,7 @@
 #include "TextureResource.h"
 
-#include "yae/profiling.h"
-#include "yae/vulkan/VulkanRenderer.h"
-#include "yae/log.h"
+#include <yae/filesystem.h>
+#include <yae/vulkan/VulkanRenderer.h>
 
 void* yae_stbi_malloc(size_t _sz)
 {
@@ -38,10 +37,8 @@ namespace yae {
 MIRROR_CLASS_DEFINITION(TextureResource);
 
 TextureResource::TextureResource(const char* _path)
-	: Resource(ResourceID(Path(_path, true, &scratchAllocator()).c_str()))
-	, m_path(_path, true, &defaultAllocator())
+	: Resource(filesystem::normalizePath(_path).c_str())
 {
-	setName(m_path.c_str());
 }
 
 
@@ -51,13 +48,13 @@ TextureResource::~TextureResource()
 }
 
 
-Resource::Error TextureResource::onLoaded(String& _outErrorDescription)
+Resource::Error TextureResource::_doLoad(String& _outErrorDescription)
 {
 	YAE_CAPTURE_FUNCTION();
 
 	// Create Texture Image
-	YAE_VERBOSEF_CAT("resource", "Loading texture \"%s\"...", m_path.c_str());
-	stbi_uc* pixels = stbi_load(m_path.c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
+	YAE_VERBOSEF_CAT("resource", "Loading texture \"%s\"...", getName());
+	stbi_uc* pixels = stbi_load(getName(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
 	if (pixels == nullptr)
 	{
 		_outErrorDescription = "Failed to open file";
@@ -74,12 +71,12 @@ Resource::Error TextureResource::onLoaded(String& _outErrorDescription)
 		return ERROR_LOAD;	
 	}
 
-	YAE_VERBOSEF_CAT("resource", "Succesfully loaded texture \"%s\".", m_path.c_str());
+	YAE_VERBOSEF_CAT("resource", "Succesfully loaded texture \"%s\".", getName());
 	return ERROR_NONE;
 }
 
 
-void TextureResource::onUnloaded()
+void TextureResource::_doUnload()
 {
 	YAE_CAPTURE_FUNCTION();
 

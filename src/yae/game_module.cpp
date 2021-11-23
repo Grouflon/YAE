@@ -1,8 +1,6 @@
 #include "game_module.h"
 
-#include <yae/profiling.h>
 #include <yae/platform.h>
-#include <yae/log.h>
 
 namespace yae {
 

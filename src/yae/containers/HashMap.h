@@ -1,5 +1,6 @@
 #pragma once
 
+#include <yae/types.h>
 #include <yae/containers/Array.h>
 
 namespace yae {

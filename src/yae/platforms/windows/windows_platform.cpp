@@ -1,5 +1,4 @@
 #include <yae/platform.h>
-#include <yae/log.h>
 
 #include <windows.h>
 #include <atlstr.h>

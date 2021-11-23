@@ -1,8 +1,5 @@
 #include "input.h"
 
-#include <yae/profiling.h>
-#include <yae/log.h>
-
 namespace yae {
 
 

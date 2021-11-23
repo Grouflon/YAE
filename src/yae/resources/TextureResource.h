@@ -1,7 +1,7 @@
 #pragma once
 
+#include <yae/types.h>
 #include <yae/resource.h>
-#include <yae/filesystem.h>
 #include <yae/vulkan/VulkanRenderer.h>
 
 #include <mirror/mirror.h>
@@ -19,13 +19,12 @@ public:
 	TextureResource(const char* _path);
 	virtual ~TextureResource();
 
-	virtual Error onLoaded(String& _outErrorDescription) override;
-	virtual void onUnloaded() override;
-
 	const TextureHandle& getHandle() const;
 
 // private:
-	Path m_path;
+	virtual Error _doLoad(String& _outErrorDescription) override;
+	virtual void _doUnload() override;
+
 	int m_width = 0;
 	int m_height = 0;
 	int m_channels = 0;

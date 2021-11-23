@@ -1,9 +1,7 @@
 #include "VulkanRenderer.h"
 
-#include <yae/log.h>
 #include <yae/resources/FileResource.h>
 #include <yae/resources/TextureResource.h>
-#include <yae/profiling.h>
 #include <yae/application.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
 

@@ -21,6 +21,7 @@ typedef uint64_t	u64;
 #endif
 
 // MACROS
+#include <cstring>
 #ifndef __FILENAME__
 #define __FILENAME__ \
 	(strrchr(__FILE__,'/') \
@@ -88,4 +89,6 @@ YAELIB_API VulkanRenderer& renderer();
 
 } // namespace yae
 
-
+#include <yae/string.h>
+#include <yae/logging.h>
+#include <yae/profiling.h>

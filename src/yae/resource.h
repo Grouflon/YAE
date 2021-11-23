@@ -2,7 +2,6 @@
 
 #include <yae/types.h>
 #include <yae/hash.h>
-#include <yae/string.h>
 #include <yae/containers/HashMap.h>
 
 #include <mirror/mirror.h>
@@ -28,10 +27,10 @@ public:
 	};
 
 	Resource(ResourceID _id);
+	Resource(const char* _name);
 	virtual ~Resource();
 	
 	ResourceID getID() const { return m_id; }
-	void setName(const char* _name) { m_name = _name; }
 	const char* getName() const { return m_name.c_str(); }
 
 	void use();
@@ -47,11 +46,10 @@ public:
 	Error getError() const { return m_error; }
 	const char* getErrorDescription() const { return m_errorDescription.c_str(); }
 
-protected:
-	virtual Error onLoaded(String& _outErrorDescription) { return ERROR_NONE; }
-	virtual void onUnloaded() {}
+// private:
+	virtual Error _doLoad(String& _outErrorDescription) { return ERROR_NONE; }
+	virtual void _doUnload() {}
 
-private:
 	ResourceID m_id;
 	String m_name;
 	u32 m_useCount = 0;

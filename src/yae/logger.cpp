@@ -1,11 +1,11 @@
-#include "log.h"
+#include "logger.h"
 
 #include <yae/program.h>
+#include <yae/hash.h>
 
 namespace yae {
 
 const char* DEFAULT_CATEGORY_NAME = "Default";
-
 
 Logger::Logger()
 	: m_categories(&toolAllocator())

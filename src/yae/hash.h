@@ -9,7 +9,6 @@
 #endif
 
 #include <yae/types.h>
-#include <yae/string.h>
 
 #if DEBUG_STRINGHASH
 #include <unordered_map>

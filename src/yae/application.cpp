@@ -1,12 +1,11 @@
 #include "Application.h"
 
 #include <yae/platform.h>
-#include <yae/profiling.h>
-#include <yae/log.h>
 #include <yae/time.h>
 #include <yae/vulkan/VulkanRenderer.h>
 #include <yae/input.h>
 #include <yae/game_module.h>
+#include <yae/memory.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>

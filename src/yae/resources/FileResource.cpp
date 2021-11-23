@@ -8,22 +8,19 @@ namespace yae {
 MIRROR_CLASS_DEFINITION(FileResource);
 
 FileResource::FileResource(const char* _path)
-	: Resource(ResourceID(Path(_path, true, &scratchAllocator()).c_str()))
-	, m_path(_path, true, &defaultAllocator())
+	: Resource(filesystem::normalizePath(_path).c_str())
 {
-	setName(m_path.c_str());
 }
 
 
 FileResource::~FileResource()
 {
-	
 }
 
 
-Resource::Error FileResource::onLoaded(String& _outErrorDescription)
+Resource::Error FileResource::_doLoad(String& _outErrorDescription)
 {
-	FileHandle file(m_path.c_str());
+	FileHandle file(getName());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
 		_outErrorDescription = "Could not open file.";
@@ -39,7 +36,7 @@ Resource::Error FileResource::onLoaded(String& _outErrorDescription)
 
 
 
-void yae::FileResource::onUnloaded()
+void yae::FileResource::_doUnload()
 {
 	defaultAllocator().deallocate(m_content);
 	m_content = nullptr;

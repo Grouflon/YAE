@@ -3,7 +3,7 @@
 #include <cstdio>
 
 #include <yae/types.h>
-#include <yae/string.h>
+#include <yae/inline_string.h>
 
 // interesting stuff: http://utf8everywhere.org/
 
@@ -11,25 +11,13 @@ namespace yae {
 
 class Allocator;
 
-struct YAELIB_API Path
-{
-	Path(Allocator* _allocator = nullptr);
-	Path(const char* _path, bool _normalize = true, Allocator* _allocator = nullptr);
-	~Path();
+namespace filesystem {
 
-	const String& getString() const { return m_path; }
-	String toString() const { return m_path; }
-	const char* c_str() const { return m_path.c_str(); }
+YAELIB_API String normalizePath(const char* _path);
+YAELIB_API String& normalizePath(String& _path);
+YAELIB_API String getDirectory(const char* _path);
 
-	Path getDirectory() const;
-
-	static void NormalizePath(String& _path);
-
-private:
-	String m_path;
-};
-
-
+} // namespace filesystem
 
 class YAELIB_API FileHandle
 {

@@ -1,6 +1,7 @@
 #include "string.h"
 
 #include <yae/program.h>
+#include <yae/memory.h>
 
 #include <cstring>
 #include <string>
