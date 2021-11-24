@@ -2,12 +2,11 @@
 
 #include <yae/resources/FileResource.h>
 #include <yae/resources/TextureResource.h>
+#include <yae/resources/MeshResource.h>
 #include <yae/application.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
 
 #include <glm/gtc/matrix_transform.hpp>
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tinyobjloader/tiny_obj_loader.h>
 
 #include <set>
 #include <vector>
@@ -15,8 +14,6 @@
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
 namespace yae {
-
-const char* MODEL_PATH = "./data/models/viking_room.obj";
 
 const u32 INVALID_QUEUE = ~0u;
 
@@ -552,79 +549,9 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 	// Load Model
 	{
-		YAE_VERBOSE_CAT("vulkan", "Loading Model...");
-		m_vertices.clear();
-		m_indices.clear();
-		bool ret = LoadModel(MODEL_PATH, m_vertices, m_indices);
-		YAE_ASSERT(ret);
-		YAE_VERBOSE_CAT("vulkan", "Loaded Model");
-	}
-
-	// Create Vertex Buffer
-	{
-		YAE_VERBOSE_CAT("vulkan", "Creating Vertex Buffer...");
-
-		VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferMemory;
-		_createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
-		);
-
-		{
-			void* data;
-			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
-			memcpy(data, m_vertices.data(), bufferSize);
-			vmaUnmapMemory(m_allocator, stagingBufferMemory);
-		}
-		_createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			m_vertexBuffer,
-			m_vertexBufferMemory
-		);
-		_copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
-
-		_destroyBuffer(stagingBuffer, stagingBufferMemory);
-		YAE_VERBOSE_CAT("vulkan", "Created Vertex Buffer");
-	}
-
-	// Create Index Buffer
-	{
-		YAE_VERBOSE_CAT("vulkan", "Creating Index Buffer...");
-		VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferMemory;
-		_createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
-		);
-
-		{
-			void* data;
-			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
-			memcpy(data, m_indices.data(), bufferSize);
-			vmaUnmapMemory(m_allocator, stagingBufferMemory);
-		}
-		_createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			m_indexBuffer,
-			m_indexBufferMemory
-		);
-		_copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
-
-		_destroyBuffer(stagingBuffer, stagingBufferMemory);
-		YAE_VERBOSE_CAT("vulkan", "Created Index Buffer");
+		m_mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
+		m_mesh->useLoad();
+		YAE_ASSERT(m_mesh->getError() == Resource::ERROR_NONE);
 	}
 
 	// Create Sync Objects
@@ -754,13 +681,13 @@ void VulkanRenderer::drawMesh()
 
 	vkCmdBindPipeline(frame.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
-	VkBuffer vertexBuffers[] = { m_vertexBuffer };
+	VkBuffer vertexBuffers[] = { m_mesh->getMeshHandle().vertexBuffer };
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(frame.commandBuffer, 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(frame.commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(frame.commandBuffer, m_mesh->getMeshHandle().indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdBindDescriptorSets(frame.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &frame.descriptorSet, 0, nullptr);
 
-	vkCmdDrawIndexed(frame.commandBuffer, u32(m_indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(frame.commandBuffer, u32(m_mesh->m_indices.size()), 1, 0, 0, 0);
 }
 
 void VulkanRenderer::drawImGui(ImDrawData* _drawData)
@@ -780,6 +707,8 @@ void VulkanRenderer::notifyFrameBufferResized(int _width, int _height)
 
 bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	VkDeviceSize imageSize = _width * _height * 4;
 
 	VkBuffer stagingBuffer;
@@ -820,9 +749,106 @@ bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _ch
 
 void VulkanRenderer::destroyTexture(TextureHandle& _inTextureHandle)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	vkDestroyImageView(m_device, _inTextureHandle.view, nullptr);
 	_inTextureHandle.view = VK_NULL_HANDLE;
 	_destroyImage(_inTextureHandle.image, _inTextureHandle.memory);
+}
+
+
+bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(_vertices != nullptr || _verticesCount == 0);
+	YAE_ASSERT(_indices != nullptr || _indicesCount == 0);
+
+	// Create Vertex Buffer
+	{
+		YAE_VERBOSE_CAT("vulkan", "Creating Vertex Buffer...");
+
+		VkDeviceSize bufferSize = sizeof(*_vertices) * _verticesCount;
+		VkBuffer stagingBuffer;
+		VmaAllocation stagingBufferMemory;
+		_createBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer,
+			stagingBufferMemory
+		);
+
+		{
+			void* data;
+			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
+			memcpy(data, _vertices, bufferSize);
+			vmaUnmapMemory(m_allocator, stagingBufferMemory);
+		}
+		_createBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			_outMeshHandle.vertexBuffer,
+			_outMeshHandle.vertexMemory
+		);
+		_copyBuffer(stagingBuffer, _outMeshHandle.vertexBuffer, bufferSize);
+
+		_destroyBuffer(stagingBuffer, stagingBufferMemory);
+		YAE_VERBOSE_CAT("vulkan", "Created Vertex Buffer");
+	}
+
+	// Create Index Buffer
+	{
+		YAE_VERBOSE_CAT("vulkan", "Creating Index Buffer...");
+		VkDeviceSize bufferSize = sizeof(*_indices) * _indicesCount;
+		VkBuffer stagingBuffer;
+		VmaAllocation stagingBufferMemory;
+		_createBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer,
+			stagingBufferMemory
+		);
+
+		{
+			void* data;
+			VK_VERIFY(vmaMapMemory(m_allocator, stagingBufferMemory, &data));
+			memcpy(data, _indices, bufferSize);
+			vmaUnmapMemory(m_allocator, stagingBufferMemory);
+		}
+		_createBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			_outMeshHandle.indexBuffer,
+			_outMeshHandle.indexMemory
+		);
+		_copyBuffer(stagingBuffer, _outMeshHandle.indexBuffer, bufferSize);
+
+		_destroyBuffer(stagingBuffer, stagingBufferMemory);
+		YAE_VERBOSE_CAT("vulkan", "Created Index Buffer");
+	}
+
+	return true;
+}
+
+
+void VulkanRenderer::destroyMesh(MeshHandle& _inMeshHandle)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	_destroyBuffer(_inMeshHandle.indexBuffer, _inMeshHandle.indexMemory);
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Index Buffer");
+
+	_destroyBuffer(_inMeshHandle.vertexBuffer, _inMeshHandle.vertexMemory);
+	YAE_VERBOSE_CAT("vulkan", "Destroyed Vertex Buffer");
+
+	_inMeshHandle.indexBuffer = VK_NULL_HANDLE;
+	_inMeshHandle.indexMemory = VK_NULL_HANDLE;
+	_inMeshHandle.vertexBuffer = VK_NULL_HANDLE;
+	_inMeshHandle.vertexMemory = VK_NULL_HANDLE;
 }
 
 
@@ -904,11 +930,10 @@ void VulkanRenderer::shutdown()
 	m_imageAvailableSemaphores.clear();
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Sync Objects");
 
-	_destroyBuffer(m_indexBuffer, m_indexBufferMemory);
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Index Buffer");
-
-	_destroyBuffer(m_vertexBuffer, m_vertexBufferMemory);
-	YAE_VERBOSE_CAT("vulkan", "Destroyed Vertex Buffer");
+	{
+		m_mesh->releaseUnuse();
+		m_mesh = nullptr;
+	}
 
 	vkDestroySampler(m_device, m_textureSampler, nullptr);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Texture Sampler");
@@ -1048,61 +1073,12 @@ VkFormat VulkanRenderer::FindSupportedFormat(VkPhysicalDevice _physicalDevice, V
 	return VK_FORMAT_UNDEFINED;
 }
 
+
 bool VulkanRenderer::HasStencilComponent(VkFormat _format)
 {
 	return _format == VK_FORMAT_D32_SFLOAT_S8_UINT || _format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-bool VulkanRenderer::LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices)
-{
-	YAE_CAPTURE_FUNCTION();
-	
-	YAE_ASSERT(_outVertices.empty());
-	YAE_ASSERT(_outIndices.empty());
-
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string warn, err;
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH))
-	{
-		YAE_ERROR((warn + err).c_str());
-		return false;
-	}
-
-	std::unordered_map<Vertex, u32> uniqueVertices;
-
-	for (const auto& shape : shapes)
-	{
-		for (const auto& index : shape.mesh.indices)
-		{
-			Vertex v{};
-			v.pos = {
-				attrib.vertices[3 * index.vertex_index + 0],
-				attrib.vertices[3 * index.vertex_index + 1],
-				attrib.vertices[3 * index.vertex_index + 2]
-			};
-
-			v.texCoord = {
-				attrib.texcoords[2 * index.texcoord_index + 0],
-				1.f - attrib.texcoords[2 * index.texcoord_index + 1]
-			};
-
-			v.color = {1.f, 1.f, 1.f};
-
-			auto it = uniqueVertices.find(v);
-			if (it == uniqueVertices.end())
-			{
-				it = uniqueVertices.insert(std::make_pair(v, u32(_outVertices.size()))).first;
-				_outVertices.push_back(v);
-			}
-			_outIndices.push_back(it->second);
-		}
-	}
-
-	return true;
-}
 
 void VulkanRenderer::_createSwapChain()
 {

@@ -53,13 +53,19 @@ Resource::Error TextureResource::_doLoad(String& _outErrorDescription)
 	YAE_CAPTURE_FUNCTION();
 
 	// Create Texture Image
-	YAE_VERBOSEF_CAT("resource", "Loading texture \"%s\"...", getName());
-	stbi_uc* pixels = stbi_load(getName(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
-	if (pixels == nullptr)
+	stbi_uc* pixels;
 	{
-		_outErrorDescription = "Failed to open file";
-		return ERROR_LOAD;
+		YAE_CAPTURE_SCOPE("open_file");
+
+		YAE_VERBOSEF_CAT("resource", "Loading texture \"%s\"...", getName());
+		pixels = stbi_load(getName(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
+		if (pixels == nullptr)
+		{
+			_outErrorDescription = "Failed to open file";
+			return ERROR_LOAD;
+		}	
 	}
+	
 
 	YAE_ASSERT(pixels);
 	bool result = renderer().createTexture(pixels, m_width, m_height, m_channels, m_textureHandle);

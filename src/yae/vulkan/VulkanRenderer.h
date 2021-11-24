@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <VulkanMemoryAllocator/vk_mem_alloc.h>
 
+// TODO: get rid of this and use our own array
 #include <vector>
 
 struct ImDrawData;
@@ -16,6 +17,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 namespace yae {
 
 class TextureResource;
+class MeshResource;
 
 struct Vertex {
 	glm::vec3 pos;
@@ -52,6 +54,14 @@ struct TextureHandle
 	VkImageView view = VK_NULL_HANDLE;
 };
 
+struct MeshHandle
+{
+	VkBuffer vertexBuffer = VK_NULL_HANDLE;
+	VmaAllocation vertexMemory = VK_NULL_HANDLE;
+	VkBuffer indexBuffer = VK_NULL_HANDLE;
+	VmaAllocation indexMemory = VK_NULL_HANDLE;
+};
+
 class VulkanRenderer
 {
 public:
@@ -72,11 +82,12 @@ public:
 	bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle);
 	void destroyTexture(TextureHandle& _inTextureHandle);
 
+	bool createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle);
+	void destroyMesh(MeshHandle& _inMeshHandle);
+
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
 	static bool HasStencilComponent(VkFormat _format);
-
-	static bool LoadModel(const char* _path, std::vector<Vertex>& _outVertices, std::vector<u32>& _outIndices);
 
 private:
 	void _createSwapChain();
@@ -136,12 +147,14 @@ private:
 	VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
+	/*
 	std::vector<Vertex> m_vertices;
 	std::vector<u32> m_indices;
 	VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
 	VmaAllocation m_vertexBufferMemory = VK_NULL_HANDLE;
 	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
 	VmaAllocation m_indexBufferMemory = VK_NULL_HANDLE;
+	*/
 
 	VkDescriptorPool m_descriptorPool;
 
@@ -155,6 +168,8 @@ private:
 	TextureResource* m_texture1 = nullptr;
 	TextureResource* m_texture2 = nullptr;
 	VkSampler m_textureSampler;
+
+	MeshResource* m_mesh = nullptr;
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;
