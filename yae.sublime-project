@@ -45,6 +45,10 @@
 					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Debug;Platform=Win64",
 				},
 				{
+					"name": "compile release_win64",
+					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Release;Platform=Win64",
+				},
+				{
 					"name": "debug",
 					"shell_cmd": "start remedybg session.rdbg"
 				},

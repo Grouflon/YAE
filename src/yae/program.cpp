@@ -3,7 +3,6 @@
 #include <imgui/imgui.h>
 #include <yae/platform.h>
 #include <yae/filesystem.h>
-#include <yae/game_module.h>
 #include <yae/resource.h>
 #include <yae/application.h>
 #include <yae/input.h>
@@ -36,6 +35,10 @@ Program::Program(Allocator* _defaultAllocator, Allocator* _scratchAllocator, All
 	, m_scratchAllocator(_scratchAllocator)
 	, m_toolAllocator(_toolAllocator)
 	, m_exePath(_defaultAllocator)
+	, m_binDirectory(_defaultAllocator)
+	, m_rootDirectory(_defaultAllocator)
+	, m_intermediateDirectory(_defaultAllocator)
+	, m_hotReloadDirectory(_defaultAllocator)
 	, m_applications(_defaultAllocator)
 {
 
@@ -59,18 +62,49 @@ void Program::init(char** _args, int _argCount)
 	m_args = _args;
 	m_argCount = _argCount;
 
+	// @TODO: make an actual argument parser
+	for (int i = 1; i < _argCount; ++i)
+	{
+		if (strcmp(_args[i], "-hotreload") == 0)
+		{
+			m_hotReloadGameAPI = true;
+		}
+	}
+
     m_logger = m_defaultAllocator->create<Logger>();
 
-    m_exePath = filesystem::normalizePath(m_args[0]);
-	YAE_LOG(m_exePath.c_str());
-	YAE_LOG(filesystem::normalizePath(platform::getWorkingDirectory()).c_str());
+    m_exePath = filesystem::getAbsolutePath(m_args[0]);
+    m_binDirectory = filesystem::getDirectory(m_exePath.c_str());
+    m_rootDirectory = filesystem::getAbsolutePath((m_binDirectory + "/../../").c_str());
+    m_intermediateDirectory = filesystem::getAbsolutePath((m_rootDirectory + "/intermediate/").c_str());
+	m_hotReloadDirectory = m_intermediateDirectory + "dll/";
+
+    // Setup directories
+    filesystem::setWorkingDirectory(m_rootDirectory.c_str());
+	filesystem::createDirectory(m_intermediateDirectory.c_str());
+    filesystem::deletePath(m_hotReloadDirectory.c_str());
+	filesystem::createDirectory(m_hotReloadDirectory.c_str());
+
+	YAE_LOGF("exe path: %s",  getExePath());
+	YAE_LOGF("bin directory: %s",  getBinDirectory());
+	YAE_LOGF("root directory: %s",  getRootDirectory());
+	YAE_LOGF("intermediate directory: %s",  getIntermediateDirectory());
+	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
 
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
 	m_profiler = m_defaultAllocator->create<Profiler>(m_toolAllocator);
 
-    yae::loadGameAPI();
+	// Prepare Game API for hot reload
+	if (m_hotReloadGameAPI)
+	{
+		_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
+	}
+	else
+	{
+		_loadGameAPI(_getGameDLLPath().c_str());
+	}
 
     /*
     logger.setCategoryVerbosity("glfw", yae::LogVerbosity_Verbose);
@@ -87,7 +121,7 @@ void Program::shutdown()
 
 	m_resourceManager->flushResources();
 
-    yae::unloadGameAPI();
+	_unloadGameAPI();
 
 	m_defaultAllocator->destroy(m_profiler);
 	m_profiler = nullptr;
@@ -147,13 +181,21 @@ void Program::run()
 			}
 		}
 
-		// Game API
-		if (shouldReloadGameAPI)
+		// Hot Reload Game API
+		if (m_hotReloadGameAPI)
 		{
-			unloadGameAPI();
-			loadGameAPI();
+			// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
+			u64 lastWriteTime = platform::getFileLastWriteTime(_getGameDLLPath().c_str());
+			u64 timeSinceLastWriteTime = platform::getSystemTime() - lastWriteTime;
+			bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 1000000); // 0.1 s
+			shouldReloadGameAPI = shouldReloadGameAPI || isDLLOutDated;
+			
+			if (shouldReloadGameAPI)
+			{
+				_unloadGameAPI();
+				_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
+			}	
 		}
-		watchGameAPI();
 
 #if YAE_PROFILING_ENABLED
 		m_profiler->update();
@@ -214,6 +256,24 @@ const char* Program::getExePath() const
 }
 
 
+const char* Program::getBinDirectory() const
+{
+	return m_binDirectory.c_str();
+}
+
+
+const char* Program::getRootDirectory() const
+{
+	return m_rootDirectory.c_str();
+}
+
+
+const char* Program::getIntermediateDirectory() const
+{
+	return m_intermediateDirectory.c_str();
+}
+
+
 Application& Program::currentApplication()
 {
 	YAE_ASSERT(m_currentApplication != nullptr);
@@ -262,5 +322,98 @@ Profiler& Program::profiler()
 	return *m_profiler;
 }
 
+
+void Program::initGame()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
+
+	m_gameAPI.gameInit();
+}
+
+
+void Program::updateGame()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
+
+	m_gameAPI.gameUpdate();
+}
+
+
+void Program::shutdownGame()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
+
+	m_gameAPI.gameShutdown();
+}
+
+
+void Program::_loadGameAPI(const char* _path)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	m_gameAPI.libraryHandle = platform::loadDynamicLibrary(_path);
+	YAE_ASSERT(m_gameAPI.libraryHandle);
+
+	m_gameAPI.gameInit = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "initGame");
+	m_gameAPI.gameUpdate = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "updateGame");
+	m_gameAPI.gameShutdown = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "shutdownGame");
+	m_gameAPI.onLibraryLoaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryLoaded");
+	m_gameAPI.onLibraryUnloaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryUnloaded");
+
+	YAE_ASSERT(m_gameAPI.gameInit);
+	YAE_ASSERT(m_gameAPI.gameUpdate);
+	YAE_ASSERT(m_gameAPI.gameShutdown);
+
+	m_gameAPI.onLibraryLoaded();
+
+	YAE_LOGF_CAT("game_module", "Loaded Game API from \"%s\"", _path);
+}
+
+
+void Program::_unloadGameAPI()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
+	
+	m_gameAPI.onLibraryUnloaded();
+	
+	platform::unloadDynamicLibrary(m_gameAPI.libraryHandle);
+	m_gameAPI = {};
+
+	YAE_LOG_CAT("game_module", "Unloaded Game API");
+}
+
+
+void Program::_copyAndLoadGameAPI(const char* _dllPath, const char* _symbolsPath)
+{
+	String dllDst = String(m_hotReloadDirectory + "game_hotreload.dll", &scratchAllocator());
+	String symbolsDst = String(m_hotReloadDirectory + "game_hotreload.pdb", &scratchAllocator());
+
+	filesystem::copy(_dllPath, dllDst.c_str(), filesystem::CopyMode_OverwriteExisting);
+	filesystem::copy(_symbolsPath, symbolsDst.c_str(), filesystem::CopyMode_OverwriteExisting);
+
+	_loadGameAPI(dllDst.c_str());
+
+	m_gameDLLLastWriteTime = platform::getFileLastWriteTime(_dllPath);
+}
+
+
+String Program::_getGameDLLPath() const
+{
+	return m_binDirectory + "game.dll";
+}
+
+
+String Program::_getGameDLLSymbolsPath() const
+{
+	return m_binDirectory + "game.pdb";
+}
 
 } // namespace yae

@@ -134,7 +134,6 @@ u32 hash32(const void* _data, size_t _size)
 }
 
 
-
 u32 hashString(const char* _str)
 {
 	return hash32(_str, strlen(_str));
@@ -146,6 +145,7 @@ u32 hashString(const char* _str)
 
 
 
+#if DEBUG_STRINGHASH
 namespace std {
 
 size_t hash<yae::StringHash>::operator()(const yae::StringHash& value) const
@@ -154,3 +154,4 @@ size_t hash<yae::StringHash>::operator()(const yae::StringHash& value) const
 }
 
 } // namespace std
+#endif

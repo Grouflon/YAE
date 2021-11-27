@@ -68,6 +68,8 @@ YAELIB_API u32 hashString(const char* _str);
 
 } // namespace yae
 
+#if DEBUG_STRINGHASH
 namespace std {
 template <> struct YAELIB_API hash<yae::StringHash> { size_t operator()(const yae::StringHash& value) const; };
 } // namespace std
+#endif

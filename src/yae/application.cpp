@@ -1,15 +1,17 @@
 #include "Application.h"
 
 #include <yae/platform.h>
+#include <yae/program.h>
 #include <yae/time.h>
 #include <yae/vulkan/VulkanRenderer.h>
 #include <yae/input.h>
-#include <yae/game_module.h>
 #include <yae/memory.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
+
+//#include <shaderc/shaderc.h>
 
 namespace yae {
 
@@ -25,6 +27,10 @@ Application::Application(const char* _name, u32 _width, u32 _height)
 void Application::init(char** _args, int _argCount)
 {
 	YAE_CAPTURE_FUNCTION();
+
+	/*shaderc_compiler_t shaderCompiler = shaderc_compiler_initialize();
+    shaderc_compiler_release(shaderCompiler);
+    shaderCompiler = nullptr;*/
 
 	// Init GLFW
 	{
@@ -79,7 +85,7 @@ void Application::init(char** _args, int _argCount)
 
 	m_clock.reset();
 
-	initGame();
+	program().initGame();
 }
 
 bool Application::doFrame()
@@ -99,7 +105,7 @@ bool Application::doFrame()
 		ImGui::NewFrame();	
 	}
 
-	updateGame();
+	program().updateGame();
 
 	if (ImGui::BeginMainMenuBar())
     {
@@ -199,7 +205,7 @@ void Application::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
 	
-	shutdownGame();
+	program().shutdownGame();
 
 	m_vulkanRenderer->shutdownImGui();
 	ImGui_ImplGlfw_Shutdown();

@@ -12,9 +12,13 @@ struct StackFrame
 	char name[256];
 };
 
-YAELIB_API u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount);
-YAELIB_API void printCallstack(StackFrame* _frames, u16 _frameCount);
+namespace callstack {
+
+YAELIB_API u16 capture(StackFrame* _outFrames, u16 _maxFrameCount);
+YAELIB_API void print(StackFrame* _frames, u16 _frameCount);
+
+} // namespace callstack
 
 } // namespace yae
 
-#define PRINT_CALLSTACK(_maxFrameCount) { yae::StackFrame frames[_maxFrameCount]; u16 frameCount = yae::captureCallstack(frames, _maxFrameCount); yae::printCallstack(frames, frameCount); }
+#define PRINT_CALLSTACK(_maxFrameCount) { yae::StackFrame frames[_maxFrameCount]; u16 frameCount = yae::callstack::capture(frames, _maxFrameCount); yae::callstack::print(frames, frameCount); }

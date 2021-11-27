@@ -5,6 +5,14 @@
 #include <stdio.h>
 #include <cstdlib>
 
+#if YAE_DEBUG
+#define APPLICATION_NAME "yae | Debug"
+#elif YAE_RELEASE
+#define APPLICATION_NAME "yae | Release"
+#else
+#define APPLICATION_NAME "yae | Unknown"
+#endif
+
 int main(int _argc, char** _argv)
 {
     yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
@@ -14,7 +22,7 @@ int main(int _argc, char** _argv)
     yae::Program program(&allocator, &scratchAllocator, &toolAllocator);
     program.init(_argv, _argc);
 
-    yae::Application app = yae::Application("yae", 800u, 600u);
+    yae::Application app = yae::Application(APPLICATION_NAME, 800u, 600u);
     program.registerApplication(&app);
 
     program.run();

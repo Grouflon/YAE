@@ -7,6 +7,7 @@ workspace "yaeApplication"
 
 	language "C++"
 	cppdialect "C++14"
+	symbols "On"
 	targetdir("./bin/"..TARGET_FOLDER_NAME.."/")
 	objdir("./obj/"..TARGET_FOLDER_NAME.."/")
 
@@ -16,12 +17,14 @@ workspace "yaeApplication"
 		"./extern/imgui/",
 		"./extern/glm/",
 		"./extern/VulkanMemoryAllocator/",
+		--"./extern/shaderc/include/",
 		"./extern/",
 		VK_SDK_PATH.."/include/",
 	}
 
 	libdirs {
 		"./lib/"..TARGET_FOLDER_NAME.."/",
+		--"./extern/shaderc/lib/"..TARGET_FOLDER_NAME.."/",
 	}
 
 	defines {
@@ -45,7 +48,7 @@ workspace "yaeApplication"
 		linkoptions { "/DEBUG:FULL" }
 
 	filter "configurations:Release"
-		defines { "NDEBUG" }
+		defines { "NDEBUG", "YAE_RELEASE" }
 		optimize "On"
 
 	filter "system:Windows"
@@ -55,11 +58,11 @@ workspace "yaeApplication"
 
 project "yae"
 	kind "SharedLib"
-	targetdir("lib/"..TARGET_FOLDER_NAME.."/")
-	ignoredefaultlibraries { "MSVCRT" }
+	targetdir("bin/"..TARGET_FOLDER_NAME.."/")
 
-	optimize "Debug"
-	symbols "On"
+	filter {"configurations:Debug" }
+		ignoredefaultlibraries { "MSVCRT" } -- we need to build glfw debug libraries to get rid of that
+	filter {}
 
 	files { 
 		"./src/yae/**.h",
@@ -85,6 +88,16 @@ project "yae"
     	files {
     		"./src/Engine/platforms/windows/**.cpp"
     	}
+    	includedirs {
+			"./extern/dbghelp/inc/"
+		}
+    	libdirs {
+			"./extern/dbghelp/lib/%{cfg.architecture}/",
+		}
+		links {
+			"dbghelp"
+		}
+
     	--[[links {
     		"vcruntime",
     		"msvcrt",
@@ -92,27 +105,19 @@ project "yae"
     		"Gdi32",
     		"Shell32",
     	}]]--
-
-    filter {"system:Windows", "configurations:Debug" }
-		includedirs {
-			"./extern/dbghelp/inc/"
-		}
-		libdirs {
-			"./extern/dbghelp/lib/%{cfg.architecture}/"
-		}
-		links {
-			"dbghelp"
-		}
+    filter {}
 
 	defines {
 		"YAELIB_EXPORT",
 		"MIRROR_EXPORT",
 		"IMGUI_API=__declspec(dllexport)",
+		"_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING", -- Allows use of exeperimental/filesystem on windows
 	}
 
 	libdirs {
 		"./extern/GLFW/lib/%{cfg.platform}/",
 	}
+
 	filter { "platforms:Win32" }
 		libdirs {
 			VK_SDK_PATH.."/Lib32/"
@@ -122,25 +127,23 @@ project "yae"
 		libdirs {
 			VK_SDK_PATH.."/Lib/"
 		}
-
 	filter {}
 
 	links {
 		"glfw3",
 		"vulkan-1",
+		--"shaderc_combined",
 	}
 
-	postbuildcommands {
-		"xcopy \"./lib/"..TARGET_FOLDER_NAME.."/yae.dll\" \"./bin/"..TARGET_FOLDER_NAME.."/yae.dll\" /f /e /d /y "
-	}
+	--postbuildcommands {
+	--	"echo F|xcopy \"./lib/"..TARGET_FOLDER_NAME.."/yae.dll\" \"./bin/"..TARGET_FOLDER_NAME.."/yae.dll\" /f /e /d /y "
+	--}
 
 project "game"
 	kind "SharedLib"
-	targetdir("lib/"..TARGET_FOLDER_NAME.."/")
+	targetdir("bin/"..TARGET_FOLDER_NAME.."/")
 	--targetdir("data/code/")
 	dependson { "yae" }
-	optimize "Debug"
-	symbols "On"
 
 	files { 
 		"./src/game/**.h",
@@ -161,12 +164,14 @@ project "game"
 		"yae",
 	}
 
+	--postbuildcommands {
+	--	"echo F|xcopy \"./lib/"..TARGET_FOLDER_NAME.."/game.dll\" \"./bin/"..TARGET_FOLDER_NAME.."/game.dll\" /f /e /d /y "
+	--}
+
 project "application"
 	kind "ConsoleApp"
 	dependson { "yae", "game" }
-	optimize "Debug"
-	symbols "On"
-	targetname "yae"
+	targetname "main"
 
 	files { 
 		"./src/main.cpp",

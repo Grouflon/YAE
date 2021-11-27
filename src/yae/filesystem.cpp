@@ -1,6 +1,10 @@
 #include "filesystem.h"
 
 #include <yae/program.h>
+#include <yae/platform.h>
+
+#include <experimental/filesystem>
+#include <cstdio>
 
 namespace yae {
 
@@ -15,7 +19,22 @@ String normalizePath(const char* _path)
 
 String& normalizePath(String& _path)
 {
-	_path.replace("\\", "/");
+	for (u32 i = 0; i < _path.size();)
+	{
+		// Only forward slashes
+		if (_path[i] == '\\')
+		{
+			_path[i] = '/';
+		}
+
+		// Remove all double slashes
+		if (i > 0 && _path[i - 1] == '/' && _path[i] == '/')
+		{
+			_path.replace(i, 1, "");
+			continue;
+		}
+		++i;
+	}
 	return _path;
 }
 
@@ -36,13 +55,68 @@ String getDirectory(const char* _path)
 	return path;
 }
 
+
+String getAbsolutePath(const char* _path)
+{
+	return normalizePath(platform::getAbsolutePath(_path));
+}
+
+
+String getRelativePath(const char* _path, const char* _relativeTo)
+{
+	return String(_path, &scratchAllocator());
+}
+
+
+void setWorkingDirectory(const char* _path)
+{
+	platform::setWorkingDirectory(_path);
+}
+
+
+String getWorkingDirectory()
+{
+	return normalizePath(platform::getWorkingDirectory());
+}
+
+
+bool deletePath(const char* _path)
+{
+	std::error_code errorCode;
+	std::uintmax_t ret = std::experimental::filesystem::remove_all(_path, errorCode);
+	return ret > 0 && ret != static_cast<std::uintmax_t>(-1);
+}
+
+
+bool createDirectory(const char* _path)
+{
+	return std::experimental::filesystem::create_directory(_path);
+}
+
+
+bool copy(const char* _from, const char* _to, CopyMode _mode)
+{
+	using namespace std::experimental::filesystem;
+	copy_options copyOptions = copy_options::none;
+	switch(_mode)
+	{
+		case CopyMode_SkipExisting: copyOptions = copy_options::skip_existing; break;
+		case CopyMode_OverwriteExisting: copyOptions = copy_options::overwrite_existing; break;
+		case CopyMode_OverwriteExistingIfOlder: copyOptions = copy_options::update_existing; break;
+	}
+
+	std::error_code errorCode;
+	std::experimental::filesystem::copy(_from, _to, copyOptions, errorCode);
+	return errorCode.value() == 0;
+}
+
 } // namespace filesystem
 
 
 FileHandle::FileHandle(const char* path)
-	: m_file(nullptr)
+	: m_path(path)
+	, m_fileHandle(nullptr)
 {
-	m_path = path;
 }
 
 FileHandle::~FileHandle()
@@ -52,7 +126,7 @@ FileHandle::~FileHandle()
 
 bool FileHandle::open(OpenMode mode)
 {
-	if (m_file && mode != m_openMode)
+	if (m_fileHandle && mode != m_openMode)
 	{
 		close();
 	}
@@ -80,9 +154,9 @@ bool FileHandle::open(OpenMode mode)
 		break;
 	}
 
-	m_file = std::fopen(m_path.c_str(), modeStr);
+	m_fileHandle = std::fopen(m_path.c_str(), modeStr);
 
-	if (!m_file)
+	if (m_fileHandle == nullptr)
 	{
 		return false;
 	}
@@ -92,44 +166,44 @@ bool FileHandle::open(OpenMode mode)
 
 void FileHandle::close()
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		std::fclose(m_file);
-		m_file = nullptr;
+		std::fclose((std::FILE*)m_fileHandle);
+		m_fileHandle = nullptr;
 	}
 }
 
 bool FileHandle::write(const void* buffer, size_t size)
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		return size == 0 || std::fwrite(buffer, size, 1, m_file) != 0;
+		return size == 0 || std::fwrite(buffer, size, 1, (std::FILE*)m_fileHandle) != 0;
 	}
 	return false;
 }
 
 size_t FileHandle::read(void* buffer, size_t size) const
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		return std::fread(buffer, 1, size, m_file);
+		return std::fread(buffer, 1, size, (std::FILE*)m_fileHandle);
 	}
 	return 0;
 }
 
 bool FileHandle::isOpen() const
 {
-	return m_file != nullptr;
+	return m_fileHandle != nullptr;
 }
 
 i32 FileHandle::getSize() const
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		i32 offset = std::ftell(m_file);
-		std::fseek(m_file, 0, SEEK_END);
-		i32 size = ftell(m_file);
-		std::fseek(m_file, offset, SEEK_SET);
+		i32 offset = std::ftell((std::FILE*)m_fileHandle);
+		std::fseek((std::FILE*)m_fileHandle, 0, SEEK_END);
+		i32 size = ftell((std::FILE*)m_fileHandle);
+		std::fseek((std::FILE*)m_fileHandle, offset, SEEK_SET);
 		return size;
 	}
 	return 0;
@@ -137,18 +211,18 @@ i32 FileHandle::getSize() const
 
 i32 FileHandle::getOffset() const
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		return std::ftell(m_file);
+		return std::ftell((std::FILE*)m_fileHandle);
 	}
 	return 0;
 }
 
 void FileHandle::setOffset(i32 offset)
 {
-	if (m_file)
+	if (m_fileHandle)
 	{
-		std::fseek(m_file, offset, SEEK_SET);
+		std::fseek((std::FILE*)m_fileHandle, offset, SEEK_SET);
 	}
 }
 

@@ -1,8 +1,7 @@
 /bin/
 /build/
 /obj/
-/lib/
-/data/code
+/intermediate/
 **.spv
 imgui.ini
 .vs
