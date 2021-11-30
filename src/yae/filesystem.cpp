@@ -131,7 +131,10 @@ String getExtension(const char* _path)
 
 bool doesPathExists(const char* _path)
 {
-	return platform::doesPathExists(_path);
+	std::error_code errorCode;
+	bool result = std::experimental::filesystem::exists(_path, errorCode);
+	YAE_ASSERT(errorCode.value() == 0);
+	return result;
 }
 
 
@@ -146,6 +149,18 @@ bool deletePath(const char* _path)
 bool createDirectory(const char* _path)
 {
 	return std::experimental::filesystem::create_directory(_path);
+}
+
+
+Date getFileLastWriteTime(const char* _path)
+{
+	std::error_code errorCode;
+	auto ftime = std::experimental::filesystem::last_write_time(_path, errorCode);
+	if (errorCode.value() != 0)
+		return Date(0);
+
+    std::time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
+    return Date(i64(cftime));
 }
 
 

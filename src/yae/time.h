@@ -4,8 +4,6 @@
 
 namespace yae {
 
-class String;
-
 struct YAELIB_API Time
 {
 	i64 time;
@@ -27,13 +25,6 @@ struct YAELIB_API Time
 	bool operator<=(const Time& _rhs) const;
 	bool operator>=(const Time& _rhs) const;
 };
-
-
-struct YAELIB_API Date
-{
-
-};
-
 
 struct YAELIB_API Clock
 {

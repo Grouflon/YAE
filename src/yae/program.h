@@ -1,7 +1,12 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/date.h>
 #include <yae/containers/Array.h>
+
+// shaderc forward declarations
+struct shaderc_compiler;
+struct shaderc_compile_options;
 
 namespace yae {
 
@@ -52,6 +57,9 @@ public:
 	Logger& logger();
 	Profiler& profiler();
 
+	shaderc_compiler* shaderCompiler() { return m_shaderCompiler; }
+	shaderc_compile_options* shaderCompilerOptions() { return m_shaderCompilerOptions; }
+
 	// Game API functions
 	void initGame();
 	void updateGame();
@@ -71,6 +79,8 @@ public:
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;
+	shaderc_compiler* m_shaderCompiler = nullptr;
+	shaderc_compile_options* m_shaderCompilerOptions = nullptr;
 
 	Array<Application*> m_applications;
 	Application* m_currentApplication = nullptr;
@@ -87,7 +97,7 @@ public:
 
 	// Game API
 	bool m_hotReloadGameAPI = false;
-	u64 m_gameDLLLastWriteTime = 0;
+	Date m_gameDLLLastWriteTime = 0;
 	GameAPI m_gameAPI;
 
 	static Program* s_programInstance;

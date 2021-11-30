@@ -67,7 +67,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	{
 		_align = 4;
 	}
-	YAE_ASSERT(_align % 4 == 0);
+	YAE_ASSERT_MSGF(_align % 4 == 0, "All alignments values must be multiples of 4 (%d given)", _align);
 	_size = ((_size + 3)/4)*4;
 	size_t requestedSize = _size;
 
@@ -192,7 +192,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 		}
 		block = block->next;
 	}
-	YAE_ASSERT(false);
+	YAE_ASSERT_MSG(false, "Memory block not found.");
 }
 
 

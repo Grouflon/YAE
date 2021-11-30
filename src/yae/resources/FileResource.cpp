@@ -22,6 +22,9 @@ void FileResource::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
+	YAE_ASSERT(m_content == nullptr);
+	YAE_ASSERT(m_contentSize == 0);
+
 	FileHandle file(getName());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
@@ -29,9 +32,9 @@ void FileResource::_doLoad()
 		return;
 	}
 
-	size_t contentSize = file.getSize();
-	void* content = scratchAllocator().allocate(contentSize);
-	file.read(content, contentSize);
+	m_contentSize = file.getSize();
+	m_content = defaultAllocator().allocate(m_contentSize);
+	file.read(m_content, m_contentSize);
 	file.close();
 }
 

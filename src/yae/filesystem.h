@@ -1,6 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/date.h>
 
 // interesting stuff: http://utf8everywhere.org/
 
@@ -26,6 +27,7 @@ YAELIB_API String getExtension(const char* _path);
 YAELIB_API bool doesPathExists(const char* _path);
 YAELIB_API bool deletePath(const char* _path);
 YAELIB_API bool createDirectory(const char* _path);
+YAELIB_API Date getFileLastWriteTime(const char* _path);
 
 enum YAELIB_API CopyMode
 {

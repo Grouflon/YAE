@@ -52,57 +52,6 @@ String getWorkingDirectory()
 }
 
 
-bool duplicateFile(const char* _srcPath, const char* _dstPath)
-{	
-	if (!CopyFileA(_srcPath, _dstPath, FALSE))
-	{
-		LPVOID lpMsgBuf;
-		DWORD dw = GetLastError();
-
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			dw,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR)&lpMsgBuf,
-			0, NULL);
-
-		LPCTSTR msg = (LPCTSTR)lpMsgBuf;
-		YAE_ERRORF("Failed to copy %s -> %s: %s", _srcPath, _dstPath, CStringA(msg));
-		return false;
-	}
-	return true;
-}
-
-
-bool doesPathExists(const char* _path)
-{
-	DWORD fileAttributes = GetFileAttributesA(_path);
-	if(INVALID_FILE_ATTRIBUTES == fileAttributes && GetLastError() == ERROR_FILE_NOT_FOUND)
-	{
-	    return false;
-	}
-	return true;
-}
-
-
-u64 getFileLastWriteTime(const char* _path)
-{
-	WIN32_FIND_DATAA fileData;
-	FILETIME filetime = {};
-	HANDLE handle = FindFirstFileA(_path, &fileData);
-	if (handle)
-	{
-		filetime = fileData.ftLastWriteTime;
-		FindClose(handle);
-		return u64(filetime.dwLowDateTime) | u64(filetime.dwHighDateTime) >> 32;
-	}
-	return 0;
-}
-
-
 String getAbsolutePath(const char* _path)
 {
 	static const int BUFFER_SIZE = MAX_PATH;

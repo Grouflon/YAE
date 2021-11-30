@@ -10,6 +10,8 @@
 #include <yae/logger.h>
 #include <yae/vulkan/VulkanRenderer.h>
 
+#include <shaderc/shaderc.h>
+
 // anonymous functions
 
 void* ImGuiMemAlloc(size_t _size, void* _userData)
@@ -98,6 +100,18 @@ void Program::init(char** _args, int _argCount)
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
 
+	// Shader compiler
+	// @NOTE: this will probably go in the Device part of the renderer at some point
+	{
+		YAE_CAPTURE_SCOPE("init_shader_compiler");
+
+		m_shaderCompiler = shaderc_compiler_initialize();
+		YAE_ASSERT(m_shaderCompiler != nullptr);
+
+		m_shaderCompilerOptions = shaderc_compile_options_initialize();
+		YAE_ASSERT(m_shaderCompilerOptions != nullptr);
+	}
+
 	// Prepare Game API for hot reload
 	if (m_hotReloadGameAPI)
 	{
@@ -124,6 +138,11 @@ void Program::shutdown()
 	m_resourceManager->flushResources();
 
 	_unloadGameAPI();
+
+	shaderc_compile_options_release(m_shaderCompilerOptions);
+	m_shaderCompilerOptions = nullptr;
+	shaderc_compiler_release(m_shaderCompiler);
+	m_shaderCompiler = nullptr;
 
 	m_defaultAllocator->destroy(m_resourceManager);
 	m_resourceManager = nullptr;
@@ -187,9 +206,9 @@ void Program::run()
 		if (m_hotReloadGameAPI)
 		{
 			// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
-			u64 lastWriteTime = platform::getFileLastWriteTime(_getGameDLLPath().c_str());
-			u64 timeSinceLastWriteTime = platform::getSystemTime() - lastWriteTime;
-			bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 1000000); // 0.1 s
+			Date lastWriteTime = filesystem::getFileLastWriteTime(_getGameDLLPath().c_str());
+			Date timeSinceLastWriteTime = date::now() - lastWriteTime;
+			bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 0);
 			shouldReloadGameAPI = shouldReloadGameAPI || isDLLOutDated;
 			
 			if (shouldReloadGameAPI)
@@ -403,7 +422,7 @@ void Program::_copyAndLoadGameAPI(const char* _dllPath, const char* _symbolsPath
 
 	_loadGameAPI(dllDst.c_str());
 
-	m_gameDLLLastWriteTime = platform::getFileLastWriteTime(_dllPath);
+	m_gameDLLLastWriteTime = filesystem::getFileLastWriteTime(_dllPath);
 }
 
 

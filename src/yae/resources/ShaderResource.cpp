@@ -86,8 +86,8 @@ void ShaderResource::_doLoad()
 	String compiledShaderFileName(string::format("%s_%s_%s", filesystem::getFileNameWithoutExtension(m_path.c_str()).c_str(), shaderTypeToString(m_shaderType), m_entryPoint.c_str()) + ".spv", &scratchAllocator());
 	String compiledShaderPath(getCompiledShaderDirectory() + compiledShaderFileName, &scratchAllocator());
 
-	u64 sourceFileTime = platform::getFileLastWriteTime(m_path.c_str());
-	u64 compiledFileTime = platform::getFileLastWriteTime(compiledShaderPath.c_str());
+	Date sourceFileTime = filesystem::getFileLastWriteTime(m_path.c_str());
+	Date compiledFileTime = filesystem::getFileLastWriteTime(compiledShaderPath.c_str());
 
 	if (sourceFileTime > compiledFileTime)
 	{
@@ -107,23 +107,6 @@ void ShaderResource::_doLoad()
 			content = scratchAllocator().allocate(contentSize);
 			file.read(content, contentSize);
 		}
-		
-		// @TODO: the compiler and options takes a long time to be initialized and should be shared. Probably through the program for now
-		shaderc_compiler_t shaderCompiler;
-		{
-			YAE_CAPTURE_SCOPE("init_compiler");
-
-			shaderCompiler = shaderc_compiler_initialize();
-			YAE_ASSERT(shaderCompiler != nullptr);
-		}
-
-		shaderc_compile_options_t compileOptions;
-		{
-			YAE_CAPTURE_SCOPE("init_compile_options");
-
-			compileOptions = shaderc_compile_options_initialize();
-			YAE_ASSERT(compileOptions != nullptr);
-		}
 
 		shaderc_compilation_result_t result;
 
@@ -131,19 +114,17 @@ void ShaderResource::_doLoad()
 			YAE_CAPTURE_SCOPE("compile_shader");
 
 			result = shaderc_compile_into_spv(
-				shaderCompiler, 
+				program().shaderCompiler(), 
 				(const char *)content,
 				contentSize,
 				shaderTypeToShadercType(m_shaderType),
 				m_path.c_str(),
 				m_entryPoint.c_str(),
-				compileOptions
+				program().shaderCompilerOptions()
 			);
 		}
 
 		scratchAllocator().deallocate(content);
-		shaderc_compile_options_release(compileOptions);
-	    shaderc_compiler_release(shaderCompiler);
 
 		if (result == nullptr)
 		{
@@ -199,6 +180,13 @@ void ShaderResource::_doLoad()
 				compiledFile->releaseUnuse();
 				return;
 			}	
+		}
+
+		if (compiledFile->getContentSize() == 0)
+		{
+			_log(RESOURCELOGTYPE_ERROR, string::format("Compiled file \"%s\" is empty.", compiledShaderPath.c_str()).c_str());
+			compiledFile->releaseUnuse();
+			return;
 		}
     	
     	renderer().createShader(compiledFile->getContent(), compiledFile->getContentSize(), m_shaderHandle);
