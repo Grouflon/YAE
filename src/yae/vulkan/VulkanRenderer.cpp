@@ -1,6 +1,6 @@
 #include "VulkanRenderer.h"
 
-#include <yae/resources/FileResource.h>
+#include <yae/resources/ShaderResource.h>
 #include <yae/resources/TextureResource.h>
 #include <yae/resources/MeshResource.h>
 #include <yae/application.h>
@@ -515,11 +515,11 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	{
 		m_texture1 = findOrCreateResource<TextureResource>("./data/textures/viking_room.png");
 		m_texture1->useLoad();
-		YAE_ASSERT(m_texture1->getError() == Resource::ERROR_NONE);
+		YAE_ASSERT(m_texture1->isLoaded());
 
 		m_texture2 = findOrCreateResource<TextureResource>("./data/textures/oro_avatar.png");
 		m_texture2->useLoad();
-		YAE_ASSERT(m_texture2->getError() == Resource::ERROR_NONE);
+		YAE_ASSERT(m_texture2->isLoaded());
 	}
 
 	// Create Texture Sampler
@@ -551,7 +551,7 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	{
 		m_mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
 		m_mesh->useLoad();
-		YAE_ASSERT(m_mesh->getError() == Resource::ERROR_NONE);
+		YAE_ASSERT(m_mesh->isLoaded());
 	}
 
 	// Create Sync Objects
@@ -832,6 +832,35 @@ bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _ind
 	}
 
 	return true;
+}
+
+
+bool VulkanRenderer::createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(_outShaderHandle.shaderModule == VK_NULL_HANDLE);
+
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = _codeSize;
+	createInfo.pCode = reinterpret_cast<const u32*>(_code);
+
+	if (vkCreateShaderModule(m_device, &createInfo, nullptr, &_outShaderHandle.shaderModule) != VK_SUCCESS)
+	{
+		YAE_ERROR_CAT("vulkan", "Failed to create shader module");
+		return false;
+	}
+	
+	return true;
+}
+
+
+void VulkanRenderer::destroyShader(ShaderHandle& _shaderHandle)
+{
+	YAE_CAPTURE_FUNCTION();
+	vkDestroyShaderModule(m_device, _shaderHandle.shaderModule, nullptr);
+	_shaderHandle.shaderModule = VK_NULL_HANDLE;
 }
 
 
@@ -1251,47 +1280,25 @@ void VulkanRenderer::_createSwapChain()
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Graphics Pipeline...");
 
-		auto createShaderModule = [](VkDevice _device, const void* _code, size_t _codeSize) -> VkShaderModule
-		{
-			VkShaderModuleCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			createInfo.codeSize = _codeSize;
-			createInfo.pCode = reinterpret_cast<const u32*>(_code);
+		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", SHADERTYPE_VERTEX, "main");
+		vertexShader->useLoad();
+		YAE_ASSERT(vertexShader->isLoaded());
 
-			VkShaderModule shaderModule;
-			VK_VERIFY(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule));
-			return shaderModule;
-		};
-
-		VkShaderModule vertexShaderModule;
-		{
-			FileResource* file = findOrCreateResource<FileResource>("./data/shaders/vert.spv");
-			file->useLoad();
-			YAE_ASSERT(file->getError() == Resource::ERROR_NONE);
-			vertexShaderModule = createShaderModule(m_device, file->getContent(), file->getContentSize());
-			file->releaseUnuse();
-		}
-
-		VkShaderModule fragmentShaderModule;
-		{
-			FileResource* file = findOrCreateResource<FileResource>("./data/shaders/frag.spv");
-			file->useLoad();
-			YAE_ASSERT(file->getError() == Resource::ERROR_NONE);
-			fragmentShaderModule = createShaderModule(m_device, file->getContent(), file->getContentSize());
-			file->releaseUnuse();
-		}
+		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", SHADERTYPE_FRAGMENT, "main");
+		fragmentShader->useLoad();
+		YAE_ASSERT(fragmentShader->isLoaded());
 
 		VkPipelineShaderStageCreateInfo vertexShaderStageInfo{};
 		vertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertexShaderStageInfo.module = vertexShaderModule;
-		vertexShaderStageInfo.pName = "main";
+		vertexShaderStageInfo.module = vertexShader->getShaderHandle().shaderModule;
+		vertexShaderStageInfo.pName = vertexShader->getEntryPoint();
 
 		VkPipelineShaderStageCreateInfo fragmentShaderStageInfo{};
 		fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragmentShaderStageInfo.module = fragmentShaderModule;
-		fragmentShaderStageInfo.pName = "main";
+		fragmentShaderStageInfo.module = fragmentShader->getShaderHandle().shaderModule;
+		fragmentShaderStageInfo.pName = fragmentShader->getEntryPoint();
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = {
 			vertexShaderStageInfo,
@@ -1445,8 +1452,8 @@ void VulkanRenderer::_createSwapChain()
 		pipelineInfo.basePipelineIndex = -1;
 		VK_VERIFY(vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline));
 
-		vkDestroyShaderModule(m_device, fragmentShaderModule, nullptr);
-		vkDestroyShaderModule(m_device, vertexShaderModule, nullptr);
+		fragmentShader->releaseUnuse();
+		vertexShader->releaseUnuse();
 
 		YAE_VERBOSE_CAT("vulkan", "Created Graphics Pipeline");
 	}

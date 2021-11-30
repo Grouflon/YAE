@@ -109,7 +109,7 @@ namespace time {
 
 Time now()
 {
-	return yae::Time(platform::getTime());
+	return yae::Time(platform::getCycles());
 }
 
 Time max()
@@ -117,33 +117,33 @@ Time max()
 	return Time(LLONG_MAX);
 }
 
-i64 timeToNanoSeconds(i64 _time)
+i64 timeToNanoSeconds(Time _time)
 {
-	return (_time * 1000000000) / getFrequency();
+	return (_time.time * 1000000000) / getFrequency();
 }
 
-i64 timeToMicroSeconds(i64 _time)
+i64 timeToMicroSeconds(Time _time)
 {
-	return (_time * 1000000) / getFrequency();
+	return (_time.time * 1000000) / getFrequency();
 }
 
-double timeToMilliSeconds64(i64 _time)
+double timeToMilliSeconds64(Time _time)
 {
 	return double(timeToMicroSeconds(_time)) / 1000.0;
 }
 
 
-float timeToMilliSeconds(i64 _time)
+float timeToMilliSeconds(Time _time)
 {
 	return float(timeToMicroSeconds(_time)) / 1000.f;
 }
 
-double timeToSeconds64(i64 _time)
+double timeToSeconds64(Time _time)
 {
 	return double(timeToMicroSeconds(_time)) / 1000000.0;
 }
 
-float timeToSeconds(i64 _time)
+float timeToSeconds(Time _time)
 {
 	return float(timeToMicroSeconds(_time)) / 1000000.f;
 }
@@ -157,7 +157,7 @@ void formatTime(Time _time, String& _outString)
 		"s"
 	};
 
-	double time = double(timeToNanoSeconds(_time.time));
+	double time = double(timeToNanoSeconds(_time));
 	u8 unit = 0;
 	while (unit < 3 && time > 1000.0)
 	{

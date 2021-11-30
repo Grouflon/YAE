@@ -39,23 +39,6 @@ String& normalizePath(String& _path)
 }
 
 
-String getDirectory(const char* _path)
-{
-	String path(_path, &scratchAllocator());
-	normalizePath(_path);
-	size_t size = path.size();
-	for (size_t i = 0; i < size; ++i)
-	{
-		size_t pos = size - 1 - i;
-		if (path[pos] == '/')
-		{
-			return path.slice(0, pos + 1);
-		}
-	}
-	return path;
-}
-
-
 String getAbsolutePath(const char* _path)
 {
 	return normalizePath(platform::getAbsolutePath(_path));
@@ -77,6 +60,78 @@ void setWorkingDirectory(const char* _path)
 String getWorkingDirectory()
 {
 	return normalizePath(platform::getWorkingDirectory());
+}
+
+
+String getDirectory(const char* _path)
+{
+	String path(_path, &scratchAllocator());
+	normalizePath(_path);
+	size_t size = path.size();
+	for (size_t i = 0; i < size; ++i)
+	{
+		size_t pos = size - 1 - i;
+		if (path[pos] == '/')
+		{
+			return path.slice(0, pos + 1);
+		}
+	}
+	return path;
+}
+
+
+String getFileName(const char* _path)
+{
+	String path(_path, &scratchAllocator());
+	normalizePath(_path);
+	size_t size = path.size();
+	for (size_t i = 0; i < size; ++i)
+	{
+		size_t pos = size - 1 - i;
+		if (path[pos] == '/')
+		{
+			return path.slice(pos + 1, size);
+		}
+	}
+	return path;
+}
+
+
+String getFileNameWithoutExtension(const char* _path)
+{
+	String fileName(getFileName(_path), &scratchAllocator());
+	size_t size = fileName.size();
+	for (size_t i = 0; i < size; ++i)
+	{
+		size_t pos = size - 1 - i;
+		if (fileName[pos] == '.')
+		{
+			return fileName.slice(0, pos);
+		}
+	}
+	return fileName;
+}
+
+
+String getExtension(const char* _path)
+{
+	String fileName(getFileName(_path), &scratchAllocator());
+	size_t size = fileName.size();
+	for (size_t i = 0; i < size; ++i)
+	{
+		size_t pos = size - 1 - i;
+		if (fileName[pos] == '.')
+		{
+			return fileName.slice(pos + 1, size);
+		}
+	}
+	return String();
+}
+
+
+bool doesPathExists(const char* _path)
+{
+	return platform::doesPathExists(_path);
 }
 
 

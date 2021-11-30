@@ -3,7 +3,7 @@
 #include <yae/types.h>
 #include <yae/resource.h>
 #include <yae/containers/array.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/render_types.h>
 
 #include <mirror/mirror.h>
 
@@ -23,7 +23,7 @@ public:
 	const MeshHandle& getMeshHandle() const { return m_meshHandle; }
 
 // private:
-	virtual Error _doLoad(String& _outErrorDescription) override;
+	virtual void _doLoad() override;
 	virtual void _doUnload() override;
 
 	MeshHandle m_meshHandle;

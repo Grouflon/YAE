@@ -18,20 +18,21 @@ FileResource::~FileResource()
 }
 
 
-Resource::Error FileResource::_doLoad(String& _outErrorDescription)
+void FileResource::_doLoad()
 {
+	YAE_CAPTURE_FUNCTION();
+
 	FileHandle file(getName());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
-		_outErrorDescription = "Could not open file.";
-		return ERROR_LOAD;
+		_log(RESOURCELOGTYPE_ERROR, "Could not open file.");
+		return;
 	}
 
-	m_contentSize = file.getSize();
-	m_content = defaultAllocator().allocate(m_contentSize);
-	file.read(m_content, m_contentSize);
-
-	return ERROR_NONE;
+	size_t contentSize = file.getSize();
+	void* content = scratchAllocator().allocate(contentSize);
+	file.read(content, contentSize);
+	file.close();
 }
 
 

@@ -13,17 +13,21 @@ namespace filesystem {
 // Path management
 YAELIB_API String normalizePath(const char* _path);
 YAELIB_API String& normalizePath(String& _path);
-YAELIB_API String getDirectory(const char* _path);
 YAELIB_API String getAbsolutePath(const char* _path);
 YAELIB_API String getRelativePath(const char* _path, const char* _relativeTo);
 YAELIB_API void setWorkingDirectory(const char* _path);
 YAELIB_API String getWorkingDirectory();
+YAELIB_API String getDirectory(const char* _path);
+YAELIB_API String getFileName(const char* _path);
+YAELIB_API String getFileNameWithoutExtension(const char* _path);
+YAELIB_API String getExtension(const char* _path);
 
 // Filesystem actions
+YAELIB_API bool doesPathExists(const char* _path);
 YAELIB_API bool deletePath(const char* _path);
 YAELIB_API bool createDirectory(const char* _path);
 
-enum CopyMode
+enum YAELIB_API CopyMode
 {
 	CopyMode_SkipExisting,
 	CopyMode_OverwriteExisting,

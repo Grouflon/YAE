@@ -2,6 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/time.h>
+#include <yae/render_types.h>
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -19,16 +20,6 @@ namespace yae {
 class TextureResource;
 class MeshResource;
 
-struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-
-	bool operator==(const Vertex& other) const {
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
-	}
-};
-
 extern const u32 INVALID_QUEUE;
 struct QueueFamilyIndices
 {
@@ -45,21 +36,6 @@ struct QueueFamilyIndices
 
 		return true;
 	}
-};
-
-struct TextureHandle
-{
-	VkImage image = VK_NULL_HANDLE;
-	VmaAllocation memory = VK_NULL_HANDLE;
-	VkImageView view = VK_NULL_HANDLE;
-};
-
-struct MeshHandle
-{
-	VkBuffer vertexBuffer = VK_NULL_HANDLE;
-	VmaAllocation vertexMemory = VK_NULL_HANDLE;
-	VkBuffer indexBuffer = VK_NULL_HANDLE;
-	VmaAllocation indexMemory = VK_NULL_HANDLE;
 };
 
 class VulkanRenderer
@@ -84,6 +60,9 @@ public:
 
 	bool createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle);
 	void destroyMesh(MeshHandle& _inMeshHandle);
+
+	bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle);
+	void destroyShader(ShaderHandle& _shaderHandle);
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);

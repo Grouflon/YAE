@@ -13,6 +13,19 @@ typedef StringHash ResourceID;
 extern const ResourceID UNDEFINED_RESOURCEID;
 
 
+enum YAELIB_API ResourceLogType
+{
+	RESOURCELOGTYPE_LOG,
+	RESOURCELOGTYPE_WARNING,
+	RESOURCELOGTYPE_ERROR,
+};
+
+struct YAELIB_API ResourceLog
+{
+	ResourceLogType type;
+	String message;
+};
+
 class YAELIB_API Resource
 {
 	MIRROR_CLASS(Resource)
@@ -20,11 +33,6 @@ class YAELIB_API Resource
 	);
 
 public:
-	enum Error
-	{
-		ERROR_NONE,
-		ERROR_LOAD
-	};
 
 	Resource(ResourceID _id);
 	Resource(const char* _name);
@@ -40,23 +48,25 @@ public:
 	void release();
 	void releaseUnuse();
 
-	bool isLoaded() const { return m_loadCount > 0; }
+	bool isLoaded() const { return m_loadCount > 0 && m_errorCount == 0; } // @TODO warning as errors option ?
 	bool isUsed() const { return m_useCount > 0; }
 
-	Error getError() const { return m_error; }
-	const char* getErrorDescription() const { return m_errorDescription.c_str(); }
+	const Array<ResourceLog>& getLogs() const { return m_logs; }
 
 // private:
-	virtual Error _doLoad(String& _outErrorDescription) { return ERROR_NONE; }
+	virtual void _doLoad() {}
 	virtual void _doUnload() {}
 
-	ResourceID m_id;
+	void _log(ResourceLogType _type, const char* _msg);
+
+	Array<ResourceLog> m_logs;
 	String m_name;
+	ResourceID m_id;
 	u32 m_useCount = 0;
 	u32 m_loadCount = 0;
-
-	Error m_error = ERROR_NONE;
-	String m_errorDescription;
+	u32 m_errorCount = 0;
+	u32 m_warningCount = 0;
+	bool m_isLoading = false;
 };
 
 

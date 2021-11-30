@@ -72,6 +72,9 @@ void Program::init(char** _args, int _argCount)
 	}
 
     m_logger = m_defaultAllocator->create<Logger>();
+	m_profiler = m_defaultAllocator->create<Profiler>(m_toolAllocator);
+
+	YAE_CAPTURE_FUNCTION();
 
     m_exePath = filesystem::getAbsolutePath(m_args[0]);
     m_binDirectory = filesystem::getDirectory(m_exePath.c_str());
@@ -94,7 +97,6 @@ void Program::init(char** _args, int _argCount)
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
-	m_profiler = m_defaultAllocator->create<Profiler>(m_toolAllocator);
 
 	// Prepare Game API for hot reload
 	if (m_hotReloadGameAPI)
@@ -123,13 +125,13 @@ void Program::shutdown()
 
 	_unloadGameAPI();
 
-	m_defaultAllocator->destroy(m_profiler);
-	m_profiler = nullptr;
-
 	m_defaultAllocator->destroy(m_resourceManager);
 	m_resourceManager = nullptr;
 
 	ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
+
+	m_defaultAllocator->destroy(m_profiler);
+	m_profiler = nullptr;
 
 	m_defaultAllocator->destroy(m_logger);
 	m_logger = nullptr;

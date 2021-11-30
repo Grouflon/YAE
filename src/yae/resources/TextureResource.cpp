@@ -48,7 +48,7 @@ TextureResource::~TextureResource()
 }
 
 
-Resource::Error TextureResource::_doLoad(String& _outErrorDescription)
+void TextureResource::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -61,8 +61,8 @@ Resource::Error TextureResource::_doLoad(String& _outErrorDescription)
 		pixels = stbi_load(getName(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
 		if (pixels == nullptr)
 		{
-			_outErrorDescription = "Failed to open file";
-			return ERROR_LOAD;
+			_log(RESOURCELOGTYPE_ERROR, "Could not open file.");
+			return;
 		}	
 	}
 	
@@ -73,12 +73,12 @@ Resource::Error TextureResource::_doLoad(String& _outErrorDescription)
 
 	if (!result)
 	{
-		_outErrorDescription = "Failed to create texture";
-		return ERROR_LOAD;	
+		_log(RESOURCELOGTYPE_ERROR, "Failed to create texture.");
+		return;
 	}
 
 	YAE_VERBOSEF_CAT("resource", "Succesfully loaded texture \"%s\".", getName());
-	return ERROR_NONE;
+	return;
 }
 
 

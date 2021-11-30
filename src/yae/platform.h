@@ -10,16 +10,25 @@ struct StackFrame;
 namespace platform {
 
 // Time
-YAELIB_API i64 getTime();
+YAELIB_API i64 getCycles();
 YAELIB_API i64 getFrequency();
-YAELIB_API u64 getSystemTime();// This needs to be in the same reference as getFileLastWriteTime
+
+/*
+	This needs to be in the same reference as getFileLastWriteTime
+*/
+YAELIB_API u64 getSystemTime();
 
 // File system
 YAELIB_API void setWorkingDirectory(const char* _path);
 YAELIB_API String getWorkingDirectory();
 YAELIB_API bool duplicateFile(const char* _srcPath, const char* _dstPath);
 YAELIB_API bool doesPathExists(const char* _path);
-YAELIB_API u64 getFileLastWriteTime(const char* _path); // This needs to be in the same reference as getSystemTime
+
+/*
+	Returns 0 if the file does not exists
+	This needs to be in the same reference as getSystemTime
+*/
+YAELIB_API u64 getFileLastWriteTime(const char* _path);
 YAELIB_API String getAbsolutePath(const char* _path);
 
 // DLLs

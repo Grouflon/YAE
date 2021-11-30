@@ -1,6 +1,7 @@
 #include "MeshResource.h"
 
 #include <yae/filesystem.h>
+#include <yae/vulkan/VulkanRenderer.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
@@ -26,7 +27,7 @@ MeshResource::~MeshResource()
 }
 
 
-Resource::Error MeshResource::_doLoad(String& _outErrorDescription)
+void MeshResource::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -39,8 +40,15 @@ Resource::Error MeshResource::_doLoad(String& _outErrorDescription)
 		YAE_CAPTURE_SCOPE("open_file");
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, getName()))
 		{
-			_outErrorDescription = (warn + err).c_str();
-			return ERROR_LOAD;
+			if (warn.size() > 0)
+			{
+				_log(RESOURCELOGTYPE_WARNING, warn.c_str());
+			}
+			if (err.size() > 0)
+			{
+				_log(RESOURCELOGTYPE_ERROR, err.c_str());
+			}
+			return;
 		}	
 	}
 	
@@ -80,11 +88,9 @@ Resource::Error MeshResource::_doLoad(String& _outErrorDescription)
 	bool result = renderer().createMesh(m_vertices.data(), m_vertices.size(), m_indices.data(), m_indices.size(), m_meshHandle);
 	if (!result)
 	{
-		_outErrorDescription = "Failed to create mesh with the renderer";
-		return ERROR_LOAD;
+		_log(RESOURCELOGTYPE_ERROR, "Failed to create mesh with the renderer");
+		return;
 	}
-
-	return ERROR_NONE;
 }
 
 

@@ -22,7 +22,7 @@ public:
 	size_t getContentSize() const { return m_contentSize; }
 
 // private:
-	virtual Error _doLoad(String& _outErrorDescription) override;
+	virtual void _doLoad() override;
 	virtual void _doUnload() override;
 
 	void* m_content = nullptr;

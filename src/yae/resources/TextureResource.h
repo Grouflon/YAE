@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/resource.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/render_types.h>
 
 #include <mirror/mirror.h>
 
@@ -22,7 +22,7 @@ public:
 	const TextureHandle& getHandle() const;
 
 // private:
-	virtual Error _doLoad(String& _outErrorDescription) override;
+	virtual void _doLoad() override;
 	virtual void _doUnload() override;
 
 	int m_width = 0;

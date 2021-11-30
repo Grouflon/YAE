@@ -6,7 +6,7 @@ namespace yae {
 
 class String;
 
-struct Time
+struct YAELIB_API Time
 {
 	i64 time;
 
@@ -29,7 +29,13 @@ struct Time
 };
 
 
-struct Clock
+struct YAELIB_API Date
+{
+
+};
+
+
+struct YAELIB_API Clock
 {
 	Time startTime;
 
@@ -42,15 +48,15 @@ struct Clock
 
 namespace time {
 
-yae::Time now();
-yae::Time max();
+YAELIB_API yae::Time now();
+YAELIB_API yae::Time max();
 
-i64 timeToNanoSeconds(i64 _time);
-i64 timeToMicroSeconds(i64 _time);
-double timeToMilliSeconds64(i64 _time);
-float timeToMilliSeconds(i64 _time);
-double timeToSeconds64(i64 _time);
-float timeToSeconds(i64 _time);
+YAELIB_API i64 timeToNanoSeconds(Time _time);
+YAELIB_API i64 timeToMicroSeconds(Time _time);
+YAELIB_API double timeToMilliSeconds64(Time _time);
+YAELIB_API float timeToMilliSeconds(Time _time);
+YAELIB_API double timeToSeconds64(Time _time);
+YAELIB_API float timeToSeconds(Time _time);
 
 void formatTime(Time _time, String& _outString);
 

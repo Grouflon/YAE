@@ -17,14 +17,12 @@ workspace "yaeApplication"
 		"./extern/imgui/",
 		"./extern/glm/",
 		"./extern/VulkanMemoryAllocator/",
-		--"./extern/shaderc/include/",
 		"./extern/",
 		VK_SDK_PATH.."/include/",
 	}
 
 	libdirs {
 		"./lib/"..TARGET_FOLDER_NAME.."/",
-		--"./extern/shaderc/lib/"..TARGET_FOLDER_NAME.."/",
 	}
 
 	defines {
@@ -59,10 +57,6 @@ workspace "yaeApplication"
 project "yae"
 	kind "SharedLib"
 	targetdir("bin/"..TARGET_FOLDER_NAME.."/")
-
-	filter {"configurations:Debug" }
-		ignoredefaultlibraries { "MSVCRT" } -- we need to build glfw debug libraries to get rid of that
-	filter {}
 
 	files { 
 		"./src/yae/**.h",
@@ -118,6 +112,24 @@ project "yae"
 		"./extern/GLFW/lib/%{cfg.platform}/",
 	}
 
+	filter {"configurations:Debug" }
+		ignoredefaultlibraries { "MSVCRT" } -- we need to build glfw debug libraries to get rid of that
+		links { "shaderc_combinedd" }
+		linkoptions { "/ignore:4099" } -- we are missing the pdbs of shaderc_combined debug libs, it generates warnings but we dont care
+
+	filter {"configurations:Release" }
+		links { "shaderc_combined" }
+
+	filter { "platforms:Win32", "configurations:Debug" }
+		libdirs {
+			VK_SDK_PATH.."/DebugLibs/Lib32/" --This is a custom path, you need to get the custom libs separately on vulkan's website
+		}
+
+	filter { "platforms:Win64", "configurations:Debug" }
+		libdirs {
+			VK_SDK_PATH.."/DebugLibs/Lib/" --This is a custom path, you need to get the custom libs separately on vulkan's website
+		}
+
 	filter { "platforms:Win32" }
 		libdirs {
 			VK_SDK_PATH.."/Lib32/"
@@ -132,7 +144,6 @@ project "yae"
 	links {
 		"glfw3",
 		"vulkan-1",
-		--"shaderc_combined",
 	}
 
 	--postbuildcommands {

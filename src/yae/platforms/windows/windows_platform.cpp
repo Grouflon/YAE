@@ -11,7 +11,7 @@ namespace yae {
 
 namespace platform {
 
-i64 getTime()
+i64 getCycles()
 {
 	LARGE_INTEGER largeInteger;
 	QueryPerformanceCounter(&largeInteger);
