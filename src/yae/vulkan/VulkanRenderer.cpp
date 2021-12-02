@@ -10,6 +10,7 @@
 
 #include <set>
 #include <vector>
+#include <algorithm>
 
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
