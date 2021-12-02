@@ -10,7 +10,7 @@ namespace yae {
 
 typedef StringHash ResourceID;
 
-extern const ResourceID UNDEFINED_RESOURCEID;
+YAELIB_API extern const ResourceID UNDEFINED_RESOURCEID;
 
 
 enum YAELIB_API ResourceLogType
