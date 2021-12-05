@@ -107,9 +107,6 @@ void Program::init(char** _args, int _argCount)
 
 		m_shaderCompiler = shaderc_compiler_initialize();
 		YAE_ASSERT(m_shaderCompiler != nullptr);
-
-		m_shaderCompilerOptions = shaderc_compile_options_initialize();
-		YAE_ASSERT(m_shaderCompilerOptions != nullptr);
 	}
 
 	// Prepare Game API for hot reload
@@ -139,8 +136,6 @@ void Program::shutdown()
 
 	_unloadGameAPI();
 
-	shaderc_compile_options_release(m_shaderCompilerOptions);
-	m_shaderCompilerOptions = nullptr;
 	shaderc_compiler_release(m_shaderCompiler);
 	m_shaderCompiler = nullptr;
 

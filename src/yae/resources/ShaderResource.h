@@ -3,12 +3,14 @@
 #include <yae/types.h>
 #include <yae/resource.h>
 #include <yae/render_types.h>
+#include <yae/containers/array.h>
 
 namespace yae {
 
 enum ShaderType
 {
 	SHADERTYPE_VERTEX,
+	SHADERTYPE_GEOMETRY,
 	SHADERTYPE_FRAGMENT,
 };
 
@@ -20,7 +22,7 @@ class YAELIB_API ShaderResource : public Resource
 	);
 
 public:
-	ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint = "main");
+	ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint = "main", const char** _defines = nullptr, size_t _defineCount = 0);
 	virtual~ ShaderResource();
 
 	const ShaderHandle& getShaderHandle() const { return m_shaderHandle; }
@@ -35,12 +37,13 @@ public:
 	ShaderType m_shaderType;
 	String m_path;
 	String m_entryPoint;
+	Array<String> m_defines;
 };
 
 template <>
 struct ResourceIDGetter<ShaderResource>
 {
-	static ResourceID GetId(const char* _path, ShaderType _type, const char* _entryPoint = "main");
+	static ResourceID GetId(const char* _path, ShaderType _type, const char* _entryPoint = "main", const char** _defines = nullptr, size_t _defineCount = 0);
 };
 
 } // namespace yae

@@ -28,7 +28,7 @@ void FileResource::_doLoad()
 	FileHandle file(getName());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
-		_log(RESOURCELOGTYPE_ERROR, "Could not open file.");
+		_log(RESOURCELOGTYPE_ERROR, string::format("Could not open file \"%s\".", getName()).c_str());
 		return;
 	}
 

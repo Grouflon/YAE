@@ -6,7 +6,6 @@
 
 // shaderc forward declarations
 struct shaderc_compiler;
-struct shaderc_compile_options;
 
 namespace yae {
 
@@ -58,7 +57,6 @@ public:
 	Profiler& profiler();
 
 	shaderc_compiler* shaderCompiler() { return m_shaderCompiler; }
-	shaderc_compile_options* shaderCompilerOptions() { return m_shaderCompilerOptions; }
 
 	// Game API functions
 	void initGame();
@@ -80,7 +78,6 @@ public:
 	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;
 	shaderc_compiler* m_shaderCompiler = nullptr;
-	shaderc_compile_options* m_shaderCompilerOptions = nullptr;
 
 	Array<Application*> m_applications;
 	Application* m_currentApplication = nullptr;

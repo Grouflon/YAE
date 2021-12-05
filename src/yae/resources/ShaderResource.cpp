@@ -30,6 +30,7 @@ const char* shaderTypeToString(ShaderType _type)
 	switch(_type)
 	{
 		case SHADERTYPE_VERTEX: return "vertex";
+		case SHADERTYPE_GEOMETRY: return "geometry";
 		case SHADERTYPE_FRAGMENT: return "fragment";
 	}
 	return "";
@@ -41,15 +42,23 @@ shaderc_shader_kind shaderTypeToShadercType(ShaderType _type)
 	switch(_type)
 	{
 		case SHADERTYPE_VERTEX: return shaderc_vertex_shader;
+		case SHADERTYPE_GEOMETRY: return shaderc_geometry_shader;
 		case SHADERTYPE_FRAGMENT: return shaderc_fragment_shader;
 	}
 	return shaderc_glsl_infer_from_source;
 }
 
 
-String buildShaderName(const char* _path, ShaderType _type, const char* _entryPoint)
+String buildShaderName(const char* _path, ShaderType _type, const char* _entryPoint, const char** _defines, size_t _defineCount)
 {
-	return string::format("%s_%s_%s", filesystem::normalizePath(_path).c_str(), shaderTypeToString(_type), _entryPoint);
+	String definesString(&scratchAllocator());
+	for(size_t i = 0; i < _defineCount; ++i)
+	{
+		definesString += "#";
+		definesString += _defines[i];
+	}
+
+	return string::format("%s_%s_%s_%s", filesystem::normalizePath(_path).c_str(), shaderTypeToString(_type), _entryPoint, definesString.c_str());
 }
 
 } // anonymous
@@ -57,12 +66,16 @@ String buildShaderName(const char* _path, ShaderType _type, const char* _entryPo
 
 MIRROR_CLASS_DEFINITION(ShaderResource);
 
-ShaderResource::ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint)
-	: Resource(buildShaderName(_path, _type, _entryPoint).c_str())
+ShaderResource::ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint, const char** _defines, size_t _defineCount)
+	: Resource(buildShaderName(_path, _type, _entryPoint, _defines, _defineCount).c_str())
 	, m_path(_path)
 	, m_shaderType(_type)
 	, m_entryPoint(_entryPoint)
 {
+	for (size_t i = 0; i < _defineCount; ++i)
+	{
+		m_defines.push_back(_defines[i]);
+	}
 }
 
 
@@ -83,7 +96,13 @@ void ShaderResource::_doLoad()
 		return;
 	}
 
-	String compiledShaderFileName(string::format("%s_%s_%s", filesystem::getFileNameWithoutExtension(m_path.c_str()).c_str(), shaderTypeToString(m_shaderType), m_entryPoint.c_str()) + ".spv", &scratchAllocator());
+	String definesString(&scratchAllocator());
+	for(const String& define : m_defines)
+	{
+		definesString += "#";
+		definesString += define;
+	}
+	String compiledShaderFileName(string::format("%s_%s_%s_%s", filesystem::getFileNameWithoutExtension(m_path.c_str()).c_str(), shaderTypeToString(m_shaderType), m_entryPoint.c_str(), definesString.c_str()) + ".spv", &scratchAllocator());
 	String compiledShaderPath(getCompiledShaderDirectory() + compiledShaderFileName, &scratchAllocator());
 
 	Date sourceFileTime = filesystem::getFileLastWriteTime(m_path.c_str());
@@ -109,9 +128,28 @@ void ShaderResource::_doLoad()
 		}
 
 		shaderc_compilation_result_t result;
-
 		{
 			YAE_CAPTURE_SCOPE("compile_shader");
+
+			shaderc_compile_options_t options = shaderc_compile_options_initialize();
+			YAE_ASSERT(options != nullptr);
+
+			for(const String& define : m_defines)
+			{
+				const char* name = define.c_str();
+				size_t nameLength = define.size();
+				const char* value = "";
+				size_t valueLength = 0;
+
+				const char* equal = strchr(name, '=');
+				if (equal != nullptr)
+				{
+					value = equal + 1;
+					valueLength = nameLength - size_t(equal - name) - 1;
+					nameLength = size_t(equal - name);
+				}
+				shaderc_compile_options_add_macro_definition(options, name, nameLength, value, valueLength);
+			}
 
 			result = shaderc_compile_into_spv(
 				program().shaderCompiler(), 
@@ -120,8 +158,10 @@ void ShaderResource::_doLoad()
 				shaderTypeToShadercType(m_shaderType),
 				m_path.c_str(),
 				m_entryPoint.c_str(),
-				program().shaderCompilerOptions()
+				options
 			);
+
+			shaderc_compile_options_release(options);
 		}
 
 		scratchAllocator().deallocate(content);
@@ -203,9 +243,9 @@ void ShaderResource::_doUnload()
 }
 
 
-ResourceID ResourceIDGetter<ShaderResource>::GetId(const char* _path, ShaderType _type, const char* _entryPoint)
+ResourceID ResourceIDGetter<ShaderResource>::GetId(const char* _path, ShaderType _type, const char* _entryPoint, const char** _defines, size_t _defineCount)
 {
-	return ResourceID(buildShaderName(_path, _type, _entryPoint).c_str());
+	return ResourceID(buildShaderName(_path, _type, _entryPoint, _defines, _defineCount).c_str());
 }
 
 } // namespace yae
