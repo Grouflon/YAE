@@ -134,8 +134,8 @@ DataArray<T>::DataArray(Allocator* _allocator)
 
 
 template <typename T>
-DataArray<T>::DataArray(const DataArray<T> &_other)
-	: BaseArray()
+DataArray<T>::DataArray(const DataArray<T> &_other, Allocator* _allocator)
+	: BaseArray(_allocator)
 {
 	u32 size = _other.m_size;
 	_setCapacity(size);
@@ -261,8 +261,8 @@ Array<T>::Array(Allocator* _allocator)
 
 
 template <typename T>
-Array<T>::Array(const Array<T> &_other)
-	: BaseArray()
+Array<T>::Array(const Array<T> &_other, Allocator* _allocator)
+	: BaseArray(_allocator)
 {
 	u32 size = _other.m_size;
 	_setCapacity(size);

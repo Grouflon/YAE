@@ -55,7 +55,7 @@ class DataArray : public BaseArray<T>
 
 public:
 	DataArray(Allocator* _allocator = nullptr);
-	DataArray(const DataArray<T> &_other);
+	DataArray(const DataArray<T> &_other, Allocator* _allocator = nullptr);
 	DataArray<T>& operator=(const DataArray<T>& _other);
 	~DataArray();
 
@@ -79,7 +79,7 @@ class Array : public BaseArray<T>
 
 public:
 	Array(Allocator* _allocator = nullptr);
-	Array(const Array<T> &_other);
+	Array(const Array<T> &_other, Allocator* _allocator = nullptr);
 	Array<T>& operator=(const Array<T>& _other);
 	~Array();
 
