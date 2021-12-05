@@ -5,8 +5,10 @@
 #include <yae/resources/MeshResource.h>
 #include <yae/application.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
+#include <yae/vulkan/im3d_impl_vulkan.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <im3d.h>
 
 #include <set>
 #include <vector>
@@ -632,8 +634,10 @@ void VulkanRenderer::beginFrame()
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			_recreateSwapChain();
+			shutdownIm3d();
 			shutdownImGui();
 			initImGui();
+			initIm3d();
 			return;
 		}
 		else if (result != VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
@@ -920,8 +924,10 @@ void VulkanRenderer::endFrame()
 		{
 			m_framebufferResized = false;
 			_recreateSwapChain();
+			shutdownIm3d();
 			shutdownImGui();
 			initImGui();
+			initIm3d();
 		}
 		else if (result != VK_SUCCESS)
 		{
@@ -1055,6 +1061,21 @@ void VulkanRenderer::shutdownImGui()
 
 	ImGui_ImplVulkan_Shutdown();
 	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
+}
+
+void VulkanRenderer::initIm3d()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	m_im3dInstance = im3d_Init();
+}
+
+void VulkanRenderer::shutdownIm3d()
+{
+	YAE_CAPTURE_FUNCTION();
+	
+	im3d_Shutdown(m_im3dInstance);
+	m_im3dInstance = nullptr;
 }
 
 bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount)

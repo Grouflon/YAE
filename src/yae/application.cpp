@@ -9,6 +9,7 @@
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
+#include <im3d/im3d.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 
 namespace yae {
@@ -75,7 +76,12 @@ void Application::init(char** _args, int _argCount)
 		bool ret = ImGui_ImplGlfw_InitForVulkan(m_window, true);
 		YAE_ASSERT(ret);
 	}
+
+	// Setup Im3d
+	Im3d::GetContext().init();
+
 	m_vulkanRenderer->initImGui();
+	m_vulkanRenderer->initIm3d();
 
 	m_clock.reset();
 
@@ -201,7 +207,9 @@ void Application::shutdown()
 	
 	program().shutdownGame();
 
+	m_vulkanRenderer->shutdownIm3d();
 	m_vulkanRenderer->shutdownImGui();
+	Im3d::GetContext().shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(m_imgui);
 	m_imgui = nullptr;

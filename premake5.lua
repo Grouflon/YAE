@@ -15,6 +15,7 @@ workspace "yaeApplication"
 		"./src/",
 		"./extern/GLFW/include/",
 		"./extern/imgui/",
+		"./extern/im3d/",
 		"./extern/glm/",
 		"./extern/VulkanMemoryAllocator/",
 		"./extern/",
@@ -30,6 +31,7 @@ workspace "yaeApplication"
 		"GLFW_INCLUDE_VULKAN",
 		"GLM_FORCE_RADIANS",
 		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"IM3D_CONFIG=<yae/yae_im3d_config.h>",
 	}
 
 	filter { "platforms:Win32" }
@@ -66,6 +68,9 @@ project "yae"
 		"./extern/imgui/*.cpp",
 		"./extern/imgui/backends/imgui_impl_glfw.cpp",
 		"./extern/imgui/backends/imgui_impl_glfw.h",
+
+		"./extern/im3d/*.h",
+		"./extern/im3d/*.cpp",
 
 		"./extern/mirror/*.h",
 		"./extern/mirror/*.cpp",
@@ -105,7 +110,7 @@ project "yae"
 		"YAELIB_EXPORT",
 		"MIRROR_EXPORT",
 		"IMGUI_API=__declspec(dllexport)",
-		"_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING", -- Allows use of exeperimental/filesystem on windows
+		"_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING", -- Allows use of experimental/filesystem on windows
 	}
 
 	libdirs {

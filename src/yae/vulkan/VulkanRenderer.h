@@ -17,6 +17,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace yae {
 
+struct im3d_Instance;
 class TextureResource;
 class MeshResource;
 
@@ -49,6 +50,9 @@ public:
 
 	void initImGui();
 	void shutdownImGui();
+
+	void initIm3d();
+	void shutdownIm3d();
 
 	void drawMesh();
 	void drawImGui(ImDrawData* _drawData);
@@ -161,6 +165,8 @@ private:
 	bool m_framebufferResized = false;
 
 	Clock m_clock;
+
+	im3d_Instance* m_im3dInstance = nullptr;
 };
 
 }
