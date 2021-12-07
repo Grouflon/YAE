@@ -40,7 +40,7 @@
 #endif
 
 #ifdef GEOMETRY_SHADER
-	layout(binding = 0) uniform UniformBufferObject {
+	layout(binding = 1) uniform UniformBufferObject {
 		vec2 viewport;
 	} u;
 
@@ -93,7 +93,7 @@
 #ifdef FRAGMENT_SHADER
 	layout(location = 0) in VertexData vData;
 	
-	layout(location=0) out vec4 fResult;
+	layout(location = 0) out vec4 fResult;
 	
 	void main() 
 	{

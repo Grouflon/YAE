@@ -14,8 +14,6 @@
 #include <vector>
 #include <algorithm>
 
-#define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
-
 namespace yae {
 
 const u32 INVALID_QUEUE = ~0u;
@@ -453,6 +451,7 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
+		deviceFeatures.geometryShader = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1067,7 +1066,7 @@ void VulkanRenderer::initIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	m_im3dInstance = im3d_Init();
+	m_im3dInstance = im3d_Init(m_device, m_renderPass, m_swapChainExtent);
 }
 
 void VulkanRenderer::shutdownIm3d()
