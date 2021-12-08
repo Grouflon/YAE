@@ -1066,7 +1066,12 @@ void VulkanRenderer::initIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	m_im3dInstance = im3d_Init(m_device, m_renderPass, m_swapChainExtent);
+	im3d_VulkanInitData initData{};
+	initData.device = m_device;
+	initData.allocator = m_allocator;
+	initData.extent = m_swapChainExtent;
+	initData.renderPass = m_renderPass;
+	m_im3dInstance = im3d_Init(initData);
 }
 
 void VulkanRenderer::shutdownIm3d()

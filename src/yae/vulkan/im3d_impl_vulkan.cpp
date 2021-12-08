@@ -17,7 +17,7 @@ VkShaderStageFlagBits _ShaderTypeToVkStageFlag(ShaderType _type)
 	return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 }
 
-VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, VkDevice _device, VkExtent2D _extent, VkRenderPass _renderPass, VkPipelineLayout _pipelineLayout)
+VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const im3d_VulkanInitData& _initData, VkPipelineLayout _pipelineLayout)
 {
 	YAE_ASSERT(_shaderCount > 0 && _shaders != nullptr);
 
@@ -73,14 +73,14 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, VkDev
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)_extent.width;
-	viewport.height = (float)_extent.height;
+	viewport.width = (float)_initData.extent.width;
+	viewport.height = (float)_initData.extent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = _extent;
+	scissor.extent = _initData.extent;
 
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -153,20 +153,20 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, VkDev
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.layout = _pipelineLayout;
-	pipelineInfo.renderPass = _renderPass;
+	pipelineInfo.renderPass = _initData.renderPass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
-	VK_VERIFY(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline));
+	VK_VERIFY(vkCreateGraphicsPipelines(_initData.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline));
 	return pipeline;
 }
 
-im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D _extent)
+im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 {
 	im3d_Instance* instance = toolAllocator().create<im3d_Instance>();
 	*instance = {};
 
-	instance->device = _device;
+	instance->initData = _initData;
 
 	// POINTS
 	ShaderResource* pointsVertexShader = nullptr;
@@ -247,7 +247,7 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = u32(countof(bindings));
 		layoutInfo.pBindings = bindings;
-		VK_VERIFY(vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &instance->descriptorSetLayout));
+		VK_VERIFY(vkCreateDescriptorSetLayout(_initData.device, &layoutInfo, nullptr, &instance->descriptorSetLayout));
 	}
 
 	// Pipeline layout
@@ -256,7 +256,7 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &instance->descriptorSetLayout;
-		VK_VERIFY(vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &instance->pipelineLayout));
+		VK_VERIFY(vkCreatePipelineLayout(_initData.device, &pipelineLayoutInfo, nullptr, &instance->pipelineLayout));
 	}
 
 	{
@@ -265,7 +265,7 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 			pointsVertexShader,
 			pointsFragmentShader
 		};
-		instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _device, _extent, _renderPass, instance->pipelineLayout);
+		instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
 	}
 
 	{
@@ -275,7 +275,7 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 			linesGeometryShader,
 			linesFragmentShader
 		};
-		instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _device, _extent, _renderPass, instance->pipelineLayout);
+		instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
 	}
 
 	{
@@ -284,7 +284,7 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 			trianglesVertexShader,
 			trianglesFragmentShader
 		};
-		instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _device, _extent, _renderPass, instance->pipelineLayout);
+		instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
 	}
 
 	trianglesFragmentShader->releaseUnuse();
@@ -303,12 +303,12 @@ im3d_Instance* im3d_Init(VkDevice _device, VkRenderPass _renderPass, VkExtent2D 
 
 void im3d_Shutdown(im3d_Instance* _instance)
 {
-	vkDestroyPipeline(_instance->device, _instance->pointsPipeline, nullptr);
-	vkDestroyPipeline(_instance->device, _instance->linesPipeline, nullptr);
-	vkDestroyPipeline(_instance->device, _instance->trianglesPipeline, nullptr);
+	vkDestroyPipeline(_instance->initData.device, _instance->pointsPipeline, nullptr);
+	vkDestroyPipeline(_instance->initData.device, _instance->linesPipeline, nullptr);
+	vkDestroyPipeline(_instance->initData.device, _instance->trianglesPipeline, nullptr);
 
-	vkDestroyPipelineLayout(_instance->device, _instance->pipelineLayout, nullptr);
-	vkDestroyDescriptorSetLayout(_instance->device, _instance->descriptorSetLayout, nullptr);
+	vkDestroyPipelineLayout(_instance->initData.device, _instance->pipelineLayout, nullptr);
+	vkDestroyDescriptorSetLayout(_instance->initData.device, _instance->descriptorSetLayout, nullptr);
 
 	toolAllocator().destroy(_instance);
 }
