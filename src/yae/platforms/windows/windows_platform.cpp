@@ -103,7 +103,7 @@ u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount)
 	stackFrame.AddrFrame.Offset    = context.Rbp;
 	stackFrame.AddrFrame.Mode      = AddrModeFlat;
 
-	IMAGEHLP_SYMBOL64* symbol = (IMAGEHLP_SYMBOL64*)scratchAllocator().allocate(sizeof(IMAGEHLP_SYMBOL64) + 256 * sizeof(TCHAR));
+	IMAGEHLP_SYMBOL64* symbol = (IMAGEHLP_SYMBOL64*)malloc(sizeof(IMAGEHLP_SYMBOL64) + 256 * sizeof(TCHAR));
 	symbol->SizeOfStruct  = sizeof( IMAGEHLP_SYMBOL64 );
     symbol->MaxNameLength = 255;
 
@@ -139,7 +139,7 @@ u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount)
         ++frameCount;
     }
 
-    scratchAllocator().deallocate(symbol);
+    free(symbol);
     return frameCount;
 }
 

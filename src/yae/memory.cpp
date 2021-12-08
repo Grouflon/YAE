@@ -7,7 +7,7 @@
 
 #if YAE_ALLOCATION_CALLSTACK_CAPTURE
 #include <yae/callstack.h>
-#include <yae/containers.h>
+#include <yae/containers/HashMap.h>
 #endif
 
 namespace yae {
@@ -18,7 +18,7 @@ struct AllocationCallStack
 	StackFrame frames[32];
 	u16 frameCount;
 };
-static HashMap<size_t, AllocationCallStack> g_allocationCaptures(&s_untrackedMallocAllocator);
+static HashMap<size_t, AllocationCallStack> g_allocationCaptures(&memory::mallocAllocator());
 #endif
 
 const u8 HEADER_PAD_VALUE = 0xFAu;
@@ -51,7 +51,7 @@ FixedSizeAllocator::~FixedSizeAllocator()
 		printf("%d Memory Leaks:\n", u32(m_allocationCount));
 		for(auto entry : g_allocationCaptures)
 		{
-			printCallstack(entry.value.frames, entry.value.frameCount);
+			callstack::print(entry.value.frames, entry.value.frameCount);
 			printf("\n");
 		}
 	}
@@ -150,7 +150,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 #if YAE_ALLOCATION_CALLSTACK_CAPTURE
 	{
 		AllocationCallStack capture;
-		capture.frameCount = captureCallstack(capture.frames, 32);
+		capture.frameCount = callstack::capture(capture.frames, 32);
 		g_allocationCaptures.set(size_t(dataStart), capture);
 	}
 #endif
