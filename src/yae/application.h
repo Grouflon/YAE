@@ -6,6 +6,11 @@
 struct GLFWwindow;
 struct ImGuiContext;
 
+namespace Im3d
+{
+	struct Context;
+}
+
 namespace yae {
 
 class VulkanRenderer;
@@ -40,6 +45,7 @@ private:
 
 	GLFWwindow* m_window = nullptr;
 	ImGuiContext* m_imgui = nullptr;
+	Im3d::Context* m_im3d = nullptr;
 
 	Clock m_clock;
 

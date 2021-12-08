@@ -78,7 +78,8 @@ void Application::init(char** _args, int _argCount)
 	}
 
 	// Setup Im3d
-	Im3d::GetContext().init();
+	m_im3d = toolAllocator().create<Im3d::Context>();
+	Im3d::SetContext(*m_im3d);
 
 	m_vulkanRenderer->initImGui();
 	m_vulkanRenderer->initIm3d();
@@ -209,7 +210,11 @@ void Application::shutdown()
 
 	m_vulkanRenderer->shutdownIm3d();
 	m_vulkanRenderer->shutdownImGui();
-	Im3d::GetContext().shutdown();
+
+	// @NOTE: Can't unset context, since the setter uses a ref
+	toolAllocator().destroy(m_im3d);
+	m_im3d = nullptr;
+
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(m_imgui);
 	m_imgui = nullptr;
