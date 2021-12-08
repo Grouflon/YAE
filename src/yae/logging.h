@@ -38,10 +38,10 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 #define YAE_LOGF(_fmt, ...)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Log, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
 #define YAE_LOGF_CAT(_category, _fmt, ...)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Log, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
 
-#define YAE_WARNING(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "\x1B[33m[%s:%d] %s\033[0m", __FILENAME__, __LINE__, _msg)
-#define YAE_WARNING_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "\x1B[33m[%s:%d] %s\033[0m", __FILENAME__, __LINE__, _msg)
-#define YAE_WARNINGF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "\x1B[33m[%s:%d] " _fmt "\033[0m", __FILENAME__, __LINE__, __VA_ARGS__)
-#define YAE_WARNINGF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "\x1B[33m[%s:%d] " _fmt "\033[0m", __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_WARNING(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_WARNING_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_WARNINGF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_WARNINGF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
 
 #define YAE_ERROR(_msg)							::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Error, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
 #define YAE_ERROR_CAT(_category, _msg)			::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Error, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
