@@ -9,4 +9,4 @@
 	url = https://github.com/Grouflon/mirror.git
 [submodule "extern/im3d"]
 	path = extern/im3d
-	url = https://github.com/john-chapman/im3d.git
+	url = https://github.com/Grouflon/im3d.git
