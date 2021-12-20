@@ -9,7 +9,7 @@ struct GLFWwindow;
 
 namespace yae {
 
-class InputSystem
+class YAELIB_API InputSystem
 {
 public:
 	void init(GLFWwindow* _window);

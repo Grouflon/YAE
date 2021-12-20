@@ -26,6 +26,8 @@ public:
 	void run();
 	void shutdown();
 
+	void requestExit();
+
 	InputSystem& input() const;
 	VulkanRenderer& renderer() const;
 

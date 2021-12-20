@@ -236,6 +236,12 @@ void Application::shutdown()
 }
 
 
+void Application::requestExit()
+{
+	glfwSetWindowShouldClose(m_window, true);
+}
+
+
 InputSystem& Application::input() const
 {
 	YAE_ASSERT(m_inputSystem != nullptr);

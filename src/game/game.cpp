@@ -4,6 +4,8 @@
 #include <yae/serialization.h>
 #include <yae/resources/FileResource.h>
 #include <yae/math_types.h>
+#include <yae/input.h>
+#include <yae/application.h>
 
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -300,7 +302,10 @@ void initGame()
 
 void updateGame()
 {
-	//printf("Hello again World!\n");
+	if (input().isKeyDown(GLFW_KEY_ESCAPE))
+	{
+		app().requestExit();
+	}
 }
 
 void shutdownGame()
