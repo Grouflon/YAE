@@ -185,6 +185,21 @@ void DataArray<T>::resize(u32 _newSize)
 
 
 template <typename T>
+void DataArray<T>::resize(u32 _newSize, const T& _initValue)
+{
+	u32 previousSize = m_size;
+	resize(_newSize);
+	if (_newSize > previousSize)
+	{
+		for (u32 i = previousSize; i < _newSize; ++i)
+		{
+			m_data[i] = _initValue;
+		}
+	}
+}
+
+
+template <typename T>
 void DataArray<T>::clear()
 {
 	m_size = 0;
@@ -307,7 +322,7 @@ void Array<T>::reserve(u32 _newCapacity)
 
 
 template <typename T>
-void Array<T>::resize(u32 _newSize)
+void Array<T>::resize(u32 _newSize, const T& _initValue)
 {
 	if (_newSize == m_size)
 		return;
@@ -321,7 +336,7 @@ void Array<T>::resize(u32 _newSize)
 	{
 		for (u32 i = m_size; i < _newSize; ++i)
 		{
-			new (m_data + i) T();
+			new (m_data + i) T(_initValue);
 		}
 	}
 	else

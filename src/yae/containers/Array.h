@@ -60,6 +60,7 @@ public:
 	~DataArray();
 
 	void resize(u32 _newSize);
+	void resize(u32 _newSize, const T& _initValue);
 	void clear();
 	T& push_back(const T& _item);
 	void pop_back();
@@ -83,7 +84,7 @@ public:
 	Array<T>& operator=(const Array<T>& _other);
 	~Array();
 
-	void resize(u32 _newSize);
+	void resize(u32 _newSize, const T& _initValue = T());
 	void clear();
 	T& push_back(const T& _item);
 	void pop_back();
