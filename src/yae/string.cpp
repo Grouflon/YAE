@@ -28,6 +28,9 @@ String::String(Allocator* _allocator)
 String::String(const char* _str, Allocator* _allocator)
 	:String(_allocator)
 {
+	if (_str == EMPTY_STRING)
+		return;
+
 	size_t len = strlen(_str);
 	reserve(len);
 	memcpy(m_buffer, _str, len + 1);
