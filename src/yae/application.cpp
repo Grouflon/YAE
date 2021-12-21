@@ -4,6 +4,7 @@
 #include <yae/program.h>
 #include <yae/time.h>
 #include <yae/vulkan/VulkanRenderer.h>
+#include <yae/vulkan/im3d_impl_vulkan.h>
 #include <yae/input.h>
 #include <yae/memory.h>
 
@@ -93,17 +94,44 @@ bool Application::doFrame()
 {
 	YAE_CAPTURE_FUNCTION();
 
+	Time frameTime = m_clock.reset();
+	float dt = frameTime.asSeconds();
+	//printf("%f\n", 1.0 / frameTime.asSeconds64());
+
 	if (glfwWindowShouldClose(m_window))
 		return false;
 
 	{
 		YAE_CAPTURE_SCOPE("beginFrame");
 
+		Vector2 viewportSize = renderer().getFrameBufferSize();
+		float fov = 45.f * D2R;
+		float aspectRatio = viewportSize.x / viewportSize.y;
+		Vector3 position = Vector3(2.f, 2.f, 2.f);
+		Vector3 target = glm::vec3(0.f, 0.f, 0.f);
+		Mat4 view = glm::lookAt(position, target, glm::vec3(0.f, 0.f, 1.f));
+		Mat4 proj = glm::perspective(fov, aspectRatio, .1f, 10.f);
+		proj[1][1] *= -1.f;
+
+		renderer().setViewProjectionMatrix(view, proj);
+
 		//glfwPollEvents();
 		m_inputSystem->update();
 		ImGui_ImplGlfw_NewFrame();
 		m_vulkanRenderer->beginFrame();
-		ImGui::NewFrame();	
+		ImGui::NewFrame();
+
+		im3d_FrameData frameData;
+		frameData.deltaTime = dt;
+		frameData.cursorPosition = Vector2::ZERO;
+		frameData.viewportSize = viewportSize;
+		frameData.camera.position = position;
+		frameData.camera.direction = normalize(target - position);
+		frameData.camera.view = view;
+		frameData.camera.projection = proj;
+		frameData.camera.fov = fov;
+		frameData.camera.orthographic = false;
+		m_vulkanRenderer->im3dNewFrame(frameData);
 	}
 
 	program().updateGame();
@@ -181,23 +209,38 @@ bool Application::doFrame()
     	showAllocatorInfo("Tool", toolAllocator());
     	ImGui::End();
     }
+
 	//ImGui::ShowDemoWindow(&s_showDemoWindow);
 
+    Im3d::PushColor(Im3d::Color(1.f, 0.f, 0.f));
+    Im3d::BeginLines();
+    	Im3d::Vertex(-5.f, 0.f, 0.f);
+    	Im3d::Vertex(5.f, 5.f, 0.f);
+    Im3d::End();
+    Im3d::PopColor();
+
+    // Rendering
+    // Mesh
 	m_vulkanRenderer->drawMesh();
 
-	// Rendering
-	ImGui::Render();
-	ImDrawData* imguiDrawData = ImGui::GetDrawData();
-	const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
-	if (!isMinimized)
+	// Im3d
 	{
-		m_vulkanRenderer->drawImGui(imguiDrawData);
+		m_vulkanRenderer->im3dEndFrame();
 	}
 
-	m_vulkanRenderer->endFrame();
+	// ImGui
+	{
+		ImGui::Render();
+		ImDrawData* imguiDrawData = ImGui::GetDrawData();
+		const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
+		if (!isMinimized)
+		{
+			m_vulkanRenderer->drawImGui(imguiDrawData);
+		}	
+	}
 
-	/*Time frameTime = m_clock.reset();
-	printf("%f\n", 1.0 / frameTime.asSeconds64());*/
+	// End Frame
+	m_vulkanRenderer->endFrame();
 
 	return true;
 }

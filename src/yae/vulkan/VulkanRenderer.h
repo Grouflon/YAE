@@ -3,14 +3,10 @@
 #include <yae/types.h>
 #include <yae/time.h>
 #include <yae/render_types.h>
+#include <yae/math_types.h>
+#include <yae/containers/Array.h>
 
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <VulkanMemoryAllocator/vk_mem_alloc.h>
-
-// TODO: get rid of this and use our own array
-#include <vector>
-
+typedef struct GLFWwindow GLFWwindow;
 struct ImDrawData;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -18,6 +14,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 namespace yae {
 
 struct im3d_Instance;
+struct im3d_FrameData;
 class TextureResource;
 class MeshResource;
 
@@ -56,6 +53,8 @@ public:
 
 	void drawMesh();
 	void drawImGui(ImDrawData* _drawData);
+	void im3dNewFrame(const im3d_FrameData& _frameData);
+	void im3dEndFrame();
 
 	void notifyFrameBufferResized(int _width, int _height);
 
@@ -68,6 +67,9 @@ public:
 	bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle);
 	void destroyShader(ShaderHandle& _shaderHandle);
 
+	void setViewProjectionMatrix(const Mat4& _view, const Mat4& _proj);
+	Vector2 getFrameBufferSize() const;
+
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static VkFormat FindSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
 	static bool HasStencilComponent(VkFormat _format);
@@ -77,21 +79,12 @@ private:
 	void _destroySwapChain();
 	void _recreateSwapChain();
 
-	void _createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VmaAllocation& _outAllocation);
-	void _destroyBuffer(VkBuffer& _inOutBuffer, VmaAllocation& _inOutAllocation);
-	void _copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size);
-
-	void _createImage(u32 _width, u32 _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VmaAllocation& _outImageMemory);
-	void _destroyImage(VkImage& _inOutImage, VmaAllocation& _inOutImageMemory);
 	void _transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout);
 	void _copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _width, u32 _height);
 
 	VkImageView _createImageView(VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags);
 
 	void _updateUniformBuffer(u32 _imageIndex);
-
-	VkCommandBuffer _beginSingleTimeCommands();
-	void _endSingleTimeCommands(VkCommandBuffer _commandBuffer);
 
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
@@ -123,21 +116,12 @@ private:
 		VkCommandPool commandPool;
 		VkCommandBuffer commandBuffer;
 	};
-	std::vector<VulkanFrameObjects> m_frameobjects;
+	DataArray<VulkanFrameObjects> m_frameobjects;
 
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
 	VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
 	VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
-
-	/*
-	std::vector<Vertex> m_vertices;
-	std::vector<u32> m_indices;
-	VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-	VmaAllocation m_vertexBufferMemory = VK_NULL_HANDLE;
-	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
-	VmaAllocation m_indexBufferMemory = VK_NULL_HANDLE;
-	*/
 
 	VkDescriptorPool m_descriptorPool;
 
@@ -154,17 +138,20 @@ private:
 
 	MeshResource* m_mesh = nullptr;
 
-	std::vector<VkSemaphore> m_imageAvailableSemaphores;
-	std::vector<VkSemaphore> m_renderFinishedSemaphores;
-	std::vector<VkFence> m_inFlightFences;
-	std::vector<VkFence> m_imagesInFlight;
-	size_t m_currentFlightFrame = 0;
+	DataArray<VkSemaphore> m_imageAvailableSemaphores;
+	DataArray<VkSemaphore> m_renderFinishedSemaphores;
+	DataArray<VkFence> m_inFlightFences;
+	DataArray<VkFence> m_imagesInFlight;
+	u32 m_currentFlightFrame = 0;
 	u32 m_currentFrameIndex = ~0;
 
 	bool m_validationLayersEnabled = false;
 	bool m_framebufferResized = false;
 
 	Clock m_clock;
+
+	Mat4 m_viewMatrix = Mat4::IDENTITY;
+	Mat4 m_projMatrix = Mat4::IDENTITY;
 
 	im3d_Instance* m_im3dInstance = nullptr;
 };

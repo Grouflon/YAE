@@ -1,10 +1,21 @@
 #include "im3d_impl_vulkan.h"
 
+#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/vulkan/vulkan.h>
 #include <yae/resources/ShaderResource.h>
+
+#include <im3d/im3d.h>
+#include <VulkanMemoryAllocator/vk_mem_alloc.h>
 
 const char* SHADER_PATH = "./data/shaders/im3d.glsl";
 
 namespace yae {
+
+struct UniformBufferObject
+{
+	Mat4 viewProj;
+	Vector2 viewport;
+};
 
 VkShaderStageFlagBits _ShaderTypeToVkStageFlag(ShaderType _type)
 {
@@ -223,7 +234,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 		trianglesFragmentShader->useLoad();
 	}
 
-	// Descriptor sets
+	// Descriptor sets & Uniform buffers
 	{
 		VkDescriptorSetLayoutBinding viewProjMatrixLayoutBinding;
 		viewProjMatrixLayoutBinding.binding = 0;
@@ -248,6 +259,57 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 		layoutInfo.bindingCount = u32(countof(bindings));
 		layoutInfo.pBindings = bindings;
 		VK_VERIFY(vkCreateDescriptorSetLayout(_initData.device, &layoutInfo, nullptr, &instance->descriptorSetLayout));
+
+		VkDescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = instance->initData.descriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &instance->descriptorSetLayout;
+        VK_VERIFY(vkAllocateDescriptorSets(instance->initData.device, &allocInfo, &instance->descriptorSet));
+
+        vulkan::createOrResizeBuffer(
+        	instance->initData.allocator,
+        	instance->uniformBuffer,
+        	instance->uniformBufferMemory,
+        	sizeof(UniformBufferObject),
+        	VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+
+        VkWriteDescriptorSet descriptorWrites[2] = {};
+        {
+        	VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = instance->uniformBuffer;
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(Mat4);
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = instance->descriptorSet;
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &bufferInfo;
+			descriptorWrites[0].pImageInfo = nullptr;
+			descriptorWrites[0].pTexelBufferView = nullptr;	
+        }
+
+        {
+        	VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = instance->uniformBuffer;
+			bufferInfo.offset = sizeof(Mat4);
+			bufferInfo.range = sizeof(Vector2);
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = instance->descriptorSet;
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pBufferInfo = &bufferInfo;
+			descriptorWrites[1].pImageInfo = nullptr;
+			descriptorWrites[1].pTexelBufferView = nullptr;	
+        }
+
+		vkUpdateDescriptorSets(_initData.device, u32(countof(descriptorWrites)), descriptorWrites, 0, nullptr);
 	}
 
 	// Pipeline layout
@@ -303,26 +365,171 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 
 void im3d_Shutdown(im3d_Instance* _instance)
 {
+	vulkan::destroyBuffer(_instance->initData.allocator, _instance->uniformBuffer, _instance->uniformBufferMemory);
+	vulkan::destroyBuffer(_instance->initData.allocator, _instance->vertexBuffer, _instance->vertexBufferMemory);
+
 	vkDestroyPipeline(_instance->initData.device, _instance->pointsPipeline, nullptr);
 	vkDestroyPipeline(_instance->initData.device, _instance->linesPipeline, nullptr);
 	vkDestroyPipeline(_instance->initData.device, _instance->trianglesPipeline, nullptr);
 
 	vkDestroyPipelineLayout(_instance->initData.device, _instance->pipelineLayout, nullptr);
+	vkFreeDescriptorSets(_instance->initData.device, _instance->initData.descriptorPool, 1, &_instance->descriptorSet);
 	vkDestroyDescriptorSetLayout(_instance->initData.device, _instance->descriptorSetLayout, nullptr);
 
 	toolAllocator().destroy(_instance);
 }
 
 
-void im3d_NewFrame(im3d_Instance* _instance)
+void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
 {
+	YAE_CAPTURE_FUNCTION();
 
+	Im3d::AppData& ad = Im3d::GetAppData();
+
+	Vector2 viewportSize = Vector2(float(_instance->initData.extent.width), float(_instance->initData.extent.height));
+
+	ad.m_deltaTime     = _frameData.deltaTime;
+	ad.m_viewportSize  = _frameData.viewportSize;
+	ad.m_viewOrigin    = _frameData.camera.position; // for VR use the head position
+	ad.m_viewDirection = _frameData.camera.direction;
+	ad.m_worldUp       = Im3d::Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho     = _frameData.camera.orthographic; 
+	
+ // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
+	ad.m_projScaleY = _frameData.camera.orthographic
+		? 2.0f / _frameData.camera.projection[1][1] // use far plane height for an ortho projection
+		: tanf(_frameData.camera.fov * 0.5f) * 2.0f // or vertical fov for a perspective projection
+		;  
+
+ // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
+	Vector2 cursorPos = _frameData.cursorPosition;
+	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
+	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
+	Vector4 rayOrigin, rayDirection;
+	Mat4 worldMatrix = inverse(_frameData.camera.view);
+	if (_frameData.camera.orthographic)
+	{
+		rayOrigin.x  = cursorPos.x / _frameData.camera.projection[0][0];
+		rayOrigin.y  = cursorPos.y / _frameData.camera.projection[1][1];
+		rayOrigin.z  = 0.0f;
+		rayOrigin.w = 1.0f;
+		rayOrigin    = worldMatrix * rayOrigin;
+		rayDirection = worldMatrix * Vector4(0.0f, 0.0f, -1.0f, 0.0f);
+		 
+	}
+	else
+	{
+		rayOrigin = Vector4(ad.m_viewOrigin, 1.0f);
+		rayDirection.x  = cursorPos.x / _frameData.camera.projection[0][0];
+		rayDirection.y  = cursorPos.y / _frameData.camera.projection[1][1];
+		rayDirection.z  = -1.0f;
+		rayDirection.w  = 0.0f;
+		rayDirection    = worldMatrix * normalize(rayDirection);
+	}
+	ad.m_cursorRayOrigin = rayOrigin.xyz();
+	ad.m_cursorRayDirection = rayDirection.xyz();
+
+ // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
+ // im3d_config.h, or if any of the IsVisible() functions are called.
+	Mat4 viewProj = Mat4(_frameData.camera.projection * _frameData.camera.view);
+	ad.setCullFrustum(viewProj, true);
+
+	for (int i = 0; i < Im3d::Action_Count; ++i)
+	{
+		ad.m_keyDown[i] = _frameData.actionKeyStates[i];
+	}
+
+ // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
+ // All key states have an equivalent (and more descriptive) 'Action_' enum.
+	//ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
+ // The following key states control which gizmo to use for the generic Gizmo() function. Here using the left ctrl
+ // key as an additional predicate.
+	//bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
+	//ad.m_keyDown[Im3d::Key_L/*Action_GizmoLocal*/]       = ctrlDown && (GetAsyncKeyState(0x4c) & 0x8000) != 0;
+	//ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
+	//ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
+	//ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+
+ // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
+	//ad.m_snapTranslation = ctrlDown ? 0.5f : 0.0f;
+	//ad.m_snapRotation    = ctrlDown ? Im3d::Radians(30.0f) : 0.0f;
+	//ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
+
+	ad.m_snapTranslation = 0.0f;
+	ad.m_snapRotation    = 0.0f;
+	ad.m_snapScale       = 0.0f;
+
+	// Update uniform buffer objects
+	UniformBufferObject ubo;
+	ubo.viewProj = viewProj;
+	ubo.viewport = viewportSize;
+	void* data;
+	VK_VERIFY(vmaMapMemory(_instance->initData.allocator, _instance->uniformBufferMemory, &data));
+	memcpy(data, &ubo, sizeof(ubo));
+	vmaUnmapMemory(_instance->initData.allocator, _instance->uniformBufferMemory);
+
+	Im3d::NewFrame();
 }
 
 
-void im3d_EndFrame(im3d_Instance* _instance)
+void im3d_EndFrame(im3d_Instance* _instance, VkCommandBuffer _commandBuffer)
 {
+	YAE_CAPTURE_FUNCTION();
 
+	Im3d::EndFrame();
+
+	for (u32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
+	{
+		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
+
+		size_t vertexBufferSize = drawList.m_vertexCount * sizeof(Im3d::VertexData);
+    	if (_instance->vertexBuffer == VK_NULL_HANDLE || _instance->vertexBufferSize < vertexBufferSize)
+    	{
+        	vulkan::createOrResizeBuffer(_instance->initData.allocator, _instance->vertexBuffer, _instance->vertexBufferMemory, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        	YAE_ASSERT(_instance->vertexBuffer != VK_NULL_HANDLE);
+        	YAE_ASSERT(_instance->vertexBufferMemory != VK_NULL_HANDLE);
+
+        	_instance->vertexBufferSize = vertexBufferSize;
+    	}
+    	
+        void* mappedMemory = nullptr;
+        VK_VERIFY(vmaMapMemory(_instance->initData.allocator, _instance->vertexBufferMemory, &mappedMemory));
+        memcpy(mappedMemory, drawList.m_vertexData, vertexBufferSize);
+        vmaUnmapMemory(_instance->initData.allocator, _instance->vertexBufferMemory);
+
+        VkPipeline pipeline = VK_NULL_HANDLE;
+        switch (drawList.m_primType)
+		{
+			case Im3d::DrawPrimitive_Points:
+				pipeline = _instance->pointsPipeline;
+				/*prim = GL_POINTS;
+				sh = g_Im3dShaderPoints;
+				glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned*/
+				break;
+			case Im3d::DrawPrimitive_Lines:
+				pipeline = _instance->linesPipeline;
+				/*prim = GL_LINES;
+				sh = g_Im3dShaderLines;
+				glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned*/
+				break;
+			case Im3d::DrawPrimitive_Triangles:
+				pipeline = _instance->trianglesPipeline;
+				/*prim = GL_TRIANGLES;
+				sh = g_Im3dShaderTriangles;
+				//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional*/
+				break;
+			default:
+				IM3D_ASSERT(false);
+				return;
+		};
+
+		vkCmdBindPipeline(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		vkCmdBindDescriptorSets(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _instance->pipelineLayout, 0, 1, &_instance->descriptorSet, 0, NULL);
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(_commandBuffer, 0, 1, &_instance->vertexBuffer, offsets);
+		vkCmdDraw(_commandBuffer, drawList.m_vertexCount, 1, 0, 0);
+	}
 }
 
 } // namespace yae

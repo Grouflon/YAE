@@ -3,12 +3,14 @@
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/TextureResource.h>
 #include <yae/resources/MeshResource.h>
-#include <yae/application.h>
+#include <yae/vulkan/vulkan.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
 #include <yae/vulkan/im3d_impl_vulkan.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <im3d.h>
+#include <VulkanMemoryAllocator/vk_mem_alloc.h>
+#include <GLFW/glfw3.h>
 
 #include <set>
 #include <vector>
@@ -570,7 +572,7 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+		for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{
 			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_imageAvailableSemaphores[i]));
 			VK_VERIFY(vkCreateSemaphore(m_device, &createInfo, nullptr, &m_renderFinishedSemaphores[i]));
@@ -703,6 +705,21 @@ void VulkanRenderer::drawImGui(ImDrawData* _drawData)
 	ImGui_ImplVulkan_RenderDrawData(_drawData, frame.commandBuffer);
 }
 
+void VulkanRenderer::im3dNewFrame(const im3d_FrameData& _frameData)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	im3d_NewFrame(m_im3dInstance, _frameData);
+}
+
+void VulkanRenderer::im3dEndFrame()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	VulkanFrameObjects& frame = m_frameobjects[m_currentFrameIndex];
+	im3d_EndFrame(m_im3dInstance, frame.commandBuffer);
+}
+
 void VulkanRenderer::notifyFrameBufferResized(int _width, int _height)
 {
 	m_framebufferResized = true;
@@ -713,16 +730,19 @@ bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _ch
 {
 	YAE_CAPTURE_FUNCTION();
 
+	_outTextureHandle = {};
+
 	VkDeviceSize imageSize = _width * _height * 4;
 
-	VkBuffer stagingBuffer;
-	VmaAllocation stagingBufferMemory;
-	_createBuffer(
+	VkBuffer stagingBuffer = VK_NULL_HANDLE;
+	VmaAllocation stagingBufferMemory = VK_NULL_HANDLE;
+	vulkan::createOrResizeBuffer(
+		m_allocator,
+		stagingBuffer,
+		stagingBufferMemory,
 		imageSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 	);
 
 	void* data;
@@ -730,7 +750,8 @@ bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _ch
 	memcpy(data, _data, static_cast<size_t>(imageSize));
 	vmaUnmapMemory(m_allocator, stagingBufferMemory);
 
-	_createImage(
+	vulkan::createImage(
+		m_allocator,
 		_width,
 		_height,
 		VK_FORMAT_R8G8B8A8_SRGB,
@@ -744,7 +765,7 @@ bool VulkanRenderer::createTexture(void* _data, int _width, int _height, int _ch
 	_transitionImageLayout(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	_copyBufferToImage(stagingBuffer, _outTextureHandle.image, _width, _height);
 	_transitionImageLayout(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	_destroyBuffer(stagingBuffer, stagingBufferMemory);
+	vulkan::destroyBuffer(m_allocator, stagingBuffer, stagingBufferMemory);
 
 	_outTextureHandle.view = _createImageView(_outTextureHandle.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 	return true;
@@ -757,7 +778,7 @@ void VulkanRenderer::destroyTexture(TextureHandle& _inTextureHandle)
 
 	vkDestroyImageView(m_device, _inTextureHandle.view, nullptr);
 	_inTextureHandle.view = VK_NULL_HANDLE;
-	_destroyImage(_inTextureHandle.image, _inTextureHandle.memory);
+	vulkan::destroyImage(m_allocator, _inTextureHandle.image, _inTextureHandle.memory);
 }
 
 
@@ -768,19 +789,22 @@ bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _ind
 	YAE_ASSERT(_vertices != nullptr || _verticesCount == 0);
 	YAE_ASSERT(_indices != nullptr || _indicesCount == 0);
 
+	_outMeshHandle = {};
+
 	// Create Vertex Buffer
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Vertex Buffer...");
 
 		VkDeviceSize bufferSize = sizeof(*_vertices) * _verticesCount;
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferMemory;
-		_createBuffer(
+		VkBuffer stagingBuffer = VK_NULL_HANDLE;
+		VmaAllocation stagingBufferMemory = VK_NULL_HANDLE;
+		vulkan::createOrResizeBuffer(
+			m_allocator,
+			stagingBuffer,
+			stagingBufferMemory,
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 
 		{
@@ -789,16 +813,17 @@ bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _ind
 			memcpy(data, _vertices, bufferSize);
 			vmaUnmapMemory(m_allocator, stagingBufferMemory);
 		}
-		_createBuffer(
+		vulkan::createOrResizeBuffer(
+			m_allocator,
+			_outMeshHandle.vertexBuffer,
+			_outMeshHandle.vertexMemory,
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			_outMeshHandle.vertexBuffer,
-			_outMeshHandle.vertexMemory
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
-		_copyBuffer(stagingBuffer, _outMeshHandle.vertexBuffer, bufferSize);
+		vulkan::copyBuffer(m_device, m_commandPool, m_graphicsQueue, stagingBuffer, _outMeshHandle.vertexBuffer, bufferSize);
 
-		_destroyBuffer(stagingBuffer, stagingBufferMemory);
+		vulkan::destroyBuffer(m_allocator, stagingBuffer, stagingBufferMemory);
 		YAE_VERBOSE_CAT("vulkan", "Created Vertex Buffer");
 	}
 
@@ -806,14 +831,15 @@ bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _ind
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Index Buffer...");
 		VkDeviceSize bufferSize = sizeof(*_indices) * _indicesCount;
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferMemory;
-		_createBuffer(
+		VkBuffer stagingBuffer = VK_NULL_HANDLE;
+		VmaAllocation stagingBufferMemory = VK_NULL_HANDLE;
+		vulkan::createOrResizeBuffer(
+			m_allocator,
+			stagingBuffer,
+			stagingBufferMemory,
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 
 		{
@@ -822,16 +848,17 @@ bool VulkanRenderer::createMesh(Vertex* _vertices, u32 _verticesCount, u32* _ind
 			memcpy(data, _indices, bufferSize);
 			vmaUnmapMemory(m_allocator, stagingBufferMemory);
 		}
-		_createBuffer(
+		vulkan::createOrResizeBuffer(
+			m_allocator,
+			_outMeshHandle.indexBuffer,
+			_outMeshHandle.indexMemory,
 			bufferSize,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			_outMeshHandle.indexBuffer,
-			_outMeshHandle.indexMemory
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
-		_copyBuffer(stagingBuffer, _outMeshHandle.indexBuffer, bufferSize);
+		vulkan::copyBuffer(m_device, m_commandPool, m_graphicsQueue, stagingBuffer, _outMeshHandle.indexBuffer, bufferSize);
 
-		_destroyBuffer(stagingBuffer, stagingBufferMemory);
+		vulkan::destroyBuffer(m_allocator, stagingBuffer, stagingBufferMemory);
 		YAE_VERBOSE_CAT("vulkan", "Created Index Buffer");
 	}
 
@@ -872,16 +899,29 @@ void VulkanRenderer::destroyMesh(MeshHandle& _inMeshHandle)
 {
 	YAE_CAPTURE_FUNCTION();
 
-	_destroyBuffer(_inMeshHandle.indexBuffer, _inMeshHandle.indexMemory);
+	vulkan::destroyBuffer(m_allocator, _inMeshHandle.indexBuffer, _inMeshHandle.indexMemory);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Index Buffer");
 
-	_destroyBuffer(_inMeshHandle.vertexBuffer, _inMeshHandle.vertexMemory);
+	vulkan::destroyBuffer(m_allocator, _inMeshHandle.vertexBuffer, _inMeshHandle.vertexMemory);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Vertex Buffer");
 
 	_inMeshHandle.indexBuffer = VK_NULL_HANDLE;
 	_inMeshHandle.indexMemory = VK_NULL_HANDLE;
 	_inMeshHandle.vertexBuffer = VK_NULL_HANDLE;
 	_inMeshHandle.vertexMemory = VK_NULL_HANDLE;
+}
+
+
+void VulkanRenderer::setViewProjectionMatrix(const Mat4& _view, const Mat4& _proj)
+{
+	m_viewMatrix = _view;
+	m_projMatrix = _proj;
+}
+
+
+Vector2 VulkanRenderer::getFrameBufferSize() const
+{
+	return Vector2(float(m_swapChainExtent.width), float(m_swapChainExtent.height));
 }
 
 
@@ -954,7 +994,7 @@ void VulkanRenderer::shutdown()
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Descriptor Set Layout");
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
 		vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
 		vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
@@ -1045,9 +1085,9 @@ void VulkanRenderer::initImGui()
 	// Upload Fonts
 	{
 		// Use any command queue
-		VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+		VkCommandBuffer commandBuffer = vulkan::beginSingleTimeCommands(m_device, m_commandPool);
 		ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-		_endSingleTimeCommands(commandBuffer);
+		vulkan::endSingleTimeCommands(m_device, m_commandPool, m_graphicsQueue, commandBuffer);
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
 
@@ -1071,6 +1111,7 @@ void VulkanRenderer::initIm3d()
 	initData.allocator = m_allocator;
 	initData.extent = m_swapChainExtent;
 	initData.renderPass = m_renderPass;
+	initData.descriptorPool = m_descriptorPool;
 	m_im3dInstance = im3d_Init(initData);
 }
 
@@ -1201,8 +1242,8 @@ void VulkanRenderer::_createSwapChain()
 		std::vector<VkImage> swapChainImages(frameCount);
 		VK_VERIFY(vkGetSwapchainImagesKHR(m_device, m_swapChain, &frameCount, swapChainImages.data()));
 
-		m_frameobjects.resize(frameCount);
-		for (size_t i = 0; i < frameCount; ++i)
+		m_frameobjects.resize(frameCount, {});
+		for (u32 i = 0; i < frameCount; ++i)
 		{
 			m_frameobjects[i].swapChainImage = swapChainImages[i];
 			m_frameobjects[i].swapChainImageView = _createImageView(swapChainImages[i], m_swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1229,7 +1270,7 @@ void VulkanRenderer::_createSwapChain()
 		);
 		YAE_ASSERT(m_depthFormat != VK_FORMAT_UNDEFINED);
 
-		_createImage(m_swapChainExtent.width, m_swapChainExtent.height, m_depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);;
+		vulkan::createImage(m_allocator, m_swapChainExtent.width, m_swapChainExtent.height, m_depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);;
 		m_depthImageView = _createImageView(m_depthImage, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 		_transitionImageLayout(m_depthImage, m_depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -1491,14 +1532,15 @@ void VulkanRenderer::_createSwapChain()
 
 		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-		for (size_t i = 0; i < frameCount; ++i)
+		for (u32 i = 0; i < frameCount; ++i)
 		{
-			_createBuffer(
+			vulkan::createOrResizeBuffer(
+				m_allocator,
+				m_frameobjects[i].uniformBuffer,
+				m_frameobjects[i].uniformBufferMemory,
 				bufferSize,
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				m_frameobjects[i].uniformBuffer,
-				m_frameobjects[i].uniformBufferMemory
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 			);
 		}
 		YAE_VERBOSE_CAT("vulkan", "Created Uniform Buffers");
@@ -1584,7 +1626,7 @@ void VulkanRenderer::_createSwapChain()
 	// Create Frame Buffers
 	{
 		YAE_VERBOSE_CAT("vulkan", "Creating Frame Buffers...");
-		for (size_t i = 0; i < m_frameobjects.size(); ++i)
+		for (u32 i = 0; i < m_frameobjects.size(); ++i)
 		{
 			VkImageView attachments[] = {
 				m_frameobjects[i].swapChainImageView,
@@ -1608,7 +1650,7 @@ void VulkanRenderer::_createSwapChain()
 	// Create pool and allocate command buffers
 	{
 		YAE_VERBOSE_CAT("vulkan", "Allocating Command Buffers...");
-		for (size_t i = 0; i < frameCount; ++i)
+		for (u32 i = 0; i < frameCount; ++i)
 		{
 			VkCommandPoolCreateInfo poolInfo{};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1636,20 +1678,20 @@ void VulkanRenderer::_destroySwapChain()
 	m_imagesInFlight.clear();
 	u32 frameCount = u32(m_frameobjects.size());
 
-	for (size_t i = 0; i < frameCount; ++i)
+	for (u32 i = 0; i < frameCount; ++i)
 	{
-		_destroyBuffer(m_frameobjects[i].uniformBuffer, m_frameobjects[i].uniformBufferMemory);
+		vulkan::destroyBuffer(m_allocator, m_frameobjects[i].uniformBuffer, m_frameobjects[i].uniformBufferMemory);
 	}
 	YAE_VERBOSE_CAT("vulkan", "Destroyed Uniform Buffers");
 
-	for (size_t i = 0; i < frameCount; ++i)
+	for (u32 i = 0; i < frameCount; ++i)
 	{
 		vkFreeCommandBuffers(m_device, m_frameobjects[i].commandPool, 1, &m_frameobjects[i].commandBuffer);
 		vkDestroyCommandPool(m_device, m_frameobjects[i].commandPool, nullptr);
 	}
 	YAE_VERBOSE_CAT("vulkan", "Freed Command Buffers");
 
-	for (size_t i = 0; i < frameCount; ++i)
+	for (u32 i = 0; i < frameCount; ++i)
 	{
 		vkDestroyFramebuffer(m_device, m_frameobjects[i].frameBuffer, nullptr);
 	}
@@ -1671,9 +1713,9 @@ void VulkanRenderer::_destroySwapChain()
 
 	vkDestroyImageView(m_device, m_depthImageView, nullptr);
 	m_depthImageView = VK_NULL_HANDLE;
-	_destroyImage(m_depthImage, m_depthImageMemory);
+	vulkan::destroyImage(m_allocator, m_depthImage, m_depthImageMemory);
 
-	for (size_t i = 0; i < frameCount; ++i)
+	for (u32 i = 0; i < frameCount; ++i)
 	{
 		vkDestroyImageView(m_device, m_frameobjects[i].swapChainImageView, nullptr);
 	}
@@ -1702,73 +1744,9 @@ void VulkanRenderer::_recreateSwapChain()
 	_createSwapChain();
 }
 
-void VulkanRenderer::_createBuffer(VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties, VkBuffer& _outBuffer, VmaAllocation& _allocation)
-{
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = _size;
-	bufferInfo.usage = _usage;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	VmaAllocationCreateInfo allocInfo = {};
-	allocInfo.preferredFlags = _properties;
-	VK_VERIFY(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &_outBuffer, &_allocation, nullptr));
-}
-
-void VulkanRenderer::_destroyBuffer(VkBuffer& _inOutBuffer, VmaAllocation& _inOutAllocation)
-{
-	vmaDestroyBuffer(m_allocator, _inOutBuffer, _inOutAllocation);
-	_inOutBuffer = VK_NULL_HANDLE;
-	_inOutAllocation = VK_NULL_HANDLE;
-}
-
-void VulkanRenderer::_copyBuffer(VkBuffer _srcBuffer, VkBuffer _dstBuffer, VkDeviceSize _size)
-{
-	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
-	
-	VkBufferCopy copyRegion{};
-	copyRegion.srcOffset = 0;
-	copyRegion.dstOffset = 0;
-	copyRegion.size = _size;
-	vkCmdCopyBuffer(commandBuffer, _srcBuffer, _dstBuffer, 1, &copyRegion);
-
-	_endSingleTimeCommands(commandBuffer);
-}
-
-void VulkanRenderer::_createImage(u32 _width, u32 _height, VkFormat _format, VkImageTiling _tiling, VkImageUsageFlags _usage, VkMemoryPropertyFlags _properties, VkImage& _outImage, VmaAllocation& _outImageMemory)
-{
-	VkImageCreateInfo imageInfo{};
-	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageInfo.extent.width = _width;
-	imageInfo.extent.height = _height;
-	imageInfo.extent.depth = 1;
-	imageInfo.mipLevels = 1;
-	imageInfo.arrayLayers = 1;
-	imageInfo.format = _format;
-	imageInfo.tiling = _tiling;
-	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	imageInfo.usage = _usage;
-	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	imageInfo.flags = 0;
-
-	VmaAllocationCreateInfo allocCreateInfo{};
-	allocCreateInfo.preferredFlags = _properties;
-	VmaAllocationInfo allocInfo;
-	VK_VERIFY(vmaCreateImage(m_allocator, &imageInfo, &allocCreateInfo, &_outImage, &_outImageMemory, &allocInfo));
-}
-
-void VulkanRenderer::_destroyImage(VkImage& _inOutImage, VmaAllocation& _inOutImageMemory)
-{
-	vmaDestroyImage(m_allocator, _inOutImage, _inOutImageMemory);
-	_inOutImage = VK_NULL_HANDLE;
-	_inOutImageMemory = VK_NULL_HANDLE;
-}
-
 void VulkanRenderer::_transitionImageLayout(VkImage _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
 {
-	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = vulkan::beginSingleTimeCommands(m_device, m_commandPool);
 
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1835,12 +1813,12 @@ void VulkanRenderer::_transitionImageLayout(VkImage _image, VkFormat _format, Vk
 		1, &barrier
 	);
 
-	_endSingleTimeCommands(commandBuffer);
+	vulkan::endSingleTimeCommands(m_device, m_commandPool, m_graphicsQueue, commandBuffer);
 }
 
 void VulkanRenderer::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _width, u32 _height)
 {
-	VkCommandBuffer commandBuffer = _beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = vulkan::beginSingleTimeCommands(m_device, m_commandPool);
 
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
@@ -1863,7 +1841,7 @@ void VulkanRenderer::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _w
 		1, &region
 	);
 
-	_endSingleTimeCommands(commandBuffer);
+	vulkan::endSingleTimeCommands(m_device, m_commandPool, m_graphicsQueue, commandBuffer);
 }
 
 VkImageView VulkanRenderer::_createImageView(VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags)
@@ -1892,48 +1870,13 @@ void VulkanRenderer::_updateUniformBuffer(u32 _imageIndex)
 {
 	UniformBufferObject ubo{};
 	ubo.model = glm::rotate(glm::mat4(1.f), m_clock.elapsed().asSeconds() * glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
-	ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-	ubo.proj = glm::perspective(glm::radians(45.f), m_swapChainExtent.width / float(m_swapChainExtent.height), .1f, 10.f);
-	ubo.proj[1][1] *= -1;
+	ubo.view = m_viewMatrix;
+	ubo.proj = m_projMatrix;
 
 	void* data;
 	VK_VERIFY(vmaMapMemory(m_allocator, m_frameobjects[_imageIndex].uniformBufferMemory, &data));
 	memcpy(data, &ubo, sizeof(ubo));
 	vmaUnmapMemory(m_allocator, m_frameobjects[_imageIndex].uniformBufferMemory);
-}
-
-VkCommandBuffer VulkanRenderer::_beginSingleTimeCommands()
-{
-	VK_VERIFY(vkResetCommandPool(m_device, m_commandPool, 0));
-
-	VkCommandBufferAllocateInfo allocateInfo{};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandPool = m_commandPool;
-	allocateInfo.commandBufferCount = 1;
-	VkCommandBuffer commandBuffer;
-	VK_VERIFY(vkAllocateCommandBuffers(m_device, &allocateInfo, &commandBuffer));
-
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	VK_VERIFY(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-	return commandBuffer;
-}
-
-void VulkanRenderer::_endSingleTimeCommands(VkCommandBuffer _commandBuffer)
-{
-	VK_VERIFY(vkEndCommandBuffer(_commandBuffer));
-
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &_commandBuffer;
-	vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-	vkQueueWaitIdle(m_graphicsQueue);
-
-	vkFreeCommandBuffers(m_device, m_commandPool, 1, &_commandBuffer);
 }
 
 } // namespace yae
