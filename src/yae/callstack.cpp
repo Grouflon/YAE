@@ -14,9 +14,10 @@ u16 capture(StackFrame* _outFrames, u16 _maxFrameCount)
 
 void print(StackFrame* _frames, u16 _frameCount)
 {
-	for (u16 i = 0; i < _frameCount; ++i)
+	//@NOTE: the first index is always the capture function, so we skip it
+	for (u16 i = 1; i < _frameCount; ++i)
 	{
-		printf("%02d -> %s (ip:%p)\n", i, _frames[i].name, _frames[i].instructionPointer);
+		printf("%02d -> %s (ip:%p)\n", i - 1, _frames[i].name, _frames[i].instructionPointer);
 	}
 }
 
