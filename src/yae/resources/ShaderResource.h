@@ -41,7 +41,7 @@ public:
 };
 
 template <>
-struct ResourceIDGetter<ShaderResource>
+struct YAELIB_API ResourceIDGetter<ShaderResource>
 {
 	static ResourceID GetId(const char* _path, ShaderType _type, const char* _entryPoint = "main", const char** _defines = nullptr, size_t _defineCount = 0);
 };

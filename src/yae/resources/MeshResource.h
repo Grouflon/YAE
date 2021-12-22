@@ -32,7 +32,7 @@ public:
 };
 
 template <>
-struct ResourceIDGetter<MeshResource>
+struct YAELIB_API ResourceIDGetter<MeshResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

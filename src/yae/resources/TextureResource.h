@@ -32,7 +32,7 @@ public:
 };
 
 template <>
-struct ResourceIDGetter<TextureResource>
+struct YAELIB_API ResourceIDGetter<TextureResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

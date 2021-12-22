@@ -54,6 +54,9 @@ public:
 	const Array<ResourceLog>& getLogs() const { return m_logs; }
 
 // private:
+	void _internalLoad();
+	void _internalUnload();
+
 	virtual void _doLoad() {}
 	virtual void _doUnload() {}
 
@@ -79,6 +82,8 @@ public:
 
 	void registerResource(Resource* _resource);
 	void unregisterResource(Resource* _resource);
+
+	void reloadResource(Resource* _resource);
 
 	void flushResources();
 
@@ -108,6 +113,20 @@ T* findOrCreateResource(Args... _args)
 	{
 		resource = defaultAllocator().create<T>(_args...);
 		manager.registerResource(resource);
+	}
+	return resource;
+}
+
+template <typename T, typename ...Args>
+T* reloadResource(Args... _args)
+{
+	ResourceManager& manager = resourceManager();
+	ResourceID id = ResourceIDGetter<T>::GetId(_args...);
+	YAE_ASSERT_MSG(id != UNDEFINED_RESOURCEID, "Unknown Resource Type");
+	T* resource = manager.findResource<T>(id);
+	if (resource != nullptr)
+	{
+		manager.reloadResource(resource);
 	}
 	return resource;
 }
