@@ -64,11 +64,21 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	*/
 
 	VkPrimitiveTopology topology;
+	VkCullModeFlagBits cullMode;
 	switch(_primitiveType)
 	{
-		case PRIMITIVETYPE_POINT: topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; break;
-		case PRIMITIVETYPE_LINE: topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST; break;
-		case PRIMITIVETYPE_TRIANGLE: topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; break;
+		case PRIMITIVETYPE_POINT:
+			topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			cullMode = VK_CULL_MODE_NONE;
+			break;
+		case PRIMITIVETYPE_LINE:
+			topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			cullMode = VK_CULL_MODE_NONE;
+			break;
+		case PRIMITIVETYPE_TRIANGLE:
+			topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			cullMode = VK_CULL_MODE_BACK_BIT;
+			break;
 	}
 
 	VkVertexInputBindingDescription bindingDescription{};
@@ -126,7 +136,7 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode = cullMode;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 	VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -140,36 +150,24 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
-	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // Optional
-	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // Optional
-	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // Optional
-	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // Optional
+	colorBlendAttachment.blendEnable = VK_TRUE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
 
 	VkPipelineColorBlendStateCreateInfo colorBlending{};
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
 	colorBlending.attachmentCount = 1;
 	colorBlending.pAttachments = &colorBlendAttachment;
-	colorBlending.blendConstants[0] = 0.0f; // Optional
-	colorBlending.blendConstants[1] = 0.0f; // Optional
-	colorBlending.blendConstants[2] = 0.0f; // Optional
-	colorBlending.blendConstants[3] = 0.0f; // Optional
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = _primitiveType == PRIMITIVETYPE_TRIANGLE ? VK_TRUE : VK_FALSE;
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f; // Optional
-	depthStencil.maxDepthBounds = 1.0f; // Optional
-	depthStencil.stencilTestEnable = VK_FALSE;
-	depthStencil.front = {}; // optional
-	depthStencil.back = {}; // optional
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -198,61 +196,6 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 	*instance = {};
 
 	instance->initData = _initData;
-
-	// POINTS
-	ShaderResource* pointsVertexShader = nullptr;
-	ShaderResource* pointsFragmentShader = nullptr;
-	{
-		const char* defines[] = { "VERTEX_SHADER", "POINTS" };
-		pointsVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
-		YAE_ASSERT(pointsVertexShader);
-		pointsVertexShader->useLoad();
-	}
-	{
-		const char* defines[] = { "FRAGMENT_SHADER", "POINTS" };
-		pointsFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
-		YAE_ASSERT(pointsFragmentShader);
-		pointsFragmentShader->useLoad();
-	}
-
-	// LINES
-	ShaderResource* linesVertexShader = nullptr;
-	ShaderResource* linesGeometryShader = nullptr;
-	ShaderResource* linesFragmentShader = nullptr;
-	{
-		const char* defines[] = { "VERTEX_SHADER", "LINES" };
-		linesVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
-		YAE_ASSERT(linesVertexShader);
-		linesVertexShader->useLoad();
-	}
-	{
-		const char* defines[] = { "GEOMETRY_SHADER", "LINES" };
-		linesGeometryShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_GEOMETRY, "main", defines, countof(defines));
-		YAE_ASSERT(linesGeometryShader);
-		linesGeometryShader->useLoad();
-	}
-	{
-		const char* defines[] = { "FRAGMENT_SHADER", "LINES" };
-		linesFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
-		YAE_ASSERT(linesFragmentShader);
-		linesFragmentShader->useLoad();
-	}
-
-	// TRIANGLES
-	ShaderResource* trianglesVertexShader = nullptr;
-	ShaderResource* trianglesFragmentShader = nullptr;
-	{
-		const char* defines[] = { "VERTEX_SHADER", "TRIANGLES" };
-		trianglesVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
-		YAE_ASSERT(trianglesVertexShader);
-		trianglesVertexShader->useLoad();
-	}
-	{
-		const char* defines[] = { "FRAGMENT_SHADER", "TRIANGLES" };
-		trianglesFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
-		YAE_ASSERT(trianglesFragmentShader);
-		trianglesFragmentShader->useLoad();
-	}
 
 	// Descriptor sets & Uniform buffers
 	{
@@ -341,13 +284,76 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 		VK_VERIFY(vkCreatePipelineLayout(_initData.device, &pipelineLayoutInfo, nullptr, &instance->pipelineLayout));
 	}
 
+	im3d_CreatePipelines(instance);
+	return instance;
+}
+
+
+void im3d_CreatePipelines(im3d_Instance* _instance)
+{
+	// POINTS
+	ShaderResource* pointsVertexShader = nullptr;
+	ShaderResource* pointsFragmentShader = nullptr;
+	{
+		const char* defines[] = { "VERTEX_SHADER", "POINTS" };
+		pointsVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
+		YAE_ASSERT(pointsVertexShader);
+		pointsVertexShader->useLoad();
+	}
+	{
+		const char* defines[] = { "FRAGMENT_SHADER", "POINTS" };
+		pointsFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
+		YAE_ASSERT(pointsFragmentShader);
+		pointsFragmentShader->useLoad();
+	}
+
+	// LINES
+	ShaderResource* linesVertexShader = nullptr;
+	ShaderResource* linesGeometryShader = nullptr;
+	ShaderResource* linesFragmentShader = nullptr;
+	{
+		const char* defines[] = { "VERTEX_SHADER", "LINES" };
+		linesVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
+		YAE_ASSERT(linesVertexShader);
+		linesVertexShader->useLoad();
+	}
+	{
+		const char* defines[] = { "GEOMETRY_SHADER", "LINES" };
+		linesGeometryShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_GEOMETRY, "main", defines, countof(defines));
+		YAE_ASSERT(linesGeometryShader);
+		linesGeometryShader->useLoad();
+	}
+	{
+		const char* defines[] = { "FRAGMENT_SHADER", "LINES" };
+		linesFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
+		YAE_ASSERT(linesFragmentShader);
+		linesFragmentShader->useLoad();
+	}
+
+	// TRIANGLES
+	ShaderResource* trianglesVertexShader = nullptr;
+	ShaderResource* trianglesFragmentShader = nullptr;
+	{
+		const char* defines[] = { "VERTEX_SHADER", "TRIANGLES" };
+		trianglesVertexShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_VERTEX, "main", defines, countof(defines));
+		YAE_ASSERT(trianglesVertexShader);
+		trianglesVertexShader->useLoad();
+	}
+	{
+		const char* defines[] = { "FRAGMENT_SHADER", "TRIANGLES" };
+		trianglesFragmentShader = findOrCreateResource<ShaderResource>(SHADER_PATH, SHADERTYPE_FRAGMENT, "main", defines, countof(defines));
+		YAE_ASSERT(trianglesFragmentShader);
+		trianglesFragmentShader->useLoad();
+	}
+
+	// CREATE PIPELINES
 	{
 		ShaderResource* shaders[] =
 		{
 			pointsVertexShader,
 			pointsFragmentShader
 		};
-		instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_POINT);
+		_instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _instance->initData, _instance->pipelineLayout, PRIMITIVETYPE_POINT);
 	}
 
 	{
@@ -357,7 +363,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			linesGeometryShader,
 			linesFragmentShader
 		};
-		instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_LINE);
+		_instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _instance->initData, _instance->pipelineLayout, PRIMITIVETYPE_LINE);
 	}
 
 	{
@@ -366,7 +372,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			trianglesVertexShader,
 			trianglesFragmentShader
 		};
-		instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_TRIANGLE);
+		_instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _instance->initData, _instance->pipelineLayout, PRIMITIVETYPE_TRIANGLE);
 	}
 
 	trianglesFragmentShader->releaseUnuse();
@@ -378,8 +384,18 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 
 	pointsFragmentShader->releaseUnuse();
 	pointsVertexShader->releaseUnuse();
+}
 
-	return instance;
+
+void im3d_DestroyPipelines(im3d_Instance* _instance)
+{
+	vkDestroyPipeline(_instance->initData.device, _instance->pointsPipeline, nullptr);
+	vkDestroyPipeline(_instance->initData.device, _instance->linesPipeline, nullptr);
+	vkDestroyPipeline(_instance->initData.device, _instance->trianglesPipeline, nullptr);
+
+	_instance->pointsPipeline = VK_NULL_HANDLE;
+	_instance->linesPipeline = VK_NULL_HANDLE;
+	_instance->trianglesPipeline = VK_NULL_HANDLE;
 }
 
 
@@ -393,9 +409,7 @@ void im3d_Shutdown(im3d_Instance* _instance)
 
 	vulkan::destroyBuffer(_instance->initData.allocator, _instance->uniformBuffer, _instance->uniformBufferMemory);
 
-	vkDestroyPipeline(_instance->initData.device, _instance->pointsPipeline, nullptr);
-	vkDestroyPipeline(_instance->initData.device, _instance->linesPipeline, nullptr);
-	vkDestroyPipeline(_instance->initData.device, _instance->trianglesPipeline, nullptr);
+	im3d_DestroyPipelines(_instance);
 
 	vkDestroyPipelineLayout(_instance->initData.device, _instance->pipelineLayout, nullptr);
 	vkFreeDescriptorSets(_instance->initData.device, _instance->initData.descriptorPool, 1, &_instance->descriptorSet);

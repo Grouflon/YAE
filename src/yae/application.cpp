@@ -113,7 +113,7 @@ bool Application::doFrame()
 		Matrix4 cameraTransform = makeTransformMatrix(m_cameraPosition, m_cameraRotation, Vector3::ONE);
 		Matrix4 view = inverse(cameraTransform);
 		//Matrix4 view = glm::lookAt(position, target, glm::vec3(0.f, 1.f, 0.f));
-		Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 10.f);
+		Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 100.f);
 		proj[1][1] *= -1.f;
 
 		renderer().setViewProjectionMatrix(view, proj);
@@ -126,7 +126,7 @@ bool Application::doFrame()
 
 		im3d_FrameData frameData;
 		frameData.deltaTime = dt;
-		frameData.cursorPosition = Vector2::ZERO;
+		frameData.cursorPosition = Vector2::ZERO; // @TODO
 		frameData.viewportSize = viewportSize;
 		frameData.camera.position = m_cameraPosition;
 		frameData.camera.direction = m_cameraRotation * Vector3::FORWARD;

@@ -7,6 +7,7 @@
 #include <yae/input.h>
 #include <yae/application.h>
 #include <yae/math.h>
+#include <yae/vulkan/VulkanRenderer.h>
 
 #include <im3d.h>
 
@@ -65,6 +66,7 @@ public:
 	float pitch = 0.f;
 	float yaw = 0.f;
 	bool fpsModeEnabled = false;
+	Matrix4 transform = Matrix4::IDENTITY;
 };
 
 void onLibraryUnloaded()
@@ -88,6 +90,12 @@ void updateGame(float _dt)
 	if (input().isKeyDown(GLFW_KEY_ESCAPE))
 	{
 		app().requestExit();
+	}
+
+	// RELOAD SHADERS
+	if (input().isCtrlDown() && input().wasKeyJustPressed(GLFW_KEY_Q))
+	{
+		renderer().reloadIm3dShaders();
 	}
 
 	// MOVE CAMERA
@@ -157,7 +165,7 @@ void updateGame(float _dt)
     	Im3d::Vertex(-1.f, 0.f, 0.f);
     Im3d::End();
 
-    //Im3d::SetSize(5.f);
+    Im3d::SetSize(2.f);
     Im3d::BeginLines();
     	Im3d::Vertex(-1.f, 0.f, 0.f);
     	Im3d::Vertex(-2.f, 0.f, 0.f);
@@ -190,6 +198,9 @@ void updateGame(float _dt)
 		}
 	Im3d::End();
 
+	if (Im3d::Gizmo("UnifiedGizmo", (float*)&gameInstance->transform)) {
+		// ...
+	}
 }
 
 void shutdownGame()

@@ -34,7 +34,7 @@ struct QueueFamilyIndices
 	}
 };
 
-class VulkanRenderer
+class YAELIB_API VulkanRenderer
 {
 public:
 	bool init(GLFWwindow* _window, bool _validationLayersEnabled = false);
@@ -47,6 +47,7 @@ public:
 	void shutdownImGui();
 
 	void initIm3d();
+	void reloadIm3dShaders();
 	void shutdownIm3d();
 
 	void drawMesh();

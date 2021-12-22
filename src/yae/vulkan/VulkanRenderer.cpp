@@ -635,9 +635,9 @@ void VulkanRenderer::beginFrame()
 		VkResult result = vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFlightFrame], VK_NULL_HANDLE, &m_currentFrameIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
-			_recreateSwapChain();
 			shutdownIm3d();
 			shutdownImGui();
+			_recreateSwapChain();
 			initImGui();
 			initIm3d();
 			return;
@@ -963,9 +963,9 @@ void VulkanRenderer::endFrame()
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
 		{
 			m_framebufferResized = false;
-			_recreateSwapChain();
 			shutdownIm3d();
 			shutdownImGui();
+			_recreateSwapChain();
 			initImGui();
 			initIm3d();
 		}
@@ -1114,6 +1114,15 @@ void VulkanRenderer::initIm3d()
 	initData.renderPass = m_renderPass;
 	initData.descriptorPool = m_descriptorPool;
 	m_im3dInstance = im3d_Init(initData);
+}
+
+void VulkanRenderer::reloadIm3dShaders()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(m_im3dInstance != nullptr);
+	im3d_DestroyPipelines(m_im3dInstance);
+	im3d_CreatePipelines(m_im3dInstance);
 }
 
 void VulkanRenderer::shutdownIm3d()
