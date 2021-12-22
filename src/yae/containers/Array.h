@@ -100,6 +100,6 @@ protected:
 	void _grow(u32 _minCapacity);
 };
 
-} // !namespace yae
+} // namespace yae
 
 #include "Array.inl"

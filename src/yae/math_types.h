@@ -6,12 +6,15 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace yae {
 
 YAELIB_API extern const float PI;
 YAELIB_API extern const float D2R;
 YAELIB_API extern const float R2D;
+
+YAELIB_API extern const float SMALL_NUMBER;
 
 struct YAELIB_API Vector2 : public glm::vec2
 {
@@ -35,8 +38,15 @@ struct YAELIB_API Vector3 : public glm::vec3
 	Vector2 xy() const { return Vector2(x,y); }
 	Vector2 xz() const { return Vector2(x,z); }
 
+	Vector3& operator+=(const Vector3& _rhs) { x += _rhs.x; y += _rhs.y; z += _rhs.z; return *this; }
+	Vector3& operator-=(const Vector3& _rhs) { x -= _rhs.x; y -= _rhs.y; z -= _rhs.z; return *this; }
+
 	static const Vector3 ZERO;
 	static const Vector3 ONE;
+
+	static const Vector3 FORWARD;
+	static const Vector3 UP;
+	static const Vector3 RIGHT;
 };
 
 
@@ -54,10 +64,10 @@ struct YAELIB_API Vector4 : public glm::vec4
 	static const Vector4 ONE;
 };
 
-struct YAELIB_API Mat4 : public glm::mat4x4
+struct YAELIB_API Matrix4 : public glm::mat4x4
 {
-	Mat4() {}
-	Mat4(float _value)
+	Matrix4() {}
+	Matrix4(float _value)
 	{
 		for(int y = 0; y < 4; ++y)
 		for(int x = 0; x < 4; ++x)
@@ -65,7 +75,7 @@ struct YAELIB_API Mat4 : public glm::mat4x4
 			(*this)[x][y] = _value;
 		}
 	}
-	Mat4(
+	Matrix4(
 		float _x0, float _y0, float _z0, float _w0,
 		float _x1, float _y1, float _z1, float _w1,
 		float _x2, float _y2, float _z2, float _w2,
@@ -75,14 +85,29 @@ struct YAELIB_API Mat4 : public glm::mat4x4
 		_x1, _y1, _z1, _w1,
 		_x2, _y2, _z2, _w2,
 		_x3, _y3, _z3, _w3) {}
-	Mat4(const glm::mat4x4& _m) : Mat4(
+	Matrix4(const glm::mat4x4& _m) : Matrix4(
 		_m[0][0], _m[0][1], _m[0][2], _m[0][3],
 		_m[1][0], _m[1][1], _m[1][2], _m[1][3],
 		_m[2][0], _m[2][1], _m[2][2], _m[2][3],
 		_m[3][0], _m[3][1], _m[3][2], _m[3][3]) {}
 
-	static const Mat4 ZERO;
-	static const Mat4 IDENTITY;
+	static const Matrix4 ZERO;
+	static const Matrix4 IDENTITY;
+};
+
+struct YAELIB_API Quaternion : public glm::quat
+{
+	Quaternion() {}
+	Quaternion(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
+	Quaternion(const glm::quat& _q) : Quaternion(_q.x, _q.y, _q.z, _q.w) {}
+	Quaternion(float _pitch, float _yaw, float _roll) : glm::quat(glm::vec3(_pitch, _yaw, _roll)) {}
+	Quaternion(const Vector3& _eulerAngles) : Quaternion(_eulerAngles.x, _eulerAngles.y, _eulerAngles.z) {}
+
+	Vector3 forward() const;
+	Vector3 up() const;
+	Vector3 right() const;
+
+	static const Quaternion IDENTITY;
 };
 
 } // namespace yae

@@ -9,6 +9,13 @@ struct GLFWwindow;
 
 namespace yae {
 
+enum CursorMode
+{
+	CURSORMODE_NORMAL,
+	CURSORMODE_HIDDEN,
+	CURSORMODE_DISABLED
+};
+
 class YAELIB_API InputSystem
 {
 public:
@@ -41,6 +48,9 @@ public:
 	void notifyKeyEvent(int _key, int _scancode, int _action, int _mods);
 	void notifyMouseButtonEvent(int _button, int _action, int _mods);
 	void notifyMouseScrollEvent(double _xOffset, double _yOffset);
+
+	CursorMode getCursorMode() const;
+	void setCursorMode(CursorMode _mode);
 
 private:
 

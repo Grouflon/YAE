@@ -3,6 +3,7 @@
 #include <yae/types.h>
 #include <yae/math_types.h>
 #include <yae/render_types.h>
+#include <yae/containers/Array.h>
 #include <im3d.h>
 
 namespace yae
@@ -19,6 +20,13 @@ struct im3d_VulkanInitData
 	VkRenderPass renderPass;
 };
 
+struct VertexBufferData
+{
+	VkBuffer vertexBuffer = VK_NULL_HANDLE;
+	VmaAllocation vertexBufferMemory = VK_NULL_HANDLE;
+	size_t vertexBufferSize = 0;
+};
+
 struct im3d_Instance
 {
 	im3d_VulkanInitData initData;
@@ -31,20 +39,18 @@ struct im3d_Instance
 	VkPipeline linesPipeline;
 	VkPipeline trianglesPipeline;
 
-	VkBuffer vertexBuffer;
-	VmaAllocation vertexBufferMemory;
+	DataArray<VertexBufferData> vertexBuffers;
 
 	VkBuffer uniformBuffer;
 	VmaAllocation uniformBufferMemory;
-	size_t vertexBufferSize;
 };
 
 struct im3d_Camera
 {
 	Vector3 position;
 	Vector3 direction;
-	Mat4 view;
-	Mat4 projection;
+	Matrix4 view;
+	Matrix4 projection;
 	float fov; // in radians
 	bool orthographic;
 };

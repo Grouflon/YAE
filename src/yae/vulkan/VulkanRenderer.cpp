@@ -6,6 +6,7 @@
 #include <yae/vulkan/vulkan.h>
 #include <yae/vulkan/imgui_impl_vulkan.h>
 #include <yae/vulkan/im3d_impl_vulkan.h>
+#include <yae/math.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <im3d.h>
@@ -14,11 +15,11 @@
 
 #include <set>
 #include <vector>
-#include <algorithm>
 
 namespace yae {
 
 const u32 INVALID_QUEUE = ~0u;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 struct UniformBufferObject
 {
@@ -187,8 +188,8 @@ VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, GLFWw
 			static_cast<u32>(height)
 		};
 
-		actualExtent.width = std::max(_capabilities.minImageExtent.width, std::min(_capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = std::max(_capabilities.minImageExtent.height, std::min(_capabilities.maxImageExtent.height, actualExtent.height));
+		actualExtent.width = max(_capabilities.minImageExtent.width, min(_capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = max(_capabilities.minImageExtent.height, min(_capabilities.maxImageExtent.height, actualExtent.height));
 
 		return actualExtent;
 	}
@@ -671,7 +672,7 @@ void VulkanRenderer::beginFrame()
 	renderPassInfo.renderArea.extent = m_swapChainExtent;
 
 	VkClearValue clearValues[2];
-	clearValues[0].color = { 0.f, 0.f, 0.f, 1.f };
+	clearValues[0].color = { 0.5f, 0.5f, 0.5f, 1.f };
 	clearValues[1].depthStencil = { 1.f, 0 };
 
 	renderPassInfo.clearValueCount = u32(countof(clearValues));
@@ -912,7 +913,7 @@ void VulkanRenderer::destroyMesh(MeshHandle& _inMeshHandle)
 }
 
 
-void VulkanRenderer::setViewProjectionMatrix(const Mat4& _view, const Mat4& _proj)
+void VulkanRenderer::setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj)
 {
 	m_viewMatrix = _view;
 	m_projMatrix = _proj;

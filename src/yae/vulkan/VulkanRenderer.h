@@ -9,8 +9,6 @@
 typedef struct GLFWwindow GLFWwindow;
 struct ImDrawData;
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
-
 namespace yae {
 
 struct im3d_Instance;
@@ -67,7 +65,7 @@ public:
 	bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle);
 	void destroyShader(ShaderHandle& _shaderHandle);
 
-	void setViewProjectionMatrix(const Mat4& _view, const Mat4& _proj);
+	void setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj);
 	Vector2 getFrameBufferSize() const;
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
@@ -150,8 +148,8 @@ private:
 
 	Clock m_clock;
 
-	Mat4 m_viewMatrix = Mat4::IDENTITY;
-	Mat4 m_projMatrix = Mat4::IDENTITY;
+	Matrix4 m_viewMatrix = Matrix4::IDENTITY;
+	Matrix4 m_projMatrix = Matrix4::IDENTITY;
 
 	im3d_Instance* m_im3dInstance = nullptr;
 };

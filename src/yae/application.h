@@ -1,6 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/math_types.h>
 #include <yae/time.h>
 
 struct GLFWwindow;
@@ -31,6 +32,14 @@ public:
 	InputSystem& input() const;
 	VulkanRenderer& renderer() const;
 
+	Vector3 getCameraPosition() const { return m_cameraPosition; }
+	Quaternion getCameraRotation() const { return m_cameraRotation; }
+	void setCameraPosition(const Vector3& _position) { m_cameraPosition = _position; }
+	void setCameraRotation(const Quaternion& _rotation) { m_cameraRotation = _rotation; }
+
+	void* getUserData() const { return m_userData; }
+	void setUserData(void* _userData) { m_userData = _userData; }
+
 private:
 
 	static void _glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height);
@@ -50,6 +59,10 @@ private:
 	Im3d::Context* m_im3d = nullptr;
 
 	Clock m_clock;
+
+	Vector3 m_cameraPosition = Vector3::ZERO;
+	Quaternion m_cameraRotation = Quaternion::IDENTITY;
+	void* m_userData = nullptr;
 
 	bool m_showMemoryProfiler = false;
 };

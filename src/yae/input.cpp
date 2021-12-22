@@ -312,4 +312,38 @@ void InputSystem::notifyMouseScrollEvent(double _xOffset, double _yOffset)
 	m_mouseScrollDelta = Vector2(float(_xOffset), float(_yOffset));
 }
 
+
+int cursorModeToGlfwCursorMode(CursorMode _mode)
+{
+	switch(_mode)
+	{
+		case CURSORMODE_HIDDEN: return GLFW_CURSOR_HIDDEN;
+		case CURSORMODE_DISABLED: return GLFW_CURSOR_DISABLED;
+		default: return GLFW_CURSOR_NORMAL;
+	}
+}
+
+
+CursorMode glfwCursorModeToCursorMode(int _mode)
+{
+	switch(_mode)
+	{
+		case GLFW_CURSOR_HIDDEN: return CURSORMODE_HIDDEN;
+		case GLFW_CURSOR_DISABLED: return CURSORMODE_DISABLED;
+		default: return CURSORMODE_NORMAL;
+	}
+}
+
+
+CursorMode InputSystem::getCursorMode() const
+{
+	return glfwCursorModeToCursorMode(glfwGetInputMode(m_window, GLFW_CURSOR));
+}
+
+
+void InputSystem::setCursorMode(CursorMode _mode)
+{
+	glfwSetInputMode(m_window, GLFW_CURSOR, cursorModeToGlfwCursorMode(_mode));
+}
+
 } // namespace yae

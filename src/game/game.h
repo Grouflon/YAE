@@ -14,7 +14,7 @@ YAEGAME_API void onLibraryLoaded();
 YAEGAME_API void onLibraryUnloaded();
 
 YAEGAME_API void initGame();
-YAEGAME_API void updateGame();
+YAEGAME_API void updateGame(float _dt);
 YAEGAME_API void shutdownGame();
 
 #ifdef __cplusplus

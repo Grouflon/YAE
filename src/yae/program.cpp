@@ -349,13 +349,13 @@ void Program::initGame()
 }
 
 
-void Program::updateGame()
+void Program::updateGame(float _dt)
 {
 	YAE_CAPTURE_FUNCTION();
 
 	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
 
-	m_gameAPI.gameUpdate();
+	m_gameAPI.gameUpdate(_dt);
 }
 
 
@@ -377,7 +377,7 @@ void Program::_loadGameAPI(const char* _path)
 	YAE_ASSERT(m_gameAPI.libraryHandle);
 
 	m_gameAPI.gameInit = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "initGame");
-	m_gameAPI.gameUpdate = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "updateGame");
+	m_gameAPI.gameUpdate = (GameUpdateFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "updateGame");
 	m_gameAPI.gameShutdown = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "shutdownGame");
 	m_gameAPI.onLibraryLoaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryLoaded");
 	m_gameAPI.onLibraryUnloaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryUnloaded");

@@ -13,7 +13,7 @@ namespace yae {
 
 struct UniformBufferObject
 {
-	Mat4 viewProj;
+	Matrix4 viewProj;
 	Vector2 viewport;
 };
 
@@ -28,7 +28,14 @@ VkShaderStageFlagBits _ShaderTypeToVkStageFlag(ShaderType _type)
 	return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 }
 
-VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const im3d_VulkanInitData& _initData, VkPipelineLayout _pipelineLayout)
+enum PrimitiveType
+{
+	PRIMITIVETYPE_POINT,	
+	PRIMITIVETYPE_LINE,
+	PRIMITIVETYPE_TRIANGLE,
+};
+
+VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const im3d_VulkanInitData& _initData, VkPipelineLayout _pipelineLayout, PrimitiveType _primitiveType)
 {
 	YAE_ASSERT(_shaderCount > 0 && _shaders != nullptr);
 
@@ -47,13 +54,26 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	}
 
 	/*
+	Vec4   m_positionSize; // xyz = position, w = size
+	Color  m_color;        // rgba8 (MSB = r)
+
+	against
+
 	layout(location=0) in vec4 aPositionSize;
 	layout(location=1) in vec4 aColor;
 	*/
 
+	VkPrimitiveTopology topology;
+	switch(_primitiveType)
+	{
+		case PRIMITIVETYPE_POINT: topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; break;
+		case PRIMITIVETYPE_LINE: topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST; break;
+		case PRIMITIVETYPE_TRIANGLE: topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; break;
+	}
+
 	VkVertexInputBindingDescription bindingDescription{};
 	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof(float) * 8;
+	bindingDescription.stride = (sizeof(float) * 4) + sizeof(u32);
 	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	VkVertexInputAttributeDescription attributeDescriptions[2];
@@ -66,7 +86,7 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	attributeDescriptions[1] = {};
 	attributeDescriptions[1].binding = 0;
 	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[1].format = VK_FORMAT_R8G8B8A8_UNORM;
 	attributeDescriptions[1].offset = sizeof(float) * 4;
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -78,7 +98,7 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.topology = topology;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	VkViewport viewport{};
@@ -281,7 +301,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
         	VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = instance->uniformBuffer;
 			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(Mat4);
+			bufferInfo.range = sizeof(Matrix4);
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = instance->descriptorSet;
 			descriptorWrites[0].dstBinding = 0;
@@ -296,7 +316,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
         {
         	VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = instance->uniformBuffer;
-			bufferInfo.offset = sizeof(Mat4);
+			bufferInfo.offset = sizeof(Matrix4);
 			bufferInfo.range = sizeof(Vector2);
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = instance->descriptorSet;
@@ -327,7 +347,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			pointsVertexShader,
 			pointsFragmentShader
 		};
-		instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
+		instance->pointsPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_POINT);
 	}
 
 	{
@@ -337,7 +357,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			linesGeometryShader,
 			linesFragmentShader
 		};
-		instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
+		instance->linesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_LINE);
 	}
 
 	{
@@ -346,7 +366,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			trianglesVertexShader,
 			trianglesFragmentShader
 		};
-		instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout);
+		instance->trianglesPipeline = _CreatePipeline(shaders, countof(shaders), _initData, instance->pipelineLayout, PRIMITIVETYPE_TRIANGLE);
 	}
 
 	trianglesFragmentShader->releaseUnuse();
@@ -365,8 +385,13 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 
 void im3d_Shutdown(im3d_Instance* _instance)
 {
+	for (VertexBufferData& data : _instance->vertexBuffers)
+	{
+		vulkan::destroyBuffer(_instance->initData.allocator, data.vertexBuffer, data.vertexBufferMemory);	
+	}
+	_instance->vertexBuffers.clear();
+
 	vulkan::destroyBuffer(_instance->initData.allocator, _instance->uniformBuffer, _instance->uniformBufferMemory);
-	vulkan::destroyBuffer(_instance->initData.allocator, _instance->vertexBuffer, _instance->vertexBufferMemory);
 
 	vkDestroyPipeline(_instance->initData.device, _instance->pointsPipeline, nullptr);
 	vkDestroyPipeline(_instance->initData.device, _instance->linesPipeline, nullptr);
@@ -406,7 +431,7 @@ void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
 	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vector4 rayOrigin, rayDirection;
-	Mat4 worldMatrix = inverse(_frameData.camera.view);
+	Matrix4 worldMatrix = inverse(_frameData.camera.view);
 	if (_frameData.camera.orthographic)
 	{
 		rayOrigin.x  = cursorPos.x / _frameData.camera.projection[0][0];
@@ -431,8 +456,8 @@ void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
 
  // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
  // im3d_config.h, or if any of the IsVisible() functions are called.
-	Mat4 viewProj = Mat4(_frameData.camera.projection * _frameData.camera.view);
-	ad.setCullFrustum(viewProj, true);
+	Matrix4 viewProj = Matrix4(_frameData.camera.projection * _frameData.camera.view);
+	//ad.setCullFrustum(viewProj, true);
 
 	for (int i = 0; i < Im3d::Action_Count; ++i)
 	{
@@ -479,24 +504,26 @@ void im3d_EndFrame(im3d_Instance* _instance, VkCommandBuffer _commandBuffer)
 
 	Im3d::EndFrame();
 
+	_instance->vertexBuffers.resize(Im3d::GetDrawListCount(), VertexBufferData());
 	for (u32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
 	{
 		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
+		VertexBufferData& vertexBufferData = _instance->vertexBuffers[i];
 
 		size_t vertexBufferSize = drawList.m_vertexCount * sizeof(Im3d::VertexData);
-    	if (_instance->vertexBuffer == VK_NULL_HANDLE || _instance->vertexBufferSize < vertexBufferSize)
+    	if (vertexBufferData.vertexBuffer == VK_NULL_HANDLE || vertexBufferData.vertexBufferSize < vertexBufferSize)
     	{
-        	vulkan::createOrResizeBuffer(_instance->initData.allocator, _instance->vertexBuffer, _instance->vertexBufferMemory, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        	YAE_ASSERT(_instance->vertexBuffer != VK_NULL_HANDLE);
-        	YAE_ASSERT(_instance->vertexBufferMemory != VK_NULL_HANDLE);
+        	vulkan::createOrResizeBuffer(_instance->initData.allocator, vertexBufferData.vertexBuffer, vertexBufferData.vertexBufferMemory, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        	YAE_ASSERT(vertexBufferData.vertexBuffer != VK_NULL_HANDLE);
+        	YAE_ASSERT(vertexBufferData.vertexBufferMemory != VK_NULL_HANDLE);
 
-        	_instance->vertexBufferSize = vertexBufferSize;
+        	vertexBufferData.vertexBufferSize = vertexBufferSize;
     	}
     	
         void* mappedMemory = nullptr;
-        VK_VERIFY(vmaMapMemory(_instance->initData.allocator, _instance->vertexBufferMemory, &mappedMemory));
+        VK_VERIFY(vmaMapMemory(_instance->initData.allocator, vertexBufferData.vertexBufferMemory, &mappedMemory));
         memcpy(mappedMemory, drawList.m_vertexData, vertexBufferSize);
-        vmaUnmapMemory(_instance->initData.allocator, _instance->vertexBufferMemory);
+        vmaUnmapMemory(_instance->initData.allocator, vertexBufferData.vertexBufferMemory);
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         switch (drawList.m_primType)
@@ -524,10 +551,10 @@ void im3d_EndFrame(im3d_Instance* _instance, VkCommandBuffer _commandBuffer)
 				return;
 		};
 
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(_commandBuffer, 0, 1, &vertexBufferData.vertexBuffer, offsets);
 		vkCmdBindPipeline(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 		vkCmdBindDescriptorSets(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _instance->pipelineLayout, 0, 1, &_instance->descriptorSet, 0, NULL);
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(_commandBuffer, 0, 1, &_instance->vertexBuffer, offsets);
 		vkCmdDraw(_commandBuffer, drawList.m_vertexCount, 1, 0, 0);
 	}
 }

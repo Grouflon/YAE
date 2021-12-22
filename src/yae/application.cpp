@@ -7,6 +7,7 @@
 #include <yae/vulkan/im3d_impl_vulkan.h>
 #include <yae/input.h>
 #include <yae/memory.h>
+#include <yae/math.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
@@ -107,10 +108,12 @@ bool Application::doFrame()
 		Vector2 viewportSize = renderer().getFrameBufferSize();
 		float fov = 45.f * D2R;
 		float aspectRatio = viewportSize.x / viewportSize.y;
-		Vector3 position = Vector3(2.f, 2.f, 2.f);
-		Vector3 target = glm::vec3(0.f, 0.f, 0.f);
-		Mat4 view = glm::lookAt(position, target, glm::vec3(0.f, 0.f, 1.f));
-		Mat4 proj = glm::perspective(fov, aspectRatio, .1f, 10.f);
+		//Vector3 position = Vector3(2.f, 2.f, 2.f);
+		//Vector3 target = glm::vec3(0.f, 0.f, 0.f);
+		Matrix4 cameraTransform = makeTransformMatrix(m_cameraPosition, m_cameraRotation, Vector3::ONE);
+		Matrix4 view = inverse(cameraTransform);
+		//Matrix4 view = glm::lookAt(position, target, glm::vec3(0.f, 1.f, 0.f));
+		Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 10.f);
 		proj[1][1] *= -1.f;
 
 		renderer().setViewProjectionMatrix(view, proj);
@@ -125,8 +128,8 @@ bool Application::doFrame()
 		frameData.deltaTime = dt;
 		frameData.cursorPosition = Vector2::ZERO;
 		frameData.viewportSize = viewportSize;
-		frameData.camera.position = position;
-		frameData.camera.direction = normalize(target - position);
+		frameData.camera.position = m_cameraPosition;
+		frameData.camera.direction = m_cameraRotation * Vector3::FORWARD;
 		frameData.camera.view = view;
 		frameData.camera.projection = proj;
 		frameData.camera.fov = fov;
@@ -134,7 +137,7 @@ bool Application::doFrame()
 		m_vulkanRenderer->im3dNewFrame(frameData);
 	}
 
-	program().updateGame();
+	program().updateGame(dt);
 
 	if (ImGui::BeginMainMenuBar())
     {
@@ -211,13 +214,6 @@ bool Application::doFrame()
     }
 
 	//ImGui::ShowDemoWindow(&s_showDemoWindow);
-
-    Im3d::PushColor(Im3d::Color(1.f, 0.f, 0.f));
-    Im3d::BeginLines();
-    	Im3d::Vertex(-5.f, 0.f, 0.f);
-    	Im3d::Vertex(5.f, 5.f, 0.f);
-    Im3d::End();
-    Im3d::PopColor();
 
     // Rendering
     // Mesh

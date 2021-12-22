@@ -16,12 +16,13 @@ class Logger;
 class Profiler;
 
 typedef void (*GameFunctionPtr)();
+typedef void (*GameUpdateFunctionPtr)(float);
 
 struct GameAPI
 {
 	void* libraryHandle = nullptr;
 	GameFunctionPtr gameInit = nullptr;
-	GameFunctionPtr gameUpdate = nullptr;
+	GameUpdateFunctionPtr gameUpdate = nullptr;
 	GameFunctionPtr gameShutdown = nullptr;
 	GameFunctionPtr onLibraryLoaded = nullptr;
 	GameFunctionPtr onLibraryUnloaded = nullptr;
@@ -60,7 +61,7 @@ public:
 
 	// Game API functions
 	void initGame();
-	void updateGame();
+	void updateGame(float _dt);
 	void shutdownGame();
 
 // private
