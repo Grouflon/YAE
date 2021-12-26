@@ -19,7 +19,7 @@ public:
 	TextureResource(const char* _path);
 	virtual ~TextureResource();
 
-	const TextureHandle& getHandle() const;
+	const TextureHandle& getTextureHandle() const;
 
 // private:
 	virtual void _doLoad() override;

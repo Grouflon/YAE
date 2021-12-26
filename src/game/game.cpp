@@ -3,6 +3,7 @@
 #include <yae/hash.h>
 #include <yae/serialization.h>
 #include <yae/resources/FileResource.h>
+#include <yae/resources/MeshResource.h>
 #include <yae/math_types.h>
 #include <yae/input.h>
 #include <yae/application.h>
@@ -21,10 +22,10 @@ using namespace yae;
 
 void onLibraryLoaded()
 {
-	//printf("\x1b[31mBA.\r\n");
+	/*
+	printf("\x1b[31mBA.\r\n");
 	YAE_LOG("Bonjour");
-	//
-	/*{
+	{
 		FileResource* configFile = findOrCreateResource<FileResource>("./config.json");
 		configFile->useLoad();
 
@@ -56,8 +57,6 @@ void onLibraryLoaded()
 		YAE_LOG(type->getName());
 		types.push_back(type);
 	}*/
-
-
 }
 
 class GameInstance
@@ -66,7 +65,10 @@ public:
 	float pitch = 0.f;
 	float yaw = 0.f;
 	bool fpsModeEnabled = false;
-	Matrix4 transform = Matrix4::IDENTITY;
+	Matrix4 mesh1Transform = Matrix4::IDENTITY;
+	Matrix4 mesh2Transform = Matrix4::IDENTITY;
+
+	MeshResource* mesh = nullptr;
 };
 
 void onLibraryUnloaded()
@@ -80,6 +82,22 @@ void initGame()
 	app().setUserData(gameInstance);
 
 	app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
+
+	gameInstance->mesh1Transform[3][0] = 1.f;
+
+	gameInstance->mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
+	gameInstance->mesh->useLoad();
+	YAE_ASSERT(gameInstance->mesh->isLoaded());
+}
+
+void shutdownGame()
+{
+	GameInstance* gameInstance = (GameInstance*)app().getUserData();
+
+	gameInstance->mesh->releaseUnuse();
+
+	defaultAllocator().destroy(gameInstance);
+	app().setUserData(nullptr);
 }
 
 void updateGame(float _dt)
@@ -155,6 +173,25 @@ void updateGame(float _dt)
 	}
 
 
+	Im3d::EnableSorting(true);
+	// Axis
+    Im3d::SetSize(5.f);
+    Im3d::BeginLines();
+    	Im3d::SetColor(Im3d::Color_Red);
+    	Im3d::Vertex(0.f, 0.f, 0.f);
+    	Im3d::Vertex(1.f, 0.f, 0.f);
+    Im3d::End();
+    Im3d::BeginLines();
+    	Im3d::SetColor(Im3d::Color_Green);
+    	Im3d::Vertex(0.f, 0.f, 0.f);
+    	Im3d::Vertex(0.f, 1.f, 0.f);
+    Im3d::End();
+    Im3d::BeginLines();
+    	Im3d::SetColor(Im3d::Color_Blue);
+    	Im3d::Vertex(0.f, 0.f, 0.f);
+    	Im3d::Vertex(0.f, 0.f, 1.f);
+    Im3d::End();
+
     Im3d::SetColor(Im3d::Color(1.f, 0.f, 0.f));
     Im3d::SetSize(10.f);
 
@@ -175,11 +212,11 @@ void updateGame(float _dt)
 
     Im3d::SetColor(Im3d::Color(1.f, 0.f, 1.f));
     Im3d::BeginTriangles();
-    	Im3d::Vertex(1.f, 0.f, 0.f);
-    	Im3d::Vertex(1.f, 1.f, 0.f);
-    	Im3d::Vertex(-1.f, 0.f, 0.f);
+    	Im3d::Vertex(1.f, 0.5f, 0.5f);
+    	Im3d::Vertex(1.f, 1.f, 0.5f);
+    	Im3d::Vertex(0.5f, 0.5f, 0.5f);
     Im3d::End();
-
+	
     static int gridSize = 20;
 	//ImGui::SliderInt("Grid Size", &gridSize, 1, 50);
 	const float gridHalf = (float)gridSize * 0.5f;
@@ -198,14 +235,11 @@ void updateGame(float _dt)
 		}
 	Im3d::End();
 
-	if (Im3d::Gizmo("UnifiedGizmo", (float*)&gameInstance->transform)) {
-		// ...
-	}
-}
+	
+	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
+	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 
-void shutdownGame()
-{
-	GameInstance* gameInstance = (GameInstance*)app().getUserData();
-	defaultAllocator().destroy(gameInstance);
-	app().setUserData(nullptr);
+	renderer().drawMesh(gameInstance->mesh1Transform, gameInstance->mesh->getMeshHandle());
+	renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
+
 }

@@ -103,11 +103,104 @@ void createImage(VmaAllocator _allocator, u32 _width, u32 _height, VkFormat _for
 	VK_VERIFY(vmaCreateImage(_allocator, &imageInfo, &allocCreateInfo, &_outImage, &_outImageMemory, &allocInfo));
 }
 
+VkImageView createImageView(VkDevice _device, VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags)
+{
+	VkImageViewCreateInfo viewInfo{};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = _image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = _format;
+	viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.subresourceRange.aspectMask = _aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	VK_VERIFY(vkCreateImageView(_device, &viewInfo, nullptr, &imageView));
+	return imageView;
+}
+
 void destroyImage(VmaAllocator _allocator, VkImage& _inOutImage, VmaAllocation& _inOutImageMemory)
 {
 	vmaDestroyImage(_allocator, _inOutImage, _inOutImageMemory);
 	_inOutImage = VK_NULL_HANDLE;
 	_inOutImageMemory = VK_NULL_HANDLE;
+}
+
+SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface)
+{
+	SwapChainSupportDetails details;
+	VK_VERIFY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_device, _surface, &details.capabilities));
+
+	u32 formatCount;
+	VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(_device, _surface, &formatCount, nullptr));
+	details.formats.resize(formatCount);
+	VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(_device, _surface, &formatCount, details.formats.data()));
+
+	u32 presentModeCount;
+	VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(_device, _surface, &presentModeCount, nullptr));
+	details.presentModes.resize(presentModeCount);
+	VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(_device, _surface, &presentModeCount, details.presentModes.data()));
+
+	return details;
+}
+
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface)
+{
+	QueueFamilyIndices queueFamilyIndices;
+
+	u32 queueFamilyCount;
+	vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, nullptr);
+	DataArray<VkQueueFamilyProperties> queueFamilyProperties(&scratchAllocator());
+	queueFamilyProperties.resize(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, queueFamilyProperties.data());
+
+	for (u32 i = 0; i < queueFamilyCount; ++i)
+	{
+		if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			queueFamilyIndices.graphicsFamily = i;
+		}
+
+		VkBool32 presentSupport = false;
+		VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(_device, i, _surface, &presentSupport));
+		if (presentSupport)
+		{
+			queueFamilyIndices.presentFamily = i;
+		}
+
+		if (queueFamilyIndices.isComplete())
+		{
+			break;
+		}
+	}
+
+	return queueFamilyIndices;
+}
+
+VkFormat findSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features)
+{
+	for (size_t i = 0; i < _candidateCount; ++i)
+	{
+		VkFormatProperties properties;
+		vkGetPhysicalDeviceFormatProperties(_physicalDevice, _candidates[i], &properties);
+
+		if (_tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & _features) == _features)
+		{
+			return _candidates[i];
+		}
+		else if (_tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & _features) == _features)
+		{
+			return _candidates[i];
+		}
+	}
+
+	return VK_FORMAT_UNDEFINED;
 }
 
 } // namespace vulkan

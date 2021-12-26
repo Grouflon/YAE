@@ -11,6 +11,12 @@ namespace yae
 
 class ShaderResource;
 
+struct Im3dUniformBufferObject
+{
+	Matrix4 viewProj;
+	Vector2 viewport;
+};
+
 struct im3d_VulkanInitData
 {
 	VkDevice device;
@@ -27,6 +33,11 @@ struct VertexBufferData
 	size_t vertexBufferSize = 0;
 };
 
+struct im3d_Frame
+{
+	DataArray<VertexBufferData> vertexBuffers;
+};
+
 struct im3d_Instance
 {
 	im3d_VulkanInitData initData;
@@ -34,15 +45,14 @@ struct im3d_Instance
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorSet descriptorSet;
 	VkPipelineLayout pipelineLayout;
+	VkBuffer uniformBuffer;
+	VmaAllocation uniformBufferMemory;
 
 	VkPipeline pointsPipeline;
 	VkPipeline linesPipeline;
 	VkPipeline trianglesPipeline;
 
-	DataArray<VertexBufferData> vertexBuffers;
-
-	VkBuffer uniformBuffer;
-	VmaAllocation uniformBufferMemory;
+	Array<im3d_Frame> frames;
 };
 
 struct im3d_Camera
@@ -65,10 +75,10 @@ struct im3d_FrameData
 };
 
 im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData);
-void im3d_CreatePipelines(im3d_Instance* _context);
-void im3d_DestroyPipelines(im3d_Instance* _context);
-void im3d_Shutdown(im3d_Instance* _context);
-void im3d_NewFrame(im3d_Instance* _context, const im3d_FrameData& _frameData);
-void im3d_EndFrame(im3d_Instance* _context, VkCommandBuffer _commandBuffer);
+void im3d_CreatePipelines(im3d_Instance* _instance);
+void im3d_DestroyPipelines(im3d_Instance* _instance);
+void im3d_Shutdown(im3d_Instance* _instance);
+void im3d_NewFrame(const im3d_FrameData& _frameData);
+void im3d_Render(im3d_Instance* _instance, VkCommandBuffer _commandBuffer, u32 _frameIndex, const Matrix4& _viewProj, const Vector2& _viewport);
 
 } // namespace yae

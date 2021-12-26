@@ -110,4 +110,8 @@ struct YAELIB_API Quaternion : public glm::quat
 	static const Quaternion IDENTITY;
 };
 
+YAELIB_API String toString(const Vector2& _v);
+YAELIB_API String toString(const Vector3& _v);
+YAELIB_API String toString(const Vector4& _v);
+
 } // namespace yae

@@ -75,7 +75,7 @@ String format(const char* _fmt, Args ..._args)
     size_t size = snprintf(nullptr, 0, _fmt, _args...);
     YAE_ASSERT(size > 0);
 
-	String result;
+	String result(&scratchAllocator());
     result.resize(size);
     snprintf(result.data(), size + 1, _fmt, _args...);
 

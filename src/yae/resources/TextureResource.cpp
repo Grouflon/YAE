@@ -93,7 +93,7 @@ void TextureResource::_doUnload()
 }
 
 
-const TextureHandle& TextureResource::getHandle() const
+const TextureHandle& TextureResource::getTextureHandle() const
 {
 	YAE_ASSERT(isLoaded());
 	return m_textureHandle;

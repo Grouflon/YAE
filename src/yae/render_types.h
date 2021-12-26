@@ -1,5 +1,7 @@
 #pragma once
 
+#include <yae/containers/Array.h>
+
 #include <vulkan/vulkan.h>
 #include <glm/glm/vec3.hpp>
 #include <glm/glm/vec2.hpp>
@@ -11,11 +13,43 @@ VK_DEFINE_HANDLE(VmaAllocation);
 
 namespace yae {
 
+const u32 INVALID_QUEUE = ~0u;
+
+struct QueueFamilyIndices
+{
+	u32 graphicsFamily = INVALID_QUEUE;
+	u32 presentFamily = INVALID_QUEUE;
+
+	bool isComplete() const
+	{
+		if (graphicsFamily == INVALID_QUEUE)
+			return false;
+
+		if (presentFamily == INVALID_QUEUE)
+			return false;
+
+		return true;
+	}
+};
+
+struct SwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	DataArray<VkSurfaceFormatKHR> formats;
+	DataArray<VkPresentModeKHR> presentModes;
+
+	bool isValid() const
+	{
+		return !formats.empty() && !presentModes.empty();
+	}
+};
+
 struct TextureHandle
 {
 	VkImage image = VK_NULL_HANDLE;
 	VmaAllocation memory = VK_NULL_HANDLE;
 	VkImageView view = VK_NULL_HANDLE;
+	VkSampler sampler = VK_NULL_HANDLE;
 };
 
 struct MeshHandle
@@ -24,6 +58,7 @@ struct MeshHandle
 	VmaAllocation vertexMemory = VK_NULL_HANDLE;
 	VkBuffer indexBuffer = VK_NULL_HANDLE;
 	VmaAllocation indexMemory = VK_NULL_HANDLE;
+	VkDeviceSize indicesCount = 0;
 };
 
 struct ShaderHandle

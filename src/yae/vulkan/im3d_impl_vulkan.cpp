@@ -1,6 +1,7 @@
 #include "im3d_impl_vulkan.h"
 
 #include <yae/vulkan/VulkanRenderer.h>
+#include <yae/vulkan/VulkanSwapChain.h>
 #include <yae/vulkan/vulkan.h>
 #include <yae/resources/ShaderResource.h>
 
@@ -10,12 +11,6 @@
 const char* SHADER_PATH = "./data/shaders/im3d.glsl";
 
 namespace yae {
-
-struct UniformBufferObject
-{
-	Matrix4 viewProj;
-	Vector2 viewport;
-};
 
 VkShaderStageFlagBits _ShaderTypeToVkStageFlag(ShaderType _type)
 {
@@ -111,7 +106,17 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	inputAssembly.topology = topology;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-	VkViewport viewport{};
+	VkDynamicState dynamicStates[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = 2;
+	dynamicState.pDynamicStates = dynamicStates;
+
+	/*VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
 	viewport.width = (float)_initData.extent.width;
@@ -121,14 +126,14 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = _initData.extent;
+	scissor.extent = _initData.extent;*/
 
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.viewportCount = 1;
-	viewportState.pViewports = &viewport;
+	viewportState.pViewports = nullptr;//&viewport;
 	viewportState.scissorCount = 1;
-	viewportState.pScissors = &scissor;
+	viewportState.pScissors = nullptr;//&scissor;
 
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -154,8 +159,8 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
 
 	VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -165,8 +170,9 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = _primitiveType == PRIMITIVETYPE_TRIANGLE ? VK_TRUE : VK_FALSE;
+	depthStencil.depthTestEnable = VK_TRUE; // @TODO: Make two sets of shaders, one that tests and the other that doesnt
+	//depthStencil.depthWriteEnable = _primitiveType == PRIMITIVETYPE_TRIANGLE ? VK_TRUE : VK_FALSE;
+	depthStencil.depthWriteEnable = VK_FALSE;
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
@@ -181,6 +187,7 @@ VkPipeline _CreatePipeline(ShaderResource** _shaders, size_t _shaderCount, const
 	pipelineInfo.pMultisampleState = &multisampling;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = _pipelineLayout;
 	pipelineInfo.renderPass = _initData.renderPass;
 	pipelineInfo.subpass = 0;
@@ -234,7 +241,7 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
         	instance->initData.allocator,
         	instance->uniformBuffer,
         	instance->uniformBufferMemory,
-        	sizeof(UniformBufferObject),
+        	sizeof(Im3dUniformBufferObject),
         	VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
@@ -285,7 +292,33 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 	}
 
 	im3d_CreatePipelines(instance);
+
+	instance->frames.resize(VulkanSwapChain::MAX_FRAMES_IN_FLIGHT);
+
 	return instance;
+}
+
+
+void im3d_Shutdown(im3d_Instance* _instance)
+{
+	for (im3d_Frame& frame : _instance->frames)
+	{
+		for (VertexBufferData& data : frame.vertexBuffers)
+		{
+			vulkan::destroyBuffer(_instance->initData.allocator, data.vertexBuffer, data.vertexBufferMemory);
+		}
+	}
+	_instance->frames.clear();
+
+
+	im3d_DestroyPipelines(_instance);
+	
+	vulkan::destroyBuffer(_instance->initData.allocator, _instance->uniformBuffer, _instance->uniformBufferMemory);
+	vkDestroyPipelineLayout(_instance->initData.device, _instance->pipelineLayout, nullptr);
+	vkFreeDescriptorSets(_instance->initData.device, _instance->initData.descriptorPool, 1, &_instance->descriptorSet);
+	vkDestroyDescriptorSetLayout(_instance->initData.device, _instance->descriptorSetLayout, nullptr);
+
+	toolAllocator().destroy(_instance);
 }
 
 
@@ -399,39 +432,17 @@ void im3d_DestroyPipelines(im3d_Instance* _instance)
 }
 
 
-void im3d_Shutdown(im3d_Instance* _instance)
-{
-	for (VertexBufferData& data : _instance->vertexBuffers)
-	{
-		vulkan::destroyBuffer(_instance->initData.allocator, data.vertexBuffer, data.vertexBufferMemory);	
-	}
-	_instance->vertexBuffers.clear();
-
-	vulkan::destroyBuffer(_instance->initData.allocator, _instance->uniformBuffer, _instance->uniformBufferMemory);
-
-	im3d_DestroyPipelines(_instance);
-
-	vkDestroyPipelineLayout(_instance->initData.device, _instance->pipelineLayout, nullptr);
-	vkFreeDescriptorSets(_instance->initData.device, _instance->initData.descriptorPool, 1, &_instance->descriptorSet);
-	vkDestroyDescriptorSetLayout(_instance->initData.device, _instance->descriptorSetLayout, nullptr);
-
-	toolAllocator().destroy(_instance);
-}
-
-
-void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
+void im3d_NewFrame(const im3d_FrameData& _frameData)
 {
 	YAE_CAPTURE_FUNCTION();
 
 	Im3d::AppData& ad = Im3d::GetAppData();
 
-	Vector2 viewportSize = Vector2(float(_instance->initData.extent.width), float(_instance->initData.extent.height));
-
 	ad.m_deltaTime     = _frameData.deltaTime;
 	ad.m_viewportSize  = _frameData.viewportSize;
 	ad.m_viewOrigin    = _frameData.camera.position; // for VR use the head position
 	ad.m_viewDirection = _frameData.camera.direction;
-	ad.m_worldUp       = Im3d::Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_worldUp       = Vector3::UP; // used internally for generating orthonormal bases
 	ad.m_projOrtho     = _frameData.camera.orthographic; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
@@ -442,8 +453,8 @@ void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
 
  // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
 	Vector2 cursorPos = _frameData.cursorPosition;
-	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
-	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
+	cursorPos = (cursorPos / _frameData.viewportSize) * 2.0f - 1.0f;
+	//cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vector4 rayOrigin, rayDirection;
 	Matrix4 worldMatrix = inverse(_frameData.camera.view);
 	if (_frameData.camera.orthographic)
@@ -499,30 +510,33 @@ void im3d_NewFrame(im3d_Instance* _instance, const im3d_FrameData& _frameData)
 	ad.m_snapRotation    = 0.0f;
 	ad.m_snapScale       = 0.0f;
 
-	// Update uniform buffer objects
-	UniformBufferObject ubo;
-	ubo.viewProj = viewProj;
-	ubo.viewport = viewportSize;
-	void* data;
-	VK_VERIFY(vmaMapMemory(_instance->initData.allocator, _instance->uniformBufferMemory, &data));
-	memcpy(data, &ubo, sizeof(ubo));
-	vmaUnmapMemory(_instance->initData.allocator, _instance->uniformBufferMemory);
-
 	Im3d::NewFrame();
 }
 
 
-void im3d_EndFrame(im3d_Instance* _instance, VkCommandBuffer _commandBuffer)
+void im3d_Render(im3d_Instance* _instance, VkCommandBuffer _commandBuffer, u32 _frameIndex, const Matrix4& _viewProj, const Vector2& _viewport)
 {
 	YAE_CAPTURE_FUNCTION();
 
-	Im3d::EndFrame();
+	// Update uniform buffer objects
+	Im3dUniformBufferObject ubo;
+	ubo.viewProj = _viewProj;
+	ubo.viewport = _viewport;
+	void* data;
+	VK_VERIFY(vmaMapMemory(_instance->initData.allocator, _instance->uniformBufferMemory, &data));
+	memcpy(data, &ubo, sizeof(ubo));
+	vmaUnmapMemory(_instance->initData.allocator, _instance->uniformBufferMemory);
+	// @NOTE: do we need a separate uniform buffer for each frame ?
 
-	_instance->vertexBuffers.resize(Im3d::GetDrawListCount(), VertexBufferData());
+	YAE_ASSERT(_frameIndex < _instance->frames.size());
+	if (Im3d::GetDrawListCount() > _instance->frames[_frameIndex].vertexBuffers.size())
+	{
+		_instance->frames[_frameIndex].vertexBuffers.resize(Im3d::GetDrawListCount(), VertexBufferData());
+	}
 	for (u32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
 	{
 		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
-		VertexBufferData& vertexBufferData = _instance->vertexBuffers[i];
+		VertexBufferData& vertexBufferData = _instance->frames[_frameIndex].vertexBuffers[i];
 
 		size_t vertexBufferSize = drawList.m_vertexCount * sizeof(Im3d::VertexData);
     	if (vertexBufferData.vertexBuffer == VK_NULL_HANDLE || vertexBufferData.vertexBufferSize < vertexBufferSize)

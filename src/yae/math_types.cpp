@@ -48,4 +48,19 @@ Vector3 Quaternion::right() const
 
 const Quaternion Quaternion::IDENTITY = Quaternion(0.f, 0.f, 0.f, 1.f);
 
+String toString(const Vector2& _v)
+{
+	return string::format("{%.2f, %.2f}", _v.x, _v.y);
+}
+
+String toString(const Vector3& _v)
+{
+	return string::format("{%.2f, %.2f, %.2f}", _v.x, _v.y, _v.z);
+}
+
+String toString(const Vector4& _v)
+{
+	return string::format("{%.2f, %.2f, %.2f, %.2f}", _v.x, _v.y, _v.z, _v.w);
+}
+
 } // namespace yae

@@ -121,12 +121,11 @@ bool Application::doFrame()
 		//glfwPollEvents();
 		m_inputSystem->update();
 		ImGui_ImplGlfw_NewFrame();
-		m_vulkanRenderer->beginFrame();
 		ImGui::NewFrame();
 
 		im3d_FrameData frameData;
 		frameData.deltaTime = dt;
-		frameData.cursorPosition = Vector2::ZERO; // @TODO
+		frameData.cursorPosition = input().getMousePosition();
 		frameData.viewportSize = viewportSize;
 		frameData.camera.position = m_cameraPosition;
 		frameData.camera.direction = m_cameraRotation * Vector3::FORWARD;
@@ -134,7 +133,10 @@ bool Application::doFrame()
 		frameData.camera.projection = proj;
 		frameData.camera.fov = fov;
 		frameData.camera.orthographic = false;
-		m_vulkanRenderer->im3dNewFrame(frameData);
+
+		frameData.actionKeyStates[Im3d::Action_Select] = input().isMouseButtonDown(0);
+
+		im3d_NewFrame(frameData);
 	}
 
 	program().updateGame(dt);
@@ -216,12 +218,16 @@ bool Application::doFrame()
 	//ImGui::ShowDemoWindow(&s_showDemoWindow);
 
     // Rendering
+	VkCommandBuffer commandBuffer = m_vulkanRenderer->beginFrame();
+	m_vulkanRenderer->beginSwapChainRenderPass(commandBuffer);	
+
     // Mesh
-	m_vulkanRenderer->drawMesh();
+    m_vulkanRenderer->drawCommands(commandBuffer);
 
 	// Im3d
 	{
-		m_vulkanRenderer->im3dEndFrame();
+		Im3d::EndFrame();
+		m_vulkanRenderer->drawIm3d(commandBuffer);
 	}
 
 	// ImGui
@@ -231,11 +237,12 @@ bool Application::doFrame()
 		const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
 		if (!isMinimized)
 		{
-			m_vulkanRenderer->drawImGui(imguiDrawData);
+			m_vulkanRenderer->drawImGui(imguiDrawData, commandBuffer);
 		}	
 	}
 
 	// End Frame
+	m_vulkanRenderer->endSwapChainRenderPass(commandBuffer);
 	m_vulkanRenderer->endFrame();
 
 	return true;
