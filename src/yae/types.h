@@ -14,10 +14,12 @@ typedef uint32_t	u32;
 typedef uint64_t	u64;
 
 // DLL EXPORT
-#ifdef YAELIB_EXPORT
-#define YAELIB_API __declspec(dllexport)
-#else
-#define YAELIB_API __declspec(dllimport)
+#ifndef YAELIB_API
+	#ifdef YAELIB_EXPORT
+		#define YAELIB_API __declspec(dllexport)
+	#else
+		#define YAELIB_API __declspec(dllimport)
+	#endif
 #endif
 
 // MACROS
