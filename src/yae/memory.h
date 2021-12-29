@@ -6,11 +6,26 @@
 
 namespace yae {
 
+namespace memory {
+
+inline YAELIB_API void* alignForward(void* _p, u8 _align)
+{
+	uintptr_t pi = uintptr_t(_p);
+	const uint32_t mod = pi % _align;
+	if (mod)
+	{
+		pi += (_align - mod);
+	}
+	return (void*)pi;
+}
+
+} // namespace memory
+
 class YAELIB_API Allocator
 {
 public:
 	static const u8 DEFAULT_ALIGN = 4;
-	static const size_t SIZE_NOT_TRACKED = 0xffffffffffffffffu;
+	static const size_t SIZE_NOT_TRACKED = ~size_t(0);
 
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) = 0;
 	virtual void deallocate(void* _memory) = 0;
@@ -146,22 +161,6 @@ typedef InlineAllocator<128> InlineAllocator128;
 typedef InlineAllocator<256> InlineAllocator256;
 typedef InlineAllocator<512> InlineAllocator512;
 
-
-namespace memory {
-
-constexpr inline YAELIB_API void* alignForward(void* _p, u8 _align)
-{
-	uintptr_t pi = uintptr_t(_p);
-	const uint32_t mod = pi % _align;
-	if (mod)
-	{
-		pi += (_align - mod);
-	}
-	return (void*)pi;
-}
-
 YAELIB_API MallocAllocator& mallocAllocator();
-
-} // namespace memory
 
 } // namespace yae
