@@ -41,7 +41,7 @@ String& normalizePath(String& _path)
 
 String getAbsolutePath(const char* _path)
 {
-	return normalizePath(platform::getAbsolutePath(_path));
+	return normalizePath(platform::getAbsolutePath(_path).c_str());
 }
 
 
@@ -59,7 +59,7 @@ void setWorkingDirectory(const char* _path)
 
 String getWorkingDirectory()
 {
-	return normalizePath(platform::getWorkingDirectory());
+	return normalizePath(platform::getWorkingDirectory().c_str());
 }
 
 

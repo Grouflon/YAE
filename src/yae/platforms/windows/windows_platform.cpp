@@ -4,7 +4,6 @@
 #include <yae/memory.h>
 
 #include <windows.h>
-#include <atlstr.h>
 #include <dbghelp.h>
 
 namespace yae {

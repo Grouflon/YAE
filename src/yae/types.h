@@ -60,7 +60,7 @@ typedef uint64_t	u64;
 
 // BASE EXTENSIONS
 template <typename T, size_t N>
-constexpr size_t countof(const T(&_array)[N])
+constexpr size_t countof(const T(&)[N])
 {
 	return N;
 }

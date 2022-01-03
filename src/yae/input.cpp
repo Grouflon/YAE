@@ -58,7 +58,7 @@ void InputSystem::update()
 	// @NOTE(2021/04/24|remi): Gamepads mapping is really erratic in terms of Id inside GLFW, that's why we put an indirection between GLFW and our api
 	GLFWgamepadstate glfwGamepadState;
 	{
-		for (int i = 0; i < countof(m_glfwGamepadToGamepad); ++i)
+		for (size_t i = 0; i < countof(m_glfwGamepadToGamepad); ++i)
 		{
 			glfwGamepadState = {};
 			if (glfwGetGamepadState(i, &glfwGamepadState) != GLFW_FALSE)
@@ -94,7 +94,7 @@ void InputSystem::update()
 	}
 	
 	//  Button states
-	for (int i = 0; i < countof(m_gamepadStates); ++i)
+	for (size_t i = 0; i < countof(m_gamepadStates); ++i)
 	{
 		GamepadState& gamepadState = m_gamepadStates[i];
 		glfwGamepadState = {};

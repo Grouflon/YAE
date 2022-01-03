@@ -4,7 +4,7 @@ namespace yae {
 
 class Logger;
 
-enum YAELIB_API LogVerbosity
+enum LogVerbosity
 {
 	LogVerbosity_None = 0,
 	LogVerbosity_Error,

@@ -29,7 +29,7 @@ YAELIB_API bool deletePath(const char* _path);
 YAELIB_API bool createDirectory(const char* _path);
 YAELIB_API Date getFileLastWriteTime(const char* _path);
 
-enum YAELIB_API CopyMode
+enum CopyMode
 {
 	CopyMode_SkipExisting,
 	CopyMode_OverwriteExisting,

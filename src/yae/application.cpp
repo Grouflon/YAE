@@ -1,4 +1,4 @@
-#include "Application.h"
+#include "application.h"
 
 #include <yae/platform.h>
 #include <yae/program.h>

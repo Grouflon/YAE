@@ -90,14 +90,14 @@ void HashMap<Key, T>::clear()
 
 
 template<typename Key, typename T>
-typename const HashMap<Key, T>::Entry* HashMap<Key, T>::begin() const
+const typename HashMap<Key, T>::Entry* HashMap<Key, T>::begin() const
 {
 	return m_data.begin();
 }
 
 
 template<typename Key, typename T>
-typename const HashMap<Key, T>::Entry* HashMap<Key, T>::end() const
+const typename HashMap<Key, T>::Entry* HashMap<Key, T>::end() const
 {
 	return m_data.end();
 }

@@ -3,8 +3,8 @@
 #include <yae/containers/Array.h>
 
 #include <vulkan/vulkan.h>
-#include <glm/glm/vec3.hpp>
-#include <glm/glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
