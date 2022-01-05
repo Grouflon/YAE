@@ -1,5 +1,7 @@
 -include header.make
 
+LDFLAGS += -shared
+
 BIN = $(BINDIR)/yae.dll
 
 SRCS += $(call rwildcard,src/yae,*.cpp)
@@ -19,14 +21,23 @@ LIBDIRS += \
 LIBS += \
 	glfw3 \
 	vulkan-1 \
+
+ifeq ($(CONFIG), Debug)
+LIBDIRS += \
+	$(VK_SDK_PATH)/DebugLibs/Lib/
+
+LIBS += \
+	shaderc_combinedd
+else ifeq ($(CONFIG), Release)
+LIBS += \
 	shaderc_combined
+endif
 
 ifeq ($(PLATFORM), Win64)
 SRCS += $(call rwildcard,src/yae/platforms/windows,*.cpp)
 INCLUDEDIRS += extern/dbghelp/inc/
 LIBDIRS += extern/dbghelp/lib/x64/
 LIBS += dbghelp
-LIBS += msvcrt ucrt msvcprt vcruntime user32 kernel32 gdi32 imm32 shell32
 endif
 
 DEFINES += \

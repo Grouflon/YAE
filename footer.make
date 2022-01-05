@@ -6,7 +6,6 @@ OBJ_DIRS := $(subst /,\,$(dir $(OBJS)))
 DEP_DIRS := $(subst /,\,$(dir $(DEPS)))
 $(shell mkdir $(OBJ_DIRS) >nul 2>&1)
 $(shell mkdir $(DEP_DIRS) >nul 2>&1)
-$(info $(BINDIR))
 $(shell mkdir $(subst /,\,$(BINDIR)) >nul 2>&1)
 
 .PHONY: all clean
@@ -14,8 +13,9 @@ $(shell mkdir $(subst /,\,$(BINDIR)) >nul 2>&1)
 all: $(BIN)
 
 clean:
-	@del /s /q $(subst /,\,intermediate/build/$(TARGET_FOLDER))
-	@del /s /q $(subst /,\,$(BINDIR))
+	@rmdir /s /q $(subst /,\,intermediate/build/$(TARGET))
+	@rmdir /s /q $(subst /,\,$(BINDIR))
+	$(info Cleaned up $(BIN):$(TARGET) files.)
 
 $(BIN): $(OBJS)
 	$(info Linking $(BIN) ...)

@@ -2,6 +2,8 @@
 
 BIN = $(BINDIR)/game.dll
 
+LDFLAGS += -shared
+
 SRCS += $(call rwildcard,src/game,*.cpp)
 
 INCLUDEDIRS +=
