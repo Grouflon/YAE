@@ -88,7 +88,6 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 			while (streakEndBlock->next != nullptr && !streakEndBlock->next->used && availableSize < requestedSize)
 			{
 				streakEndBlock = streakEndBlock->next;
-				size_t headerSize = _getHeaderSize();
 				size_t blockSize = _getBlockSize(streakEndBlock);
 				availableSize += blockSize;
 				YAE_ASSERT(!streakEndBlock->next || _getData(streakStartBlock) + availableSize == (u8*)streakEndBlock->next);

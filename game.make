@@ -2,6 +2,7 @@
 
 BIN = $(BINDIR)/game.dll
 
+CPPFLAGS += -Wno-unused-variable -Wno-unused-function
 LDFLAGS += -shared
 
 SRCS += $(call rwildcard,src/game,*.cpp)

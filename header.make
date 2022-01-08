@@ -29,9 +29,10 @@ CFLAGS := -std=c14
 # C++ flags
 CXXFLAGS := -std=c++14
 # C/C++ flags
-CPPFLAGS := -Wall -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension
+CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension
 # linker flags
 LDFLAGS := -Xlinker /NODEFAULTLIB
+LDFLAGS += -Xlinker /ignore:4099 # Warning about missing pdbs for external libs, we don't care
 # flags required for dependency generation; passed to compilers
 DEPFLAGS = -MT $@ -MD -MP -MF $(DEPDIR)/$*.Td
 
@@ -65,6 +66,7 @@ DEFINES += \
 endif
 ifeq ($(CONFIG), Release)
 CPPFLAGS += -g -O3
+CPPFLAGS += -Wno-unused-comparison -Wno-unused-variable # happens a lot with deactivated asserts
 LDFLAGS += -g -O3
 DEFINES += \
 	NDEBUG \
@@ -80,7 +82,6 @@ LIBS += msvcrtd ucrtd vcruntimed msvcprtd
 else ifeq ($(TARGET), Win64_Release)
 LIBS += msvcrt ucrt vcruntime msvcprt
 endif
-
 
 
 OBJS :=

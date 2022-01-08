@@ -13,7 +13,7 @@ typedef StringHash ResourceID;
 YAELIB_API extern const ResourceID UNDEFINED_RESOURCEID;
 
 
-enum YAELIB_API ResourceLogType
+enum ResourceLogType
 {
 	RESOURCELOGTYPE_LOG,
 	RESOURCELOGTYPE_WARNING,

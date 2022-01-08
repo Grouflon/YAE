@@ -68,8 +68,8 @@ MIRROR_CLASS_DEFINITION(ShaderResource);
 
 ShaderResource::ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint, const char** _defines, size_t _defineCount)
 	: Resource(buildShaderName(_path, _type, _entryPoint, _defines, _defineCount).c_str())
-	, m_path(_path)
 	, m_shaderType(_type)
+	, m_path(_path)
 	, m_entryPoint(_entryPoint)
 {
 	for (size_t i = 0; i < _defineCount; ++i)

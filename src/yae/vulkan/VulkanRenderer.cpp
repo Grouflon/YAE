@@ -68,23 +68,6 @@ static void PopulateDebugUtilsMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 	_createInfo.pUserData = nullptr; // Optional
 }
 
-const u32 INVALID_MEMORY_TYPE = ~0u;
-static u32 FindMemoryType(VkPhysicalDevice _physicalDevice, u32 _typeFilter, VkMemoryPropertyFlags _properties)
-{
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryProperties);
-
-	for (u32 i = 0; i < memoryProperties.memoryTypeCount; ++i)
-	{
-		if ((_typeFilter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & _properties) == _properties)
-		{
-			return i;
-		}
-	}
-
-	return INVALID_MEMORY_TYPE;
-}
-
 bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 {
 	YAE_CAPTURE_FUNCTION();
@@ -277,7 +260,7 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 		std::vector<VkPhysicalDevice> availablePhysicalDevices(availablePhysicalDeviceCount);
 		VK_VERIFY(vkEnumeratePhysicalDevices(m_instance, &availablePhysicalDeviceCount, availablePhysicalDevices.data()));
 
-		auto GetDeviceScore = [deviceExtensions, deviceExtensionCount](VkPhysicalDevice _device, VkSurfaceKHR _surface) -> u32
+		auto GetDeviceScore = [deviceExtensions](VkPhysicalDevice _device, VkSurfaceKHR _surface) -> u32
 		{
 			VkPhysicalDeviceProperties deviceProperties;
 			vkGetPhysicalDeviceProperties(_device, &deviceProperties);
@@ -300,7 +283,7 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 			if (!swapChainSupport.isValid())
 				return 0;
 
-			if (!CheckDeviceExtensionSupport(_device, deviceExtensions, deviceExtensionCount))
+			if (!CheckDeviceExtensionSupport(_device, deviceExtensions, countof(deviceExtensions)))
 				return 0;
 
 			u32 score = 0;
@@ -559,7 +542,7 @@ void VulkanRenderer::shutdown()
 
 VkCommandBuffer VulkanRenderer::beginFrame()
 {
-	YAE_ASSERT_MSG(m_currentFlightImageIndex == ~0, "Can't call beginFrame while already in progress");
+	YAE_ASSERT_MSG(m_currentFlightImageIndex == ~0u, "Can't call beginFrame while already in progress");
 
 	VkResult result = m_swapChain->acquireNextImage(&m_currentFlightImageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -592,7 +575,7 @@ VkCommandBuffer VulkanRenderer::beginFrame()
 
 void VulkanRenderer::endFrame()
 {
-	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0, "Can't call endFrame while frame is not in progress");
+	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0u, "Can't call endFrame while frame is not in progress");
 	VkCommandBuffer commandBuffer = m_frameInfos[m_currentFrameIndex].commandBuffer;
 
 	VK_VERIFY(vkEndCommandBuffer(commandBuffer));
@@ -616,7 +599,7 @@ void VulkanRenderer::endFrame()
 
 void VulkanRenderer::beginSwapChainRenderPass(VkCommandBuffer _commandBuffer)
 {
-	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0, "Can't call beginSwapChainRenderPass if frame is not in progress");
+	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0u, "Can't call beginSwapChainRenderPass if frame is not in progress");
 	YAE_ASSERT_MSG(_commandBuffer == m_frameInfos[m_currentFrameIndex].commandBuffer, "Can't begin render pass on command buffer from a different frame");
 
 	VkRenderPassBeginInfo renderPassInfo{};
@@ -628,7 +611,7 @@ void VulkanRenderer::beginSwapChainRenderPass(VkCommandBuffer _commandBuffer)
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
 	VkClearValue clearValues[2] = {};
-	clearValues[0].color = {0.01f, 0.01f, 0.01f, 1.0f};
+	clearValues[0].color = {{0.01f, 0.01f, 0.01f, 1.0f}};
 	clearValues[1].depthStencil = {1.0f, 0};
 	renderPassInfo.clearValueCount = u32(countof(clearValues));
 	renderPassInfo.pClearValues = clearValues;
@@ -649,7 +632,7 @@ void VulkanRenderer::beginSwapChainRenderPass(VkCommandBuffer _commandBuffer)
 
 void VulkanRenderer::endSwapChainRenderPass(VkCommandBuffer _commandBuffer)
 {
-	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0, "Can't call endSwapChainRenderPass if frame is not in progress");
+	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0u, "Can't call endSwapChainRenderPass if frame is not in progress");
 	YAE_ASSERT_MSG(_commandBuffer == m_frameInfos[m_currentFrameIndex].commandBuffer, "Can't end render pass on command buffer from a different frame");
 
 	vkCmdEndRenderPass(_commandBuffer);
@@ -1410,8 +1393,8 @@ void VulkanRenderer::_transitionImageLayout(VkImage _image, VkFormat _format, Vk
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
 	
-	VkPipelineStageFlags sourceStage;
-	VkPipelineStageFlags destinationStage;
+	VkPipelineStageFlags sourceStage = 0;
+	VkPipelineStageFlags destinationStage = 0;
 	if (_oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && _newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 	{
 		barrier.srcAccessMask = 0;

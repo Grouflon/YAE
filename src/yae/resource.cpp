@@ -16,8 +16,8 @@ Resource::Resource(ResourceID _id)
 }
 
 Resource::Resource(const char* _name)
-	: m_id(ResourceID(_name))
-	, m_name(_name)
+	: m_name(_name)
+	, m_id(ResourceID(_name))
 {
 	YAE_ASSERT(m_id != UNDEFINED_RESOURCEID);
 }
@@ -145,6 +145,7 @@ void Resource::_log(ResourceLogType _type, const char* _msg)
 	{
 		case RESOURCELOGTYPE_WARNING: ++m_warningCount; break;
 		case RESOURCELOGTYPE_ERROR: ++m_errorCount; break;
+		default: break;
 	}
 }
 

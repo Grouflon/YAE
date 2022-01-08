@@ -48,4 +48,9 @@ DEFINES += \
 	_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING \
 	_MT _DLL
 
+# Remove warnings on external code
+%/imgui_impl_vulkan.o: CPPFLAGS += -Wno-unused-function
+%/im3d.o: CPPFLAGS += -Wno-unused-variable -Wno-unused-function
+%/windows_platform.o: CPPFLAGS += -Wno-extra-tokens -Wno-pragma-pack
+
 -include footer.make

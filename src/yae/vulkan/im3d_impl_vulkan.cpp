@@ -481,7 +481,7 @@ void im3d_NewFrame(const im3d_FrameData& _frameData)
 
  // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
  // im3d_config.h, or if any of the IsVisible() functions are called.
-	Matrix4 viewProj = Matrix4(_frameData.camera.projection * _frameData.camera.view);
+	//Matrix4 viewProj = Matrix4(_frameData.camera.projection * _frameData.camera.view);
 	//ad.setCullFrustum(viewProj, true);
 
 	for (int i = 0; i < Im3d::Action_Count; ++i)

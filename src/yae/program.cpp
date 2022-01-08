@@ -36,12 +36,12 @@ Program::Program(Allocator* _defaultAllocator, Allocator* _scratchAllocator, All
 	: m_defaultAllocator(_defaultAllocator)
 	, m_scratchAllocator(_scratchAllocator)
 	, m_toolAllocator(_toolAllocator)
+	, m_applications(_defaultAllocator)
 	, m_exePath(_defaultAllocator)
 	, m_binDirectory(_defaultAllocator)
 	, m_rootDirectory(_defaultAllocator)
 	, m_intermediateDirectory(_defaultAllocator)
 	, m_hotReloadDirectory(_defaultAllocator)
-	, m_applications(_defaultAllocator)
 {
 
 }
@@ -172,7 +172,7 @@ void Program::run()
     {
         yae::String dump;
         m_profiler->dumpCapture("init", dump);
-        printf(dump.c_str());
+        printf("%s", dump.c_str());
         printf("\n");
     }
 
@@ -225,7 +225,7 @@ void Program::run()
     {
         yae::String dump;
         m_profiler->dumpCapture("frame", dump);
-        printf(dump.c_str());
+        printf("%s", dump.c_str());
         printf("\n");
     }
 
@@ -243,7 +243,7 @@ void Program::run()
     {
         yae::String dump;
         m_profiler->dumpCapture("shutdown", dump);
-        printf(dump.c_str());
+        printf("%s", dump.c_str());
         printf("\n");
     }
 }

@@ -5,6 +5,8 @@
 
 namespace yae {
 
+const u32 INVALID_MEMORY_TYPE = ~0u;
+
 namespace vulkan {
 
 void createOrResizeBuffer(VmaAllocator _allocator, VkBuffer& _inOutBuffer, VmaAllocation& _inOutAllocation, VkDeviceSize _size, VkBufferUsageFlags _usage, VkMemoryPropertyFlags _properties);
@@ -23,6 +25,7 @@ VkImageView createImageView(VkDevice _device, VkImage _image, VkFormat _format, 
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface);
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface);
 VkFormat findSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candidates, size_t _candidateCount, VkImageTiling _tiling, VkFormatFeatureFlags _features);
+u32 findMemoryType(VkPhysicalDevice _physicalDevice, u32 _typeFilter, VkMemoryPropertyFlags _properties);
 
 } // namespace vulkan
 

@@ -9,12 +9,12 @@
 
 namespace yae {
 
-char* EMPTY_STRING = "";
+const char* EMPTY_STRING = "";
 const size_t String::INVALID_POS = size_t(-1);
 
 String::String(Allocator* _allocator)
-	: m_allocator(_allocator)
-	, m_buffer(EMPTY_STRING)
+	: m_buffer(const_cast<char*>(EMPTY_STRING))
+	, m_allocator(_allocator)
 {
 	if (m_allocator == nullptr)
 	{

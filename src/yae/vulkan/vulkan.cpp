@@ -203,6 +203,22 @@ VkFormat findSupportedFormat(VkPhysicalDevice _physicalDevice, VkFormat* _candid
 	return VK_FORMAT_UNDEFINED;
 }
 
+u32 findMemoryType(VkPhysicalDevice _physicalDevice, u32 _typeFilter, VkMemoryPropertyFlags _properties)
+{
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryProperties);
+
+	for (u32 i = 0; i < memoryProperties.memoryTypeCount; ++i)
+	{
+		if ((_typeFilter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & _properties) == _properties)
+		{
+			return i;
+		}
+	}
+
+	return INVALID_MEMORY_TYPE;
+}
+
 } // namespace vulkan
 
 } // namespace yae

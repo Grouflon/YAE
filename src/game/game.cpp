@@ -145,7 +145,7 @@ void updateGame(float _dt)
 		// TRANSLATION
 		Vector3 forward = -app().getCameraRotation().forward(); // @NOTE: forward is reversed, we need to figure out why at some point
 		Vector3 right = app().getCameraRotation().right();
-		Vector3 up = app().getCameraRotation().up();
+		//Vector3 up = app().getCameraRotation().up();
 		Vector3 inputRate = Vector3::ZERO;
 
 		if (input().isKeyDown(GLFW_KEY_D))

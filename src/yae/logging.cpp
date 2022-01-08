@@ -20,6 +20,7 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 		case LogVerbosity_Error: beginTag = "\033[31m"; break;
 		case LogVerbosity_Warning: beginTag = "\033[33m"; break;
 		case LogVerbosity_Verbose: beginTag = "\033[90m"; break;
+		default: break;
 	}
 
 	if (category.verbosity >= _verbosity)

@@ -30,7 +30,11 @@ void yae_stbi_free(void* _p)
 #define STBI_REALLOC(p,newsz)     yae_stbi_realloc(p, newsz);
 #define STBI_FREE(p)              yae_stbi_free(p);
 #define STB_IMAGE_IMPLEMENTATION
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-compare"
 #include <stb/stb_image.h>
+#pragma clang diagnostic pop
 
 namespace yae {
 

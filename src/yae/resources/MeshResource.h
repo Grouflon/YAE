@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/resource.h>
-#include <yae/containers/array.h>
+#include <yae/containers/Array.h>
 #include <yae/render_types.h>
 
 #include <mirror/mirror.h>

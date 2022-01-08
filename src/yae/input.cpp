@@ -9,9 +9,9 @@ void InputSystem::init(GLFWwindow* _window)
 
 	m_window = _window;
 
-	memset(m_keyStates, sizeof(m_keyStates), 0);
-	memset(m_gamepadStates, sizeof(m_gamepadStates), 0);
-	memset(m_mouseButtonStates, sizeof(m_mouseButtonStates), 0);
+	memset(m_keyStates, 0, sizeof(m_keyStates));
+	memset(m_gamepadStates, 0, sizeof(m_gamepadStates));
+	memset(m_mouseButtonStates, 0, sizeof(m_mouseButtonStates));
 	m_mouseXAxis = {};
 	m_mouseYAxis = {};
 	m_mouseScrollDelta = Vector2::ZERO;
@@ -65,7 +65,7 @@ void InputSystem::update()
 			{
 				if (m_glfwGamepadToGamepad[i] == -1)
 				{
-					for (int j = 0; j < countof(m_gamepadStates); ++j)
+					for (size_t j = 0; j < countof(m_gamepadStates); ++j)
 					{
 						if (m_gamepadStates[j].glfwGamepadId == -1)
 						{
@@ -83,7 +83,7 @@ void InputSystem::update()
 				int gamepadId = m_glfwGamepadToGamepad[i];
 				if (gamepadId != -1)
 				{
-					YAE_ASSERT(m_gamepadStates[gamepadId].glfwGamepadId == i);
+					YAE_ASSERT(m_gamepadStates[gamepadId].glfwGamepadId == i8(i));
 
 					YAE_LOGF_CAT("input", "Gamepad %d(%d) disconnected", gamepadId, i);
 					m_gamepadStates[gamepadId].glfwGamepadId = -1;
@@ -137,7 +137,7 @@ void InputSystem::shutdown()
 
 bool InputSystem::wasKeyJustPressed(int _key) const
 {
-	YAE_ASSERT(_key >= 0 && _key < countof(m_keyStates));
+	YAE_ASSERT(_key >= 0 && size_t(_key) < countof(m_keyStates));
 
 	const KeyState& keyState = m_keyStates[_key];
 	return keyState.changesCount > 1 || (keyState.down && keyState.changesCount == 1);
@@ -146,7 +146,7 @@ bool InputSystem::wasKeyJustPressed(int _key) const
 
 bool InputSystem::wasKeyJustReleased(int _key) const
 {
-	YAE_ASSERT(_key >= 0 && _key < countof(m_keyStates));
+	YAE_ASSERT(_key >= 0 && size_t(_key) < countof(m_keyStates));
 
 	const KeyState& keyState = m_keyStates[_key];
 	return keyState.changesCount > 1 || (!keyState.down && keyState.changesCount == 1);
@@ -155,7 +155,7 @@ bool InputSystem::wasKeyJustReleased(int _key) const
 
 bool InputSystem::isKeyDown(int _key) const
 {
-	YAE_ASSERT(_key >= 0 && _key < countof(m_keyStates));
+	YAE_ASSERT(_key >= 0 && size_t(_key) < countof(m_keyStates));
 
 	return m_keyStates[_key].down;
 }
@@ -164,8 +164,8 @@ bool InputSystem::isKeyDown(int _key) const
 
 bool InputSystem::wasGamepadButtonJustPressed(int _gamepadId, int _button) const
 {
-	YAE_ASSERT(_gamepadId >= 0 && _gamepadId < countof(m_gamepadStates));
-	YAE_ASSERT(_button >= 0 && _button < countof(m_gamepadStates[0].buttonStates));
+	YAE_ASSERT(_gamepadId >= 0 && size_t(_gamepadId) < countof(m_gamepadStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_gamepadStates[0].buttonStates));
 
 	const KeyState& keyState = m_gamepadStates[_gamepadId].buttonStates[_button];
 	return keyState.changesCount > 1 || (keyState.down && keyState.changesCount == 1);
@@ -174,8 +174,8 @@ bool InputSystem::wasGamepadButtonJustPressed(int _gamepadId, int _button) const
 
 bool InputSystem::wasGamepadButtonJustReleased(int _gamepadId, int _button) const
 {
-	YAE_ASSERT(_gamepadId >= 0 && _gamepadId < countof(m_gamepadStates));
-	YAE_ASSERT(_button >= 0 && _button < countof(m_gamepadStates[0].buttonStates));
+	YAE_ASSERT(_gamepadId >= 0 && size_t(_gamepadId) < countof(m_gamepadStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_gamepadStates[0].buttonStates));
 
 	const KeyState& keyState = m_gamepadStates[_gamepadId].buttonStates[_button];
 	return keyState.changesCount > 1 || (!keyState.down && keyState.changesCount == 1);
@@ -184,8 +184,8 @@ bool InputSystem::wasGamepadButtonJustReleased(int _gamepadId, int _button) cons
 
 bool InputSystem::isGamepadButtonDown(int _gamepadId, int _button) const
 {
-	YAE_ASSERT(_gamepadId >= 0 && _gamepadId < countof(m_gamepadStates));
-	YAE_ASSERT(_button >= 0 && _button < countof(m_gamepadStates[0].buttonStates));
+	YAE_ASSERT(_gamepadId >= 0 && size_t(_gamepadId) < countof(m_gamepadStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_gamepadStates[0].buttonStates));
 
 	return m_gamepadStates[_gamepadId].buttonStates[_button].down;
 }
@@ -193,8 +193,8 @@ bool InputSystem::isGamepadButtonDown(int _gamepadId, int _button) const
 
 float InputSystem::getGamepadAxisValue(int _gamepadId, int _axis) const
 {
-	YAE_ASSERT(_gamepadId >= 0 && _gamepadId < countof(m_gamepadStates));
-	YAE_ASSERT(_axis >= 0 && _axis < countof(m_gamepadStates[0].axisStates));
+	YAE_ASSERT(_gamepadId >= 0 && size_t(_gamepadId) < countof(m_gamepadStates));
+	YAE_ASSERT(_axis >= 0 && size_t(_axis) < countof(m_gamepadStates[0].axisStates));
 
 	return m_gamepadStates[_gamepadId].axisStates[_axis].value;
 }
@@ -202,8 +202,8 @@ float InputSystem::getGamepadAxisValue(int _gamepadId, int _axis) const
 
 float InputSystem::getGamepadAxisDelta(int _gamepadId, int _axis) const
 {
-	YAE_ASSERT(_gamepadId >= 0 && _gamepadId < countof(m_gamepadStates));
-	YAE_ASSERT(_axis >= 0 && _axis < countof(m_gamepadStates[0].axisStates));	
+	YAE_ASSERT(_gamepadId >= 0 && size_t(_gamepadId) < countof(m_gamepadStates));
+	YAE_ASSERT(_axis >= 0 && size_t(_axis) < countof(m_gamepadStates[0].axisStates));	
 
 	return m_gamepadStates[_gamepadId].axisStates[_axis].delta;
 }
@@ -229,7 +229,7 @@ bool InputSystem::isAltDown() const
 
 void InputSystem::notifyKeyEvent(int _key, int _scancode, int _action, int _mods)
 {
-	YAE_ASSERT(_key >= 0 && _key < countof(m_keyStates));
+	YAE_ASSERT(_key >= 0 && size_t(_key) < countof(m_keyStates));
 
 	KeyState& keyState = m_keyStates[_key];
 	++keyState.changesCount;
@@ -265,7 +265,7 @@ Vector2 InputSystem::getMouseScrollDelta() const
 
 bool InputSystem::wasMouseButtonJustPressed(int _button) const
 {
-	YAE_ASSERT(_button >= 0 && _button < countof(m_mouseButtonStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_mouseButtonStates));
 	
 	const KeyState& keyState = m_mouseButtonStates[_button];
 	return keyState.changesCount > 1 || (keyState.down && keyState.changesCount == 1);
@@ -274,7 +274,7 @@ bool InputSystem::wasMouseButtonJustPressed(int _button) const
 
 bool InputSystem::wasMouseButtonJustReleased(int _button) const
 {
-	YAE_ASSERT(_button >= 0 && _button < countof(m_mouseButtonStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_mouseButtonStates));
 
 	const KeyState& keyState = m_mouseButtonStates[_button];
 	return keyState.changesCount > 1 || (!keyState.down && keyState.changesCount == 1);
@@ -283,7 +283,7 @@ bool InputSystem::wasMouseButtonJustReleased(int _button) const
 
 bool InputSystem::isMouseButtonDown(int _button) const
 {
-	YAE_ASSERT(_button >= 0 && _button < countof(m_mouseButtonStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_mouseButtonStates));
 
 	return m_mouseButtonStates[_button].down;
 }
@@ -291,7 +291,7 @@ bool InputSystem::isMouseButtonDown(int _button) const
 
 void InputSystem::notifyMouseButtonEvent(int _button, int _action, int _mods)
 {
-	YAE_ASSERT(_button >= 0 && _button < countof(m_mouseButtonStates));
+	YAE_ASSERT(_button >= 0 && size_t(_button) < countof(m_mouseButtonStates));
 
 	KeyState& buttonState = m_mouseButtonStates[_button];
 	++buttonState.changesCount;

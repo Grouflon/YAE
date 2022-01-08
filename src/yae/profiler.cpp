@@ -158,7 +158,7 @@ void Profiler::_cleanEvents()
 			}
 		}
 
-		u32 lastOutdatedEventIndex = -1;
+		u32 lastOutdatedEventIndex = ~0u;
 		for (u32 i = 0; i < m_events.size(); ++i)
 		{
 			if (m_events[i].stopTime == Time(0))
@@ -176,7 +176,7 @@ void Profiler::_cleanEvents()
 			}
 		}
 
-		if (lastOutdatedEventIndex != -1)
+		if (lastOutdatedEventIndex != ~0u)
 		{
 			removedEvents = lastOutdatedEventIndex + 1;
 			m_events.erase(0, removedEvents);
