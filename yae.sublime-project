@@ -13,8 +13,12 @@
 			]
 		},
 		{
-			"name": "VulkanSDK",
+			"name": "VulkanSDK_162.1",
 			"path": "C:/VulkanSDK/1.2.162.1/Include"
+		},
+		{
+			"name": "VulkanSDK_189.0",
+			"path": "C:/VulkanSDK/1.2.189.0/Include"
 		}
 	],
 	"build_systems":
