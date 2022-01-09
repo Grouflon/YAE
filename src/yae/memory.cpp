@@ -18,7 +18,7 @@ struct AllocationCallStack
 	StackFrame frames[32];
 	u16 frameCount;
 };
-static HashMap<size_t, AllocationCallStack> g_allocationCaptures(&memory::mallocAllocator());
+static HashMap<size_t, AllocationCallStack> g_allocationCaptures(&mallocAllocator());
 #endif
 
 const u8 HEADER_PAD_VALUE = 0xFAu;
@@ -225,6 +225,7 @@ void FixedSizeAllocator::check()
 	{
 		u8* data = _getData(block);
 		YAE_ASSERT(!block->next || block->next == (Header*)(data + block->size));
+		YAE_ASSERT(m_allocatedSize == m_allocableSize || block->size != 0);
 
 		totalSize += _getBlockSize(block);
 		block = block->next;
@@ -329,14 +330,10 @@ MallocAllocator::Header* MallocAllocator::_getHeader(void* _data)
 	return (Header*)(data - sizeof(Header));
 }
 
-namespace memory {
-
 MallocAllocator& mallocAllocator()
 {
 	static MallocAllocator s_mallocAllocator;
 	return s_mallocAllocator;
 }
-
-} // namespace memory
 
 } // namespace yae
