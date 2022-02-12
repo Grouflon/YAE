@@ -68,8 +68,12 @@
 					"shell_cmd": "start remedybg session.rdbg"
 				},
 				{
-					"name": "debug visual",
-					"shell_cmd": "devenv yaeApplication.sln /DebugExe \"bin/Win64_Debug/yae.exe\""
+					"name": "debug visual Debug",
+					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe\""
+				},
+				{
+					"name": "debug visual Release",
+					"shell_cmd": "devenv /debugexe \"bin/Win64_Release/main.exe\""
 				}
 			]
 		},
