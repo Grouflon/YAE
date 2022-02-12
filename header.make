@@ -66,7 +66,7 @@ DEFINES += \
 endif
 ifeq ($(CONFIG), Release)
 CPPFLAGS += -g -O3
-CPPFLAGS += -Wno-unused-comparison -Wno-unused-variable # happens a lot with deactivated asserts
+CPPFLAGS += -Wno-unused-comparison -Wno-unused-variable -Wno-unused-but-set-variable # happens a lot with deactivated asserts
 LDFLAGS += -g -O3
 DEFINES += \
 	NDEBUG \
