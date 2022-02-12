@@ -1,5 +1,7 @@
 #include "memory.h"
 
+#include <yae/math.h>
+
 #include <cstdlib>
 #include <cstring>
 
@@ -8,6 +10,14 @@
 #if YAE_ALLOCATION_CALLSTACK_CAPTURE
 #include <yae/callstack.h>
 #include <yae/containers/HashMap.h>
+#endif
+
+#if YAE_DEBUG
+#define YAE_INITIALIZE_MEMORY 1
+#define YAE_CHECK_MEMORY 1
+#else
+#define YAE_INITIALIZE_MEMORY 0
+#define YAE_CHECK_MEMORY 0
 #endif
 
 namespace yae {
@@ -30,7 +40,7 @@ FixedSizeAllocator::FixedSizeAllocator(size_t _size)
 	m_memory = malloc(m_memorySize);
 	YAE_ASSERT(m_memory != nullptr);
 
-#if YAE_DEBUG
+#if YAE_INITIALIZE_MEMORY
 	memset(m_memory, 0, m_memorySize);
 #endif
 
@@ -129,7 +139,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	streakStartBlock->alignment = _align;
 	streakStartBlock->used = true;
 
-#if YAE_DEBUG
+#if YAE_INITIALIZE_MEMORY
 	// Reset memory
 	memset(streakStartBlockData, 0x00, streakStartBlock->size);
 #endif
@@ -142,7 +152,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	m_allocatedSize = m_allocatedSize + _getBlockSize(streakStartBlock);
 	++m_allocationCount;
 
-#if YAE_DEBUG
+#if YAE_CHECK_MEMORY
 	check();
 #endif
 
@@ -157,6 +167,31 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	return dataStart;
 }
 
+
+void* FixedSizeAllocator::reallocate(void* _memory, size_t _size, u8 _align)
+{
+	if (_memory == nullptr)
+		return allocate(_size, _align);
+
+	Header* block = m_firstBlock;
+	while (block != nullptr)
+	{
+		void* data = _getData(block);
+		void* dataStart = _getDataStart(block, block->alignment);
+		if (dataStart == _memory)
+		{
+			// @NOTE: this is not an actual realloc, but it will do for now	
+			size_t size = block->size - size_t((u8*)(dataStart) - (u8*)(data));
+			void* newMemory = allocate(_size, _align);
+			memcpy(newMemory, _memory, min(size, _size));
+			deallocate(_memory);
+			return newMemory;
+		}
+		block = block->next;
+	}
+	YAE_ASSERT_MSG(false, "The memory to reallocate is unknown to this allocator.");
+	return nullptr;
+}
 
 
 void FixedSizeAllocator::deallocate(void* _memory)
@@ -176,8 +211,10 @@ void FixedSizeAllocator::deallocate(void* _memory)
 			--m_allocationCount;
 			m_allocatedSize = m_allocatedSize - _getBlockSize(block);
 
-#if YAE_DEBUG
+#if YAE_INITIALIZE_MEMORY
 			memset(data, 0xDD, block->size);
+#endif
+#if YAE_CHECK_MEMORY
 			check();
 #endif
 
@@ -192,27 +229,6 @@ void FixedSizeAllocator::deallocate(void* _memory)
 		block = block->next;
 	}
 	YAE_ASSERT_MSG(false, "Memory block not found.");
-}
-
-
-size_t FixedSizeAllocator::getAllocationSize(void* _memory) const
-{
-	if (_memory == nullptr)
-		return SIZE_NOT_TRACKED;
-
-	Header* block = m_firstBlock;
-	while (block != nullptr)
-	{
-		void* data = _getData(block);
-		void* dataStart = _getDataStart(block, block->alignment);
-		if (dataStart == _memory)
-		{
-			return block->size - size_t((u8*)(dataStart) - (u8*)(data));
-		}
-		block = block->next;
-	}
-
-	return SIZE_NOT_TRACKED;
 }
 
 
@@ -282,11 +298,12 @@ void* MallocAllocator::allocate(size_t _size, u8 _align)
 	size_t blockSize = _size + _align + sizeof(Header);
 	Header* block = (Header*)malloc(blockSize);
 	block->size = _size + _align;
+	block->alignment = _align;
 
-	u8* data = (u8*)block + sizeof(Header);
-	u8* dataStart = (u8*)memory::alignForward(data, _align);
+	u8* data = _getData(block);
+	u8* dataStart = _getDataStart(block);
 
-#if YAE_DEBUG
+#if YAE_INITIALIZE_MEMORY
 	memset(data, 0x00, block->size);
 #endif
 
@@ -299,6 +316,26 @@ void* MallocAllocator::allocate(size_t _size, u8 _align)
 }
 
 
+void* MallocAllocator::reallocate(void* _memory, size_t _size, u8 _align)
+{
+	if (_memory == nullptr)
+	{
+		return allocate(_size, _align);
+	}
+
+	size_t newBlockSize = _size + _align + sizeof(Header);
+	void* newMemory = allocate(newBlockSize, _align);
+
+	Header* previousBlock = _getHeader(_memory);
+	size_t previousBlockDataSize = _getDataSize(previousBlock);
+	memcpy(newMemory, _memory, min(previousBlockDataSize, _size));
+
+	deallocate(_memory);
+
+	return newMemory;
+}
+
+
 void MallocAllocator::deallocate(void* _memory)
 {
 	if (_memory == nullptr)
@@ -308,7 +345,7 @@ void MallocAllocator::deallocate(void* _memory)
 	YAE_ASSERT(block != nullptr);
 
 	u8* data = (u8*)block + sizeof(Header);
-#if YAE_DEBUG
+#if YAE_INITIALIZE_MEMORY
 	memset(data, 0xDD, block->size);
 #endif
 
@@ -328,6 +365,22 @@ MallocAllocator::Header* MallocAllocator::_getHeader(void* _data)
 		--data;
 	}
 	return (Header*)(data - sizeof(Header));
+}
+
+u8* MallocAllocator::_getData(Header* _header)
+{
+	return (u8*)_header + sizeof(Header);
+}
+
+u8* MallocAllocator::_getDataStart(Header* _header)
+{
+	u8* data = _getData(_header);
+	return (u8*)memory::alignForward(data, _header->alignment);
+}
+
+size_t MallocAllocator::_getDataSize(Header* _header)
+{
+	return _header->size - _header->alignment;
 }
 
 MallocAllocator& mallocAllocator()

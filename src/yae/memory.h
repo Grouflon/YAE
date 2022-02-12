@@ -28,9 +28,9 @@ public:
 	static const size_t SIZE_NOT_TRACKED = ~size_t(0);
 
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) = 0;
+	virtual void* reallocate(void* _memory, size_t _size, u8 _align = DEFAULT_ALIGN) = 0;
 	virtual void deallocate(void* _memory) = 0;
 
-	virtual size_t getAllocationSize(void* _memory) const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocationCount() const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocatedSize() const { return SIZE_NOT_TRACKED; }
 	virtual size_t getAllocableSize() const { return SIZE_NOT_TRACKED; }
@@ -61,9 +61,9 @@ public:
 	virtual ~FixedSizeAllocator();
 
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
+	virtual void* reallocate(void* _memory, size_t _size, u8 _align = DEFAULT_ALIGN) override;
 	virtual void deallocate(void* _memory) override;
 
-	virtual size_t getAllocationSize(void* _memory) const override;
 	virtual size_t getAllocationCount() const override { return m_allocationCount; }
 	virtual size_t getAllocatedSize() const override { return m_allocatedSize; }
 	virtual size_t getAllocableSize() const override { return m_allocableSize; }
@@ -105,6 +105,7 @@ public:
 	virtual ~MallocAllocator();
 
 	virtual void* allocate(size_t _size, u8 _align = DEFAULT_ALIGN) override;
+	virtual void* reallocate(void* _memory, size_t _size, u8 _align = DEFAULT_ALIGN) override;
 	virtual void deallocate(void* _memory) override;
 
 	virtual size_t getAllocationCount() const override { return m_allocationCount; }
@@ -114,9 +115,13 @@ private:
 	struct Header
 	{
 		size_t size;
+		u8 alignment;
 	};
 
 	static Header* _getHeader(void* _data);
+	static u8* _getData(Header* _header);
+	static u8* _getDataStart(Header* _header);
+	static size_t _getDataSize(Header* _header);
 
 	size_t m_allocationCount = 0;
 	size_t m_allocatedSize = 0;
@@ -143,6 +148,12 @@ public:
 		YAE_ASSERT_MSGF(availableSize >= _size, "Out of memory: %d available, %d requested", availableSize, _size);
 		m_cursor = (start + _size) - m_buffer;
 		return start;
+	}
+
+	virtual void* reallocate(void* _memory, size_t _size, u8 _align = DEFAULT_ALIGN) override
+	{
+		YAE_ASSERT_MSG(false, "Not implemented.");
+		return nullptr;
 	}
 
 	virtual void deallocate(void* _memory) override
