@@ -33,6 +33,7 @@ void yae_stbi_free(void* _p)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsign-compare"
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
 #include <stb/stb_image.h>
 #pragma clang diagnostic pop
 
