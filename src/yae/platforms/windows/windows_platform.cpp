@@ -10,6 +10,23 @@ namespace yae {
 
 namespace platform {
 
+void setOutputColor(OutputColor _color)
+{
+	// @NOTE: see this thread for help on colors: https://stackoverflow.com/questions/8765938/colorful-text-using-printf-in-c
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	int colorAttribute = 0;
+	switch(_color)
+	{
+		case OutputColor_Grey: colorAttribute = 8; break;
+		case OutputColor_Yellow: colorAttribute = 6; break;
+		case OutputColor_Red: colorAttribute = 4; break;
+
+		case OutputColor_Default:
+		default: colorAttribute = 7; break;
+	}
+	SetConsoleTextAttribute(hConsole, colorAttribute);
+}
+
 i64 getCycles()
 {
 	LARGE_INTEGER largeInteger;

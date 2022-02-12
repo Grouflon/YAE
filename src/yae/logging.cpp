@@ -2,6 +2,7 @@
 #include "logging.h"
 
 #include <yae/logger.h>
+#include <yae/platform.h>
 
 namespace yae {
 
@@ -9,23 +10,22 @@ namespace logging {
 
 void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _verbosity, const char* _msg)
 {
-	// @NOTE: see this thread for help on colors: https://stackoverflow.com/questions/8765938/colorful-text-using-printf-in-c
-	// We might want to go for the selected answer with platform specific code, in order to avoid having to do any modification on the user's machine
 	Logger::LogCategory& category = _logger.findOrAddCategory(_categoryName);
-	const char* beginTag = "\033[0m";
-	const char* endTag = "\033[0m";
 
+	OutputColor outputColor = OutputColor_Default;
 	switch(_verbosity)
 	{
-		case LogVerbosity_Error: beginTag = "\033[31m"; break;
-		case LogVerbosity_Warning: beginTag = "\033[33m"; break;
-		case LogVerbosity_Verbose: beginTag = "\033[90m"; break;
+		case LogVerbosity_Error: outputColor = OutputColor_Red; break;
+		case LogVerbosity_Warning: outputColor = OutputColor_Yellow; break;
+		case LogVerbosity_Verbose: outputColor = OutputColor_Grey; break;
 		default: break;
 	}
-
+	
 	if (category.verbosity >= _verbosity)
 	{
-		printf("%s[%s]%s%s\n", beginTag, category.name.c_str(), _msg, endTag);
+		platform::setOutputColor(outputColor);
+		printf("[%s]%s\n", category.name.c_str(), _msg);
+		platform::setOutputColor(OutputColor_Default);
 	}
 }
 

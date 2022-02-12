@@ -7,7 +7,18 @@ namespace yae {
 
 struct StackFrame;
 
+enum OutputColor
+{
+	OutputColor_Default,
+	OutputColor_Grey,
+	OutputColor_Yellow,
+	OutputColor_Red,
+};
+
 namespace platform {
+
+// Logging
+YAELIB_API void setOutputColor(OutputColor _color);	
 
 // Time
 YAELIB_API i64 getCycles();
