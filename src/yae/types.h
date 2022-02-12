@@ -13,6 +13,13 @@ typedef uint16_t	u16;
 typedef uint32_t	u32;
 typedef uint64_t	u64;
 
+#ifndef YAE_DEBUG
+#define YAE_DEBUG 0
+#endif
+#ifndef YAE_RELEASE
+#define YAE_RELEASE 0
+#endif
+
 // DLL EXPORT
 #ifndef YAELIB_API
 	#ifdef YAELIB_EXPORT
@@ -41,14 +48,24 @@ typedef uint64_t	u64;
 #define YAE_DEBUG_BREAK raise(SIGTRAP)
 #endif
 
+#ifndef YAE_ASSERT_ENABLED
+#if YAE_RELEASE
+#define YAE_ASSERT_ENABLED 0
+#else
+#define YAE_ASSERT_ENABLED 1
+#endif
+#endif
+
+#include <yae/logging.h>
+
 // ASSERTS
-#ifdef _DEBUG
-#define YAE_ASSERT(_cond)					if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_VERIFY(_cond) 					if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) YAE_DEBUG_BREAK;
-#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) YAE_DEBUG_BREAK;
+#if YAE_ASSERT_ENABLED
+#define YAE_ASSERT(_cond)					if (!(_cond)) { YAE_ERROR(#_cond);             YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { YAE_ERROR(_msg);               YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { YAE_ERRORF(_fmt, __VA_ARGS__); YAE_DEBUG_BREAK; }
+#define YAE_VERIFY(_cond) 					if (!(_cond)) { YAE_ERROR(#_cond);             YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { YAE_ERROR(_msg);               YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { YAE_ERRORF(_fmt, __VA_ARGS__); YAE_DEBUG_BREAK; }
 #else
 #define YAE_ASSERT(cond)
 #define YAE_ASSERT_MSG(_cond, _msg)
@@ -92,5 +109,4 @@ YAELIB_API VulkanRenderer& renderer();
 } // namespace yae
 
 #include <yae/string.h>
-#include <yae/logging.h>
 #include <yae/profiling.h>

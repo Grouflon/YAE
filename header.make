@@ -52,7 +52,8 @@ DEFINES := \
 	_CRT_SECURE_NO_WARNINGS \
 	GLM_FORCE_RADIANS \
 	GLM_FORCE_DEPTH_ZERO_TO_ONE \
-	IM3D_CONFIG=\<yae/yae_im3d_config.h\>
+	IM3D_CONFIG=\<yae/yae_im3d_config.h\>\
+	YAE_CONFIG=\"$(CONFIG)\"
 
 LIBS :=
 
@@ -62,6 +63,13 @@ LDFLAGS += -g -O0
 DEFINES += \
 	DEBUG \
 	_DEBUG \
+	YAE_DEBUG
+endif
+ifeq ($(CONFIG), DebugOptimized)
+CPPFLAGS += -g -O3
+LDFLAGS += -g -O3
+DEFINES += \
+	NDEBUG \
 	YAE_DEBUG
 endif
 ifeq ($(CONFIG), Release)
@@ -79,7 +87,7 @@ endif
 
 ifeq ($(TARGET), Win64_Debug)
 LIBS += msvcrtd ucrtd vcruntimed msvcprtd
-else ifeq ($(TARGET), Win64_Release)
+else
 LIBS += msvcrt ucrt vcruntime msvcprt
 endif
 

@@ -5,13 +5,7 @@
 #include <stdio.h>
 #include <cstdlib>
 
-#if YAE_DEBUG
-#define APPLICATION_NAME "yae | Debug"
-#elif YAE_RELEASE
-#define APPLICATION_NAME "yae | Release"
-#else
-#define APPLICATION_NAME "yae | Unknown"
-#endif
+#define APPLICATION_NAME "yae | " YAE_CONFIG
 
 int main(int _argc, char** _argv)
 {

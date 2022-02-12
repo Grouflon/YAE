@@ -53,11 +53,15 @@
 				},*/
 				{
 					"name" : "clean",
-					"shell_cmd" : "make PLATFORM=Win64 CONFIG=Debug clean && make PLATFORM=Win64 CONFIG=Release clean"
+					"shell_cmd" : "make PLATFORM=Win64 CONFIG=Debug clean && make PLATFORM=Win64 CONFIG=DebugOptimized clean && make PLATFORM=Win64 CONFIG=Release clean"
 				},
 				{
 					"name" : "compile Win64_Debug",
 					"cmd" : "make PLATFORM=Win64 CONFIG=Debug application"
+				},
+				{
+					"name" : "compile Win64_DebugOptimized",
+					"cmd" : "make PLATFORM=Win64 CONFIG=DebugOptimized application"
 				},
 				{
 					"name" : "compile Win64_Release",
@@ -70,6 +74,10 @@
 				{
 					"name": "debug visual Debug",
 					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe\""
+				},
+				{
+					"name": "debug visual DebugOptimized",
+					"shell_cmd": "devenv /debugexe \"bin/Win64_DebugOptimized/main.exe\""
 				},
 				{
 					"name": "debug visual Release",

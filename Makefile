@@ -6,7 +6,7 @@
 
 # Platform : (Win64|Web)
 PLATFORM := Win64
-# Configuration : (Debug|Release)
+# Configuration : (Debug|DebugOptimized|Release)
 CONFIG := Release
 # ======================
 

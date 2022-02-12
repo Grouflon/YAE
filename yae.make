@@ -28,7 +28,7 @@ LIBDIRS += \
 
 LIBS += \
 	shaderc_combinedd
-else ifeq ($(CONFIG), Release)
+else
 LIBS += \
 	shaderc_combined
 endif
@@ -52,5 +52,6 @@ DEFINES += \
 %/imgui_impl_vulkan.o: CPPFLAGS += -Wno-unused-function
 %/im3d.o: CPPFLAGS += -Wno-unused-variable -Wno-unused-function
 %/windows_platform.o: CPPFLAGS += -Wno-extra-tokens -Wno-pragma-pack
+%/imgui_widgets.o: CPPFLAGS += -Wno-unused-variable
 
 -include footer.make

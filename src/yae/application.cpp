@@ -58,10 +58,10 @@ void Application::init(char** _args, int _argCount)
 	// Init Vulkan
 	m_vulkanRenderer = defaultAllocator().create<VulkanRenderer>();
 
-#ifdef NDEBUG
-	const bool enableValidationLayers = false;
-#else
+#if YAE_DEBUG
 	const bool enableValidationLayers = true;
+#else
+	const bool enableValidationLayers = false;
 #endif
 	m_vulkanRenderer->init(m_window, enableValidationLayers);
 
