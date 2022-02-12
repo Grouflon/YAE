@@ -15,13 +15,6 @@ LIBDIRS += \
 LIBS += \
   yae 
 
-ifeq ($(PLATFORM), Win64)
-SRCS += $(call rwildcard,src/yae/platforms/windows,*.cpp)
-INCLUDEDIRS += extern/dbghelp/inc/
-LIBDIRS += extern/dbghelp/lib/x64/
-LIBS += dbghelp
-endif
-
 DEFINES += \
   YAEGAME_EXPORT \
   MIRROR_IMPORT \
