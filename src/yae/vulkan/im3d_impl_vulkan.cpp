@@ -246,35 +246,34 @@ im3d_Instance* im3d_Init(const im3d_VulkanInitData& _initData)
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
 
+        VkDescriptorBufferInfo bufferInfo[2] = {};
         VkWriteDescriptorSet descriptorWrites[2] = {};
         {
-        	VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = instance->uniformBuffer;
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(Matrix4);
+			bufferInfo[0].buffer = instance->uniformBuffer;
+			bufferInfo[0].offset = 0;
+			bufferInfo[0].range = sizeof(Matrix4);
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = instance->descriptorSet;
 			descriptorWrites[0].dstBinding = 0;
 			descriptorWrites[0].dstArrayElement = 0;
 			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrites[0].descriptorCount = 1;
-			descriptorWrites[0].pBufferInfo = &bufferInfo;
+			descriptorWrites[0].pBufferInfo = bufferInfo;
 			descriptorWrites[0].pImageInfo = nullptr;
 			descriptorWrites[0].pTexelBufferView = nullptr;	
         }
 
         {
-        	VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = instance->uniformBuffer;
-			bufferInfo.offset = sizeof(Matrix4);
-			bufferInfo.range = sizeof(Vector2);
+			bufferInfo[1].buffer = instance->uniformBuffer;
+			bufferInfo[1].offset = sizeof(Matrix4);
+			bufferInfo[1].range = sizeof(Vector2);
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = instance->descriptorSet;
 			descriptorWrites[1].dstBinding = 1;
 			descriptorWrites[1].dstArrayElement = 0;
 			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrites[1].descriptorCount = 1;
-			descriptorWrites[1].pBufferInfo = &bufferInfo;
+			descriptorWrites[1].pBufferInfo = bufferInfo + 1;
 			descriptorWrites[1].pImageInfo = nullptr;
 			descriptorWrites[1].pTexelBufferView = nullptr;	
         }
