@@ -38,6 +38,7 @@ help:
 	@echo ""
 	@echo "CONFIG:"
 	@echo "  Debug"
+	@echo "  DebugOptimized"
 	@echo "  Release"
 	@echo ""
 	@echo "PLATFORM:"
