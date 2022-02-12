@@ -20,6 +20,7 @@ int main(int _argc, char** _argv)
     yae::FixedSizeAllocator toolAllocator = yae::FixedSizeAllocator(1024*1024*32);
 
     yae::Program program(&allocator, &scratchAllocator, &toolAllocator);
+    //yae::Program program(&yae::mallocAllocator(), &yae::mallocAllocator(), &yae::mallocAllocator());
     program.init(_argv, _argc);
 
     yae::Application app = yae::Application(APPLICATION_NAME, 800u, 600u);

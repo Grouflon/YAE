@@ -10,14 +10,7 @@ void* yae_stbi_malloc(size_t _sz)
 
 void* yae_stbi_realloc(void* _p, size_t _newsz)
 {
-	if (_p == nullptr)
-		return yae_stbi_malloc(_newsz);
-
-	yae::Allocator& a = yae::scratchAllocator();
-	void* p = a.allocate(_newsz);
-	memcpy(p, _p, a.getAllocationSize(_p));
-	a.deallocate(_p);
-	return p;
+	return yae::scratchAllocator().reallocate(_p, _newsz);
 }
 
 void yae_stbi_free(void* _p)
