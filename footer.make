@@ -12,7 +12,7 @@ COMPILE.c = @$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(patsubst %,-I%,$(INCLUDED
 # compile C++ source files
 COMPILE.cc = @$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(patsubst %,-I%,$(INCLUDEDIRS)) $(patsubst %,-D%,$(DEFINES)) -c -o $@
 # link object files to binary
-LINK.o = $(LD) $(LDFLAGS) $(LDLIBS) $(patsubst %,-L%,$(LIBDIRS)) $(patsubst %,-l%,$(LIBS)) -o $@
+LINK.o = @$(LD) $(LDFLAGS) $(LDLIBS) $(patsubst %,-L%,$(LIBDIRS)) $(patsubst %,-l%,$(LIBS)) -o $@
 # precompile step
 PRECOMPILE = $(CREATE_TARGET_DIRECTORY)
 # postcompile step

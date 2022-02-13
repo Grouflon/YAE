@@ -1,8 +1,16 @@
 -include header.make
 
-LDFLAGS += -shared
+LINKTYPE := shared
+ifeq ($(PLATFORM), Web)
+LINKTYPE := static
+endif
 
+ifeq ($(LINKTYPE), shared)
 BIN = $(BINDIR)/yae.dll
+else ifeq ($(LINKTYPE), static)
+BIN = $(BINDIR)/yae.lib
+endif
+
 
 SRCS += $(call rwildcard,src/yae,*.cpp)
 SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/platforms,*.cpp), $(SRCS)))
@@ -42,11 +50,24 @@ endif
 
 DEFINES += \
 	GLFW_INCLUDE_VULKAN \
+	_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING \
+	_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_FILESYSTEM
+
+ifeq ($(LINKTYPE), shared)
+LDFLAGS += -shared
+DEFINES += \
 	YAELIB_EXPORT \
 	MIRROR_EXPORT \
 	IMGUI_API=__declspec(dllexport) \
-	_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING \
 	_MT _DLL
+
+else ifeq ($(LINKTYPE), static)
+LDFLAGS += -static
+DEFINES += \
+	YAELIB_API= \
+	MIRROR_API=
+endif
+
 
 # Remove warnings on external code
 %/imgui_impl_vulkan.o: CPPFLAGS += -Wno-unused-function

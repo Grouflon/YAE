@@ -52,7 +52,7 @@ DEFINES := \
 	_CRT_SECURE_NO_WARNINGS \
 	GLM_FORCE_RADIANS \
 	GLM_FORCE_DEPTH_ZERO_TO_ONE \
-	IM3D_CONFIG=\<yae/yae_im3d_config.h\>\
+	IM3D_CONFIG=\"yae/yae_im3d_config.h\"\
 	YAE_CONFIG=\"$(CONFIG)\"
 
 LIBS :=
@@ -83,12 +83,24 @@ endif
 
 ifeq ($(PLATFORM), Win64)
 LIBS += user32 kernel32 gdi32 imm32 shell32
+DEFINES += \
+	YAE_PLATFORM_WINDOWS
 endif
 
 ifeq ($(TARGET), Win64_Debug)
 LIBS += msvcrtd ucrtd vcruntimed msvcprtd
 else
 LIBS += msvcrt ucrt vcruntime msvcprt
+endif
+
+ifeq ($(PLATFORM), Web)
+CC = emcc
+CXX = emcc
+LD = emcc
+CPPFLAGS += \
+	-Wno-unknown-pragmas
+DEFINES += \
+	YAE_PLATFORM_WEB
 endif
 
 

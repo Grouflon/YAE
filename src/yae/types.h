@@ -1,6 +1,6 @@
 #pragma once
 
-// Int Types
+// BASE TYPES
 #include <stdint.h>
 
 typedef int8_t		i8;
@@ -13,11 +13,19 @@ typedef uint16_t	u16;
 typedef uint32_t	u32;
 typedef uint64_t	u64;
 
+// BUILD DEFINES
 #ifndef YAE_DEBUG
 #define YAE_DEBUG 0
 #endif
 #ifndef YAE_RELEASE
 #define YAE_RELEASE 0
+#endif
+
+#ifndef YAE_PLATFORM_WINDOWS
+#define YAE_PLATFORM_WINDOWS 0
+#endif
+#ifndef YAE_PLATFORM_WEB
+#define YAE_PLATFORM_WEB 0
 #endif
 
 // DLL EXPORT
@@ -44,6 +52,9 @@ typedef uint64_t	u64;
 #ifdef _MSC_VER
 #include <intrin.h>
 #define YAE_DEBUG_BREAK __debugbreak()
+#elif YAE_PLATFORM_WEB
+#include <cassert>
+#define YAE_DEBUG_BREAK assert(false)
 #else
 #define YAE_DEBUG_BREAK raise(SIGTRAP)
 #endif
@@ -56,16 +67,14 @@ typedef uint64_t	u64;
 #endif
 #endif
 
-#include <yae/logging.h>
-
-// ASSERTS
+// ASSERTS (should not depend on any engine construct)
 #if YAE_ASSERT_ENABLED
-#define YAE_ASSERT(_cond)					if (!(_cond)) { YAE_ERROR(#_cond);             YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { YAE_ERROR(_msg);               YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { YAE_ERRORF(_fmt, __VA_ARGS__); YAE_DEBUG_BREAK; }
-#define YAE_VERIFY(_cond) 					if (!(_cond)) { YAE_ERROR(#_cond);             YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { YAE_ERROR(_msg);               YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { YAE_ERRORF(_fmt, __VA_ARGS__); YAE_DEBUG_BREAK; }
+#define YAE_ASSERT(_cond)					if (!(_cond)) { printf("%s", #_cond);       YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { printf("%s", _msg);         YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { printf(_fmt, __VA_ARGS__);  YAE_DEBUG_BREAK; }
+#define YAE_VERIFY(_cond) 					if (!(_cond)) { printf("%s", #_cond);       YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { printf("%s", _msg);         YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { printf(_fmt, __VA_ARGS__);  YAE_DEBUG_BREAK; }
 #else
 #define YAE_ASSERT(cond)
 #define YAE_ASSERT_MSG(_cond, _msg)
@@ -83,7 +92,7 @@ constexpr size_t countof(const T(&)[N])
 }
 
 
-// Global getters
+// FORWARD DECLARATIONS & GLOBAL GETTERS
 namespace yae {
 
 class Allocator;
@@ -108,5 +117,7 @@ YAELIB_API VulkanRenderer& renderer();
 
 } // namespace yae
 
+// BASE INCLUDES
 #include <yae/string.h>
+#include <yae/logging.h>
 #include <yae/profiling.h>

@@ -52,6 +52,14 @@
 					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Release;Platform=Win64",
 				},*/
 				{
+					"name" : "compile Web_Debug",
+					"cmd" : "make PLATFORM=Web CONFIG=Debug application"
+				},
+				{
+					"name" : "clean Web_Debug",
+					"shell_cmd" : "make PLATFORM=Web CONFIG=Debug clean"
+				},
+				{
 					"name" : "clean",
 					"shell_cmd" : "make PLATFORM=Win64 CONFIG=Debug clean && make PLATFORM=Win64 CONFIG=DebugOptimized clean && make PLATFORM=Win64 CONFIG=Release clean"
 				},
