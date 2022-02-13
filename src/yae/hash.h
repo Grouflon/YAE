@@ -11,8 +11,8 @@
 #include <yae/types.h>
 
 #if DEBUG_STRINGHASH
-#include <unordered_map>
-#include <string.h>
+#include <yae/containers/HashMap.h>
+#include <yae/string.h>
 #endif
 
 
@@ -46,13 +46,18 @@ private:
 
 
 #if DEBUG_STRINGHASH
+// @NOTE: Maybe this whole thing should be part of the program and be idle until the program is not initialized.
+// Static initialization does not fit with the engine philosophy (allocators are not ready at static init time)
+
 class StringHashRepository
 {
 public:
+	StringHashRepository();
 	const char* registerStringHash(u32 _hash, const char* _string);
+	void clear();
 
 private:
-	std::unordered_map<u32, std::string> m_stringMap;
+	HashMap<u32, MallocString> m_stringMap;
 };
 
 extern StringHashRepository g_stringHashRepository;
@@ -67,9 +72,3 @@ YAELIB_API u32 hashString(const char* _str);
 } // namespace hash
 
 } // namespace yae
-
-#if DEBUG_STRINGHASH
-namespace std {
-template <> struct YAELIB_API hash<yae::StringHash> { size_t operator()(const yae::StringHash& value) const; };
-} // namespace std
-#endif

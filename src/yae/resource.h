@@ -103,6 +103,12 @@ private:
 };
 
 template <typename T, typename ...Args>
+struct ResourceIDGetter
+{
+	static ResourceID GetId(Args... _args) { return UNDEFINED_RESOURCEID; }
+};
+
+template <typename T, typename ...Args>
 T* findOrCreateResource(Args... _args)
 {
 	ResourceManager& manager = resourceManager();
@@ -130,12 +136,6 @@ T* reloadResource(Args... _args)
 	}
 	return resource;
 }
-
-template <typename T, typename ...Args>
-struct ResourceIDGetter
-{
-	static ResourceID GetId(Args... _args) { return UNDEFINED_RESOURCEID; }
-};
 
 
 }

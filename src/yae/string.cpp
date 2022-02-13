@@ -38,9 +38,9 @@ String::String(const char* _str, Allocator* _allocator)
 }
 
 
-
+// @NOTE: not sure if replicating the allocator is the right thing to do, but it does solve issues with there are intermediate copies made. If it does the logic should be extended to containers
 String::String(const String& _str, Allocator* _allocator)
-	: String(_str.c_str(), _allocator)
+	: String(_str.c_str(), _allocator != nullptr ? _allocator : _str.m_allocator)
 {
 
 }
@@ -115,6 +115,21 @@ void String::clear()
 	}
 }
 
+
+void String::shrink()
+{
+	// @WARNING: NOT TESTED
+	if (m_length == 0 && m_bufferSize > 0)
+	{
+		m_allocator->deallocate(m_buffer);
+		m_buffer = const_cast<char*>(EMPTY_STRING);
+		m_bufferSize = 0;
+	}
+	else if (m_length > 0)
+	{
+		m_buffer = m_allocator->reallocate(m_buffer, m_length + 1);
+	}
+}
 
 
 size_t String::find(const char* _str, size_t _startPosition) const
@@ -278,8 +293,9 @@ bool String::operator==(const String& _str) const
 	return strcmp(_str.m_buffer, m_buffer) == 0;
 }
 
-MallocAllocator s_mallocAllocator;
-MallocString::MallocString() : String(&s_mallocAllocator) {}
+MallocString::MallocString() : String(&mallocAllocator()) {}
+MallocString::MallocString(const char* _str) : String(_str, &mallocAllocator()) {}
+MallocString::MallocString(const String& _str) : String(_str, &mallocAllocator()) {}
 
 
 namespace string {

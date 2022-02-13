@@ -85,22 +85,32 @@ u32 StringHash::operator%(u32 _rhs) const
 
 
 #if DEBUG_STRINGHASH
+StringHashRepository::StringHashRepository()
+	: m_stringMap(&mallocAllocator())
+{
+
+}
+
 const char* StringHashRepository::registerStringHash(u32 _hash, const char* _string)
 {
-	auto it = m_stringMap.find(_hash);
-	if (it == m_stringMap.end())
+	MallocString* stringPtr = m_stringMap.get(_hash);
+	if (stringPtr == nullptr)
 	{
-		auto ret = m_stringMap.insert(std::pair<u32, std::string>(_hash, _string));
-		YAE_ASSERT(ret.second);
-		return ret.first->second.c_str();
+		MallocString& string = m_stringMap.set(_hash, _string);
+		return string.c_str();
 	}
 	else
 	{
-		YAE_ASSERT(strcmp(_string, it->second.c_str()) == 0); // Hash collision !
-		return it->second.c_str();
+		YAE_ASSERT(strcmp(_string, stringPtr->c_str()) == 0); // Hash collision !
+		return stringPtr->c_str();
 	}
 }
 
+void StringHashRepository::clear()
+{
+	m_stringMap.clear();
+	m_stringMap.shrink();
+}
 
 
 StringHashRepository g_stringHashRepository;
@@ -142,16 +152,3 @@ u32 hashString(const char* _str)
 } // namespace hash
 
 } // namespace yae
-
-
-
-#if DEBUG_STRINGHASH
-namespace std {
-
-size_t hash<yae::StringHash>::operator()(const yae::StringHash& value) const
-{
-	return value.getHash();
-}
-
-} // namespace std
-#endif

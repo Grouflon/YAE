@@ -21,7 +21,7 @@ public:
 		T value;
 	};
 
-	HashMap(Allocator* _allocator);
+	HashMap(Allocator* _allocator = nullptr);
 
 	bool has(Key _key) const;
 	const T* get(Key _key) const;
@@ -33,6 +33,7 @@ public:
 
 	void reserve(u32 _size);
 	void clear();
+	void shrink();
 
 	const Entry* begin() const;
 	const Entry* end() const;

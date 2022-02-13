@@ -28,6 +28,7 @@ public:
 	void reserve(size_t _size);
 	void resize(size_t _size, char _c = ' ');
 	void clear();
+	void shrink();
 
 	size_t find(const char* _str, size_t _startPosition = 0) const;
 	String& replace(const char* _toReplace, const char* _replacement);
@@ -60,8 +61,8 @@ class YAELIB_API MallocString : public String
 {
 public:
 	MallocString();
-	/*MallocString(const char* _str);
-	MallocString(const String& _str);*/
+	MallocString(const char* _str);
+	MallocString(const String& _str);
 };
 
 

@@ -145,7 +145,7 @@ public:
 		u8* start = (u8*)memory::alignForward(m_buffer + m_cursor, _align);
 		u8* bufferEnd = m_buffer + BUFFER_SIZE;
 		size_t availableSize = bufferEnd - start;
-		YAE_ASSERT_MSGF(availableSize >= _size, "Out of memory: %d available, %d requested", availableSize, _size);
+		YAE_ASSERT_MSGF(availableSize >= _size, "Out of memory: %zu available, %zu requested", availableSize, _size);
 		m_cursor = (start + _size) - m_buffer;
 		return start;
 	}

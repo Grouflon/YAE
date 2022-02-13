@@ -62,6 +62,7 @@ public:
 	void resize(u32 _newSize);
 	void resize(u32 _newSize, const T& _initValue);
 	void clear();
+	void shrink();
 	T& push_back(const T& _item);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
@@ -86,6 +87,7 @@ public:
 
 	void resize(u32 _newSize, const T& _initValue = T());
 	void clear();
+	void shrink();
 	T& push_back(const T& _item);
 	void pop_back();
 	void erase(u32 _index, u32 _count);

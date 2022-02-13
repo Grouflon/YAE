@@ -90,6 +90,15 @@ void HashMap<Key, T>::clear()
 
 
 template<typename Key, typename T>
+void HashMap<Key, T>::shrink()
+{
+	m_hash.shrink();
+	m_data.shrink();
+}
+
+
+
+template<typename Key, typename T>
 const typename HashMap<Key, T>::Entry* HashMap<Key, T>::begin() const
 {
 	return m_data.begin();

@@ -207,6 +207,13 @@ void DataArray<T>::clear()
 
 
 template <typename T>
+void DataArray<T>::shrink()
+{
+	_setCapacity(this->m_size);
+}
+
+
+template <typename T>
 T& DataArray<T>::push_back(const T& _item)
 {
 	resize(this->m_size + 1);
@@ -359,6 +366,13 @@ void Array<T>::clear()
 		this->m_data[i].~T();
 	}
 	this->m_size = 0;
+}
+
+
+template <typename T>
+void Array<T>::shrink()
+{
+	_setCapacity(this->m_size);
 }
 
 

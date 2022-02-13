@@ -8,6 +8,7 @@
 #include <yae/input.h>
 #include <yae/profiler.h>
 #include <yae/logger.h>
+#include <yae/hash.h>
 #include <yae/vulkan/VulkanRenderer.h>
 
 #include <shaderc/shaderc.h>
@@ -149,6 +150,10 @@ void Program::shutdown()
 
 	m_defaultAllocator->destroy(m_logger);
 	m_logger = nullptr;
+
+#if DEBUG_STRINGHASH
+	g_stringHashRepository.clear();
+#endif
 
 	m_defaultAllocator = nullptr;
 	m_scratchAllocator = nullptr;
