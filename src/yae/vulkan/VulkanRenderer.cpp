@@ -216,13 +216,13 @@ bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
 	{
 		vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT");
 		if (vkCreateDebugUtilsMessengerEXT == nullptr) {
-			YAE_ERRORF_CAT("vulkan", "Can't get \"vkCreateDebugUtilsMessengerEXT\". An extension is probably missing");
+			YAE_ERROR_CAT("vulkan", "Can't get \"vkCreateDebugUtilsMessengerEXT\". An extension is probably missing");
 			return false;
 		}
 
 		vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
 		if (vkDestroyDebugUtilsMessengerEXT == nullptr) {
-			YAE_ERRORF_CAT("vulkan", "Can't get \"vkDestroyDebugUtilsMessengerEXT\". An extension is probably missing");
+			YAE_ERROR_CAT("vulkan", "Can't get \"vkDestroyDebugUtilsMessengerEXT\". An extension is probably missing");
 			return false;
 		}
 	}

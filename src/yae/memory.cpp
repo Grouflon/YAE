@@ -222,7 +222,7 @@ void* FixedSizeAllocator::reallocate(void* _memory, size_t _size, u8 _align)
 			// @NOTE: this is not an actual realloc, but it will do for now	
 			size_t size = block->size - size_t((u8*)(dataStart) - (u8*)(data));
 			void* newMemory = allocate(_size, _align);
-			memcpy(newMemory, _memory, min(size, _size));
+			memcpy(newMemory, _memory, min(u64(size), u64(_size)));
 			deallocate(_memory);
 			return newMemory;
 		}
@@ -370,7 +370,7 @@ void* MallocAllocator::reallocate(void* _memory, size_t _size, u8 _align)
 
 	Header* previousBlock = _getHeader(_memory);
 	size_t previousBlockDataSize = _getDataSize(previousBlock);
-	memcpy(newMemory, _memory, min(previousBlockDataSize, _size));
+	memcpy(newMemory, _memory, min(u64(previousBlockDataSize), u64(_size)));
 
 	deallocate(_memory);
 
