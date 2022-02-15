@@ -152,7 +152,7 @@ void Program::shutdown()
 	m_logger = nullptr;
 
 #if DEBUG_STRINGHASH
-	g_stringHashRepository.clear();
+	clearStringHashRepository();
 #endif
 
 	m_defaultAllocator = nullptr;

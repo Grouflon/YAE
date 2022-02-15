@@ -61,6 +61,7 @@ private:
 };
 
 extern StringHashRepository g_stringHashRepository;
+void clearStringHashRepository();
 #endif
 
 

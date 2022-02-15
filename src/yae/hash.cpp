@@ -114,6 +114,11 @@ void StringHashRepository::clear()
 
 
 StringHashRepository g_stringHashRepository;
+
+void clearStringHashRepository()
+{
+	g_stringHashRepository.clear();
+}
 #endif
 
 
