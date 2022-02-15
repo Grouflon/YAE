@@ -212,6 +212,7 @@ bool Application::doFrame()
     	showAllocatorInfo("Default", defaultAllocator());
     	showAllocatorInfo("Scratch", scratchAllocator());
     	showAllocatorInfo("Tool", toolAllocator());
+    	showAllocatorInfo("Malloc", mallocAllocator());
     	ImGui::End();
     }
 
