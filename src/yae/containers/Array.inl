@@ -470,6 +470,7 @@ void Array<T>::_setCapacity(u32 _newCapacity)
 		{
 			new (newData + i) T();
 			newData[i] = this->m_data[i];
+			this->m_data[i].~T();
 		}
 	}
 	this->m_allocator->deallocate(this->m_data);
