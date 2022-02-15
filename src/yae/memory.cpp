@@ -7,11 +7,6 @@
 
 #define YAE_ALLOCATION_CALLSTACK_CAPTURE 1
 
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-#include <yae/callstack.h>
-#include <yae/containers/HashMap.h>
-#endif
-
 #if YAE_DEBUG
 #define YAE_INITIALIZE_MEMORY 1
 #define YAE_CHECK_MEMORY 1
@@ -20,9 +15,11 @@
 #define YAE_CHECK_MEMORY 0
 #endif
 
-namespace yae {
-
 #if YAE_ALLOCATION_CALLSTACK_CAPTURE
+#include <yae/callstack.h>
+#include <yae/containers/HashMap.h>
+
+namespace yae {
 
 class CallStackAllocator : public Allocator
 {
@@ -36,6 +33,7 @@ static CallStackAllocator s_callstackAllocator;
 
 struct AllocationCallStack
 {
+	size_t size;
 	StackFrame frames[32];
 	u16 frameCount;
 };
@@ -48,7 +46,41 @@ HashMap<size_t, AllocationCallStack>& allocationCaptures()
 	}
 	return *s_allocationCaptures;
 }
+
+} // namespace yae
+
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_PRINT(_allocator)\
+	if (_allocator->getAllocationCount() > 0)\
+	{\
+		printf("%zu Memory Leaks:\n", _allocator->getAllocationCount());\
+		for(auto entry : allocationCaptures())\
+		{\
+			printf("address: 0x%p (%zu bytes)\n", (void*)entry.key, entry.value.size);\
+			callstack::print(entry.value.frames, entry.value.frameCount);\
+			printf("\n");\
+		}\
+	}
+
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_IN(_memory, _size)\
+	{\
+		AllocationCallStack capture;\
+		capture.size = _size;\
+		capture.frameCount = callstack::capture(capture.frames, 32);\
+		allocationCaptures().set(size_t(_memory), capture);\
+	}
+
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_OUT(_memory)\
+	{\
+		allocationCaptures().remove(size_t(_memory));\
+	}
+
+#else
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_PRINT(_allocator)
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_IN(_memory, _size)
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE_OUT(_memory)
 #endif
+
+namespace yae {
 
 const u8 HEADER_PAD_VALUE = 0xFAu;
 
@@ -74,17 +106,8 @@ FixedSizeAllocator::FixedSizeAllocator(size_t _size)
 
 FixedSizeAllocator::~FixedSizeAllocator()
 {
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-	if (m_allocationCount > 0)
-	{
-		printf("%zu Memory Leaks:\n", m_allocationCount);
-		for(auto entry : allocationCaptures())
-		{
-			callstack::print(entry.value.frames, entry.value.frameCount);
-			printf("\n");
-		}
-	}
-#endif
+	YAE_ALLOCATION_CALLSTACK_CAPTURE_PRINT(this);
+
 	YAE_ASSERT_MSGF(m_allocationCount == 0, "Allocations count == %zu, memory leak detected", m_allocationCount);
 	free(m_memory);
 }
@@ -178,13 +201,7 @@ void* FixedSizeAllocator::allocate(size_t _size, u8 _align)
 	check();
 #endif
 
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-	{
-		AllocationCallStack capture;
-		capture.frameCount = callstack::capture(capture.frames, 32);
-		allocationCaptures().set(size_t(dataStart), capture);
-	}
-#endif
+	YAE_ALLOCATION_CALLSTACK_CAPTURE_IN(dataStart, _size);
 
 	return dataStart;
 }
@@ -240,11 +257,7 @@ void FixedSizeAllocator::deallocate(void* _memory)
 			check();
 #endif
 
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-			{
-				allocationCaptures().remove(size_t(dataStart));
-			}
-#endif
+			YAE_ALLOCATION_CALLSTACK_CAPTURE_OUT(_memory);
 
 			return;
 		}
@@ -311,17 +324,8 @@ MallocAllocator::MallocAllocator() : Allocator()
 
 MallocAllocator::~MallocAllocator()
 {
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-	if (m_allocationCount > 0)
-	{
-		printf("%zu Memory Leaks:\n", m_allocationCount);
-		for(auto entry : allocationCaptures())
-		{
-			callstack::print(entry.value.frames, entry.value.frameCount);
-			printf("\n");
-		}
-	}
-#endif
+	YAE_ALLOCATION_CALLSTACK_CAPTURE_PRINT(this);
+
 	YAE_ASSERT_MSGF(m_allocationCount == 0, "Allocations count == %zu, memory leak detected", m_allocationCount);
 }
 
@@ -348,13 +352,7 @@ void* MallocAllocator::allocate(size_t _size, u8 _align)
 	++m_allocationCount;
 	m_allocatedSize += blockSize;
 
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-	{
-		AllocationCallStack capture;
-		capture.frameCount = callstack::capture(capture.frames, 32);
-		allocationCaptures().set(size_t(dataStart), capture);
-	}
-#endif
+	YAE_ALLOCATION_CALLSTACK_CAPTURE_IN(dataStart, _size);
 
 	return dataStart;
 }
@@ -399,11 +397,7 @@ void MallocAllocator::deallocate(void* _memory)
 	--m_allocationCount;
 	m_allocatedSize -= blockSize;
 
-#if YAE_ALLOCATION_CALLSTACK_CAPTURE
-			{
-				allocationCaptures().remove(size_t(_getDataStart(block)));
-			}
-#endif
+	YAE_ALLOCATION_CALLSTACK_CAPTURE_OUT(_memory);
 }
 
 

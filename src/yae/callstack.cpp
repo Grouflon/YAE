@@ -17,7 +17,7 @@ void print(StackFrame* _frames, u16 _frameCount)
 	//@NOTE: the first index is always the capture function, so we skip it
 	for (u16 i = 1; i < _frameCount; ++i)
 	{
-		printf("%02d -> %s (ip:%p)\n", i - 1, _frames[i].name, _frames[i].instructionPointer);
+		printf("%02d -> %s (ip:0x%p)\n", i - 1, _frames[i].name, _frames[i].instructionPointer);
 	}
 }
 

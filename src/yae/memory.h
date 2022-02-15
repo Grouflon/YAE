@@ -53,7 +53,6 @@ public:
 };
 
 
-
 class YAELIB_API FixedSizeAllocator : public Allocator
 {
 public:
@@ -126,6 +125,7 @@ private:
 	size_t m_allocationCount = 0;
 	size_t m_allocatedSize = 0;
 };
+
 
 template <size_t BUFFER_SIZE>
 class InlineAllocator : public Allocator
