@@ -57,6 +57,11 @@ DEFINES := \
 
 LIBS :=
 
+# ======================
+# CUSTOM RULES
+# ======================
+# CONFIG
+# =============
 ifeq ($(CONFIG), Debug)
 CPPFLAGS += -g -O0
 LDFLAGS += -g -O0
@@ -81,6 +86,9 @@ DEFINES += \
 	YAE_RELEASE
 endif
 
+# =============
+# WINDOWS
+# =============
 ifeq ($(PLATFORM), Win64)
 LIBS += user32 kernel32 gdi32 imm32 shell32
 DEFINES += \
@@ -93,6 +101,9 @@ else
 LIBS += msvcrt ucrt vcruntime msvcprt
 endif
 
+# =============
+# WEB
+# =============
 ifeq ($(PLATFORM), Web)
 CC = emcc
 CXX = emcc

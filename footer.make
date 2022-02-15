@@ -2,9 +2,6 @@ OBJS += $(patsubst %,$(OBJDIR)/%.o,$(basename $(SRCS))) # object files, auto gen
 DEPS += $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS))) # dependency files, auto generated from source files
 
 # compilers (at least gcc and clang) don't create the subdirectories automatically
-OBJ_DIRS := $(subst /,\,$(dir $(OBJS)))
-DEP_DIRS := $(subst /,\,$(dir $(DEPS)))
-
 # create target directory if not exists
 CREATE_TARGET_DIRECTORY = @if not exist $(subst /,\,$(@D)) ( mkdir $(subst /,\,$(@D)) )
 # compile C source files
@@ -65,5 +62,7 @@ $(OBJDIR)/%.o: %.cxx $(DEPDIR)/%.d
 	$(POSTCOMPILE)
 
 .PRECIOUS: $(DEPDIR)/%.d
-$(DEPDIR)/%.d:
+$(DEPDIR)/%.d: ;
 	$(CREATE_TARGET_DIRECTORY)
+
+-include $(DEPS)
