@@ -127,7 +127,7 @@ void String::shrink()
 	}
 	else if (m_length > 0)
 	{
-		m_buffer = m_allocator->reallocate(m_buffer, m_length + 1);
+		m_buffer = (char*)m_allocator->reallocate(m_buffer, m_length + 1);
 	}
 }
 
