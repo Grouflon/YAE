@@ -13,7 +13,7 @@ const char* EMPTY_STRING = "";
 const size_t String::INVALID_POS = size_t(-1);
 
 String::String(Allocator* _allocator)
-	: m_buffer(const_cast<char*>(EMPTY_STRING))
+	: m_buffer(nullptr)
 	, m_allocator(_allocator)
 {
 	if (m_allocator == nullptr)
@@ -28,10 +28,10 @@ String::String(Allocator* _allocator)
 String::String(const char* _str, Allocator* _allocator)
 	:String(_allocator)
 {
-	if (_str == EMPTY_STRING)
+	size_t len = strlen(_str);
+	if (len == 0)
 		return;
 
-	size_t len = strlen(_str);
 	reserve(len);
 	memcpy(m_buffer, _str, len + 1);
 	m_length = len;
@@ -49,9 +49,10 @@ String::String(const String& _str, Allocator* _allocator)
 
 String::~String()
 {
-	if (m_buffer != EMPTY_STRING)
+	if (m_buffer != nullptr)
 	{
-		m_allocator->deallocate(m_buffer);		
+		m_allocator->deallocate(m_buffer);	
+		m_buffer = nullptr;	
 	}
 }
 
@@ -69,6 +70,13 @@ String::String(String&& _str)
 
 
 
+const char* String::c_str() const
+{
+	return m_buffer != nullptr ? m_buffer : EMPTY_STRING;
+}
+
+
+
 void String::reserve(size_t _size)
 {
 	size_t sizeRequired = _size + 1;
@@ -76,10 +84,12 @@ void String::reserve(size_t _size)
 	{
 		void* buffer = m_allocator->allocate(sizeRequired);
 		memcpy(buffer, m_buffer, m_bufferSize);
-		if (m_buffer != EMPTY_STRING)
+		if (m_buffer != nullptr)
 		{
 			m_allocator->deallocate(m_buffer);
+			m_buffer = nullptr;
 		}
+		YAE_ASSERT(m_buffer == nullptr);
 		m_buffer = (char*)buffer;
 		m_bufferSize = sizeRequired;
 		YAE_ASSERT_MSG(m_buffer != nullptr, "Allocation failed");
@@ -108,7 +118,7 @@ void String::resize(size_t _size, char _c)
 
 void String::clear()
 {
-	if (m_buffer != EMPTY_STRING)
+	if (m_buffer != nullptr)
 	{
 		m_length = 0;
 		m_buffer[m_length] = 0;
@@ -119,10 +129,10 @@ void String::clear()
 void String::shrink()
 {
 	// @WARNING: NOT TESTED
-	if (m_length == 0 && m_bufferSize > 0)
+	if (m_length == 0 && m_buffer != nullptr)
 	{
 		m_allocator->deallocate(m_buffer);
-		m_buffer = const_cast<char*>(EMPTY_STRING);
+		m_buffer = nullptr;
 		m_bufferSize = 0;
 	}
 	else if (m_length > 0)
@@ -134,7 +144,7 @@ void String::shrink()
 
 size_t String::find(const char* _str, size_t _startPosition) const
 {
-	if (m_buffer == EMPTY_STRING || _str == nullptr)
+	if (m_buffer == nullptr || _str == nullptr)
 		return INVALID_POS;
 
 	if (_startPosition >= m_length)
@@ -181,6 +191,9 @@ String String::slice(size_t _startPosition, size_t _count) const
 
 String& String::replace(size_t _position, size_t _count, const char* _replacement)
 {
+	if (m_length == 0)
+		return *this;
+
 	size_t baseLength = m_length;
 	size_t count = std::min(baseLength - _position, _count);
 	size_t replacementLen = strlen(_replacement);
@@ -204,7 +217,7 @@ String& String::operator=(const char* _str)
 String& String::operator=(const String& _str)
 {
 	reserve(_str.m_length);
-	memcpy(m_buffer, _str.m_buffer, _str.m_length + 1);
+	memcpy(m_buffer, _str.c_str(), _str.m_length + 1);
 	m_length = _str.m_length;
 	return *this;
 }
@@ -293,9 +306,20 @@ bool String::operator==(const String& _str) const
 	return strcmp(_str.m_buffer, m_buffer) == 0;
 }
 
-MallocString::MallocString() : String(&mallocAllocator()) {}
-MallocString::MallocString(const char* _str) : String(_str, &mallocAllocator()) {}
-MallocString::MallocString(const String& _str) : String(_str, &mallocAllocator()) {}
+MallocString::MallocString()
+	: String(&mallocAllocator())
+{
+}
+
+MallocString::MallocString(const char* _str)
+	: String(_str, &mallocAllocator())
+{
+}
+
+MallocString::MallocString(const String& _str)
+	: String(_str, &mallocAllocator())
+{
+}
 
 
 namespace string {

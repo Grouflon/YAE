@@ -21,7 +21,7 @@ public:
 	String(String&& _str);
 
 	size_t size() const { return m_length; }
-	const char* c_str() const { return m_buffer; }
+	const char* c_str() const;
 	char* data() { return m_buffer; }
 	Allocator* allocator() const { return m_allocator; }
 
