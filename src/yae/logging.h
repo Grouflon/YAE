@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 namespace yae {
 
 class Logger;
@@ -20,8 +22,21 @@ YAELIB_API void log(::yae::Logger& _logger, const char* _categoryName, yae::LogV
 template<typename ...Args>
 void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _verbosity, const char* _fmt, Args... _args)
 {
-	String msg = string::format(_fmt, _args...);
-	log(_logger, _categoryName, _verbosity, msg.c_str());
+	const int BUFFER_SIZE = 512;
+	int logSize = snprintf(nullptr, 0, _fmt, _args...);
+	if (logSize < BUFFER_SIZE)
+	{
+		char buffer[BUFFER_SIZE];
+		snprintf(buffer, BUFFER_SIZE, _fmt, _args...);
+		log(_logger, _categoryName, _verbosity, buffer);
+	}
+	else
+	{
+		char* buffer = (char*)malloc(logSize + 1);
+		snprintf(buffer, logSize + 1, _fmt, _args...);
+		log(_logger, _categoryName, _verbosity, buffer);
+		free(buffer);
+	}
 }
 
 } // namespace logging
