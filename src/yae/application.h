@@ -5,7 +5,6 @@
 #include <yae/time.h>
 
 struct GLFWwindow;
-struct ImGuiContext;
 
 namespace Im3d
 {
@@ -14,8 +13,9 @@ namespace Im3d
 
 namespace yae {
 
-class VulkanRenderer;
+class Renderer;
 class InputSystem;
+class ImGuiSystem;
 
 class YAELIB_API Application
 {
@@ -30,7 +30,7 @@ public:
 	void requestExit();
 
 	InputSystem& input() const;
-	VulkanRenderer& renderer() const;
+	Renderer& renderer() const;
 
 	Vector3 getCameraPosition() const { return m_cameraPosition; }
 	Quaternion getCameraRotation() const { return m_cameraRotation; }
@@ -52,10 +52,10 @@ private:
 	u32 m_height = 0;
 
 	InputSystem* m_inputSystem = nullptr;
-	VulkanRenderer* m_vulkanRenderer = nullptr;
+	ImGuiSystem* m_imGuiSystem = nullptr;
+	Renderer* m_renderer = nullptr;
 
 	GLFWwindow* m_window = nullptr;
-	ImGuiContext* m_imgui = nullptr;
 	Im3d::Context* m_im3d = nullptr;
 
 	Clock m_clock;

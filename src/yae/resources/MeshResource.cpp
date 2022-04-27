@@ -1,14 +1,12 @@
 #include "MeshResource.h"
 
 #include <yae/filesystem.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/Renderer.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
-#include <set>
 #include <vector>
-#include <unordered_map>
 
 namespace yae {
 
@@ -54,8 +52,8 @@ void MeshResource::_doLoad()
 	
 	{
 		YAE_CAPTURE_SCOPE("remove_duplicates");
-		std::unordered_map<Vertex, u32> uniqueVertices;
-
+		
+		yae::HashMap<u32, u32> uniqueVertices(&yae::mallocAllocator());
 		for (const auto& shape : shapes)
 		{
 			for (const auto& index : shape.mesh.indices)
@@ -74,13 +72,14 @@ void MeshResource::_doLoad()
 
 				v.color = {1.f, 1.f, 1.f};
 
-				auto it = uniqueVertices.find(v);
-				if (it == uniqueVertices.end())
+				u32 vertexHash = hash::hash32(&v, sizeof(Vertex));
+				const u32* uniqueVertexIndexPtr = uniqueVertices.get(vertexHash);
+				if (uniqueVertexIndexPtr == nullptr)
 				{
-					it = uniqueVertices.insert(std::make_pair(v, u32(m_vertices.size()))).first;
+					uniqueVertexIndexPtr = &uniqueVertices.set(vertexHash, m_vertices.size());
 					m_vertices.push_back(v);
 				}
-				m_indices.push_back(it->second);
+				m_indices.push_back(*uniqueVertexIndexPtr);
 			}
 		}
 	}

@@ -1,9 +1,13 @@
 #pragma once
 
 #include <yae/types.h>
+
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+
 #include <yae/render_types.h>
 #include <yae/math_types.h>
 #include <yae/containers/Array.h>
+#include <yae/Renderer.h>
 
 typedef struct GLFWwindow GLFWwindow;
 struct ImDrawData;
@@ -15,50 +19,53 @@ struct im3d_FrameData;
 class VulkanSwapChain;
 class TextureResource;
 
-class YAELIB_API VulkanRenderer
+class YAELIB_API VulkanRenderer : public Renderer
 {
-public:
-	bool init(GLFWwindow* _window, bool _validationLayersEnabled = false);
-	void waitIdle();
-	void shutdown();
+	MIRROR_CLASS(VulkanRenderer)
+	(
+		MIRROR_PARENT(Renderer)
+	);
 
-	VkCommandBuffer beginFrame();
-  	void endFrame();
+public:
+	virtual void hintWindow() override;
+
+	virtual bool init(GLFWwindow* _window) override;
+	virtual void waitIdle() override;
+	virtual void shutdown() override;
+
+	virtual FrameHandle beginFrame() override;
+  	virtual void endFrame() override;
+
+	virtual Vector2 getFrameBufferSize() const override;
+	virtual void notifyFrameBufferResized(int _width, int _height) override;
+
+	virtual bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) override;
+	virtual void destroyTexture(TextureHandle& _inTextureHandle) override;
+
+	virtual bool createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle) override;
+	virtual void destroyMesh(MeshHandle& _inMeshHandle) override;
+
+	virtual bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle) override;
+	virtual void destroyShader(ShaderHandle& _shaderHandle) override;
+
+	virtual void drawCommands(FrameHandle _frameHandle) override;
+
+	virtual void drawMesh(const Matrix4& _transform, const MeshHandle& _meshHandle) override;
+
   	void beginSwapChainRenderPass(VkCommandBuffer _commandBuffer);
   	void endSwapChainRenderPass(VkCommandBuffer _commandBuffer);
-
-	void initImGui();
-	void shutdownImGui();
 
 	void initIm3d();
 	void reloadIm3dShaders();
 	void shutdownIm3d();
 
-	void drawImGui(ImDrawData* _drawData, VkCommandBuffer _commandBuffer);
 	void drawIm3d(VkCommandBuffer _commandBuffer);
 
-	void notifyFrameBufferResized(int _width, int _height);
-
-	bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle);
-	void destroyTexture(TextureHandle& _inTextureHandle);
-
-	bool createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle);
-	void destroyMesh(MeshHandle& _inMeshHandle);
-
-	bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle);
-	void destroyShader(ShaderHandle& _shaderHandle);
-
-	void setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj);
-	Vector2 getFrameBufferSize() const;
-
-	void drawMesh(const Matrix4& _transform, const MeshHandle& _meshHandle);
-
-	void drawCommands(VkCommandBuffer _commandBuffer);
 
 	static bool CheckDeviceExtensionSupport(VkPhysicalDevice _physicalDevice, const char* const* _extensionsList, size_t _extensionCount);
 	static bool HasStencilComponent(VkFormat _format);
 
-private:
+//private:
 	void _recreateSwapChain();
 	void _createCommandBuffers();
 	void _destroyCommandBuffers();
@@ -109,9 +116,6 @@ private:
 	bool m_validationLayersEnabled = false;
 	bool m_framebufferResized = false;
 
-	Matrix4 m_viewMatrix = Matrix4::IDENTITY;
-	Matrix4 m_projMatrix = Matrix4::IDENTITY;
-
 	struct DrawCommand
 	{
 		Matrix4 transform;
@@ -126,16 +130,4 @@ private:
 
 }
 
-#include <functional>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
-namespace std {
-	template<> struct hash<yae::Vertex> {
-		size_t operator()(yae::Vertex const& vertex) const {
-			return ((hash<glm::vec3>()(vertex.pos) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1);
-		}
-	};
-}
+#endif // YAE_IMPLEMENTS_RENDERER_VULKAN

@@ -1,0 +1,4 @@
+#include "OpenGLRenderer.h"
+
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+#endif // YAE_IMPLEMENTS_RENDERER_OPENGL

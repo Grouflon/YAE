@@ -1,8 +1,8 @@
 #include "im3d_impl_vulkan.h"
 
-#include <yae/vulkan/VulkanRenderer.h>
-#include <yae/vulkan/VulkanSwapChain.h>
-#include <yae/vulkan/vulkan.h>
+#include "VulkanRenderer.h"
+#include "VulkanSwapChain.h"
+#include "vulkan.h"
 #include <yae/resources/ShaderResource.h>
 
 #include <im3d/im3d.h>

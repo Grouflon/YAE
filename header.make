@@ -31,8 +31,7 @@ CXXFLAGS := -std=c++14
 # C/C++ flags
 CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension
 # linker flags
-LDFLAGS := -Xlinker /NODEFAULTLIB
-LDFLAGS += -Xlinker /ignore:4099 # Warning about missing pdbs for external libs, we don't care
+LDFLAGS := 
 # flags required for dependency generation; passed to compilers
 DEPFLAGS = -MT $@ -MD -MP -MF $(DEPDIR)/$*.Td
 
@@ -63,24 +62,24 @@ LIBS :=
 # CONFIG
 # =============
 ifeq ($(CONFIG), Debug)
-CPPFLAGS += -g -O0
-LDFLAGS += -g -O0
+CPPFLAGS += -O0
+LDFLAGS += -O0
 DEFINES += \
 	DEBUG \
 	_DEBUG \
 	YAE_DEBUG
 endif
 ifeq ($(CONFIG), DebugOptimized)
-CPPFLAGS += -g -O3
-LDFLAGS += -g -O3
+CPPFLAGS += -O3
+LDFLAGS += -O3
 DEFINES += \
 	NDEBUG \
 	YAE_DEBUG
 endif
 ifeq ($(CONFIG), Release)
-CPPFLAGS += -g -O3
+CPPFLAGS += -O3
 CPPFLAGS += -Wno-unused-comparison -Wno-unused-variable -Wno-unused-but-set-variable # happens a lot with deactivated asserts
-LDFLAGS += -g -O3
+LDFLAGS += -O3
 DEFINES += \
 	NDEBUG \
 	YAE_RELEASE
@@ -93,12 +92,17 @@ ifeq ($(PLATFORM), Win64)
 LIBS += user32 kernel32 gdi32 imm32 shell32
 DEFINES += \
 	YAE_PLATFORM_WINDOWS
-endif
 
-ifeq ($(TARGET), Win64_Debug)
+CPPFLAGS += -g #generate symbols
+LDFLAGS += -Xlinker /NODEFAULTLIB
+LDFLAGS += -Xlinker /ignore:4099 # Warning about missing pdbs for external libs, we don't care
+
+ifeq ($(CONFIG), Debug)
 LIBS += msvcrtd ucrtd vcruntimed msvcprtd
 else
 LIBS += msvcrt ucrt vcruntime msvcprt
+endif
+
 endif
 
 # =============
@@ -112,6 +116,8 @@ CPPFLAGS += \
 	-Wno-unknown-pragmas
 DEFINES += \
 	YAE_PLATFORM_WEB
+
+LDFLAGS += -s USE_GLFW=3
 endif
 
 

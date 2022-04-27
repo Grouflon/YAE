@@ -1,13 +1,14 @@
 #include "VulkanRenderer.h"
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+
+#include "vulkan.h"
+#include "VulkanSwapChain.h"
+#include "imgui_impl_vulkan.h"
+#include "im3d_impl_vulkan.h"
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/TextureResource.h>
-#include <yae/vulkan/vulkan.h>
-#include <yae/vulkan/VulkanSwapChain.h>
-#include <yae/vulkan/imgui_impl_vulkan.h>
-#include <yae/vulkan/im3d_impl_vulkan.h>
 #include <yae/math.h>
-
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <im3d.h>
@@ -18,8 +19,6 @@
 #include <vector>
 
 namespace yae {
-
-const int MAX_FRAMES_IN_FLIGHT = 2;
 
 struct UniformBufferObject
 {
@@ -68,12 +67,22 @@ static void PopulateDebugUtilsMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 	_createInfo.pUserData = nullptr; // Optional
 }
 
-bool VulkanRenderer::init(GLFWwindow* _window, bool _validationLayersEnabled)
+void VulkanRenderer::hintWindow()
+{
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Disable OpenGL context creation
+}
+
+bool VulkanRenderer::init(GLFWwindow* _window)
 {
 	YAE_CAPTURE_FUNCTION();
 
 	m_window = _window;
-	m_validationLayersEnabled = _validationLayersEnabled;
+
+#if YAE_DEBUG
+	m_validationLayersEnabled = true;
+#else
+	m_validationLayersEnabled = false;
+#endif
 
 	// Extensions
 	std::vector<const char*> extensions;
@@ -540,16 +549,16 @@ void VulkanRenderer::shutdown()
 	m_window = nullptr;
 }
 
-VkCommandBuffer VulkanRenderer::beginFrame()
+FrameHandle VulkanRenderer::beginFrame()
 {
 	YAE_ASSERT_MSG(m_currentFlightImageIndex == ~0u, "Can't call beginFrame while already in progress");
 
 	VkResult result = m_swapChain->acquireNextImage(&m_currentFlightImageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		shutdownImGui();
+		//shutdownImGui();
 		_recreateSwapChain();
-		initImGui();
+		//initImGui();
 		return nullptr;
 	}
 	YAE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
@@ -570,6 +579,9 @@ VkCommandBuffer VulkanRenderer::beginFrame()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	VK_VERIFY(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+
+	beginSwapChainRenderPass(commandBuffer);
+
 	return commandBuffer;
 }
 
@@ -578,15 +590,17 @@ void VulkanRenderer::endFrame()
 	YAE_ASSERT_MSG(m_currentFlightImageIndex != ~0u, "Can't call endFrame while frame is not in progress");
 	VkCommandBuffer commandBuffer = m_frameInfos[m_currentFrameIndex].commandBuffer;
 
+	endSwapChainRenderPass(commandBuffer);
+
 	VK_VERIFY(vkEndCommandBuffer(commandBuffer));
 
 	VkResult result = m_swapChain->submitCommandBuffers(&commandBuffer, 1, &m_currentFlightImageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
 	{
 		m_framebufferResized = false;
-		shutdownImGui();
+		//shutdownImGui();
 		_recreateSwapChain();
-		initImGui();
+		//initImGui();
 	}
 	else
 	{
@@ -646,12 +660,14 @@ void VulkanRenderer::drawMesh(const Matrix4& _transform, const MeshHandle& _mesh
 	m_drawCommands.push_back(command);
 }
 
-void VulkanRenderer::drawCommands(VkCommandBuffer _commandBuffer)
+void VulkanRenderer::drawCommands(FrameHandle _frameHandle)
 {
 	YAE_CAPTURE_FUNCTION();
 
+	VkCommandBuffer commandBuffer = (VkCommandBuffer) _frameHandle;
+
 	FrameInfo& frame = m_frameInfos[m_currentFrameIndex];
-	vkCmdBindPipeline(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
 	for (u32 i = 0; i < m_drawCommands.size(); ++i)
 	{
@@ -661,7 +677,7 @@ void VulkanRenderer::drawCommands(VkCommandBuffer _commandBuffer)
 		SimplePushConstantData push{};
 		push.model = command.transform;
 		vkCmdPushConstants(
-			_commandBuffer,
+			commandBuffer,
 			m_pipelineLayout,
 			VK_SHADER_STAGE_VERTEX_BIT,
 			0,
@@ -672,22 +688,14 @@ void VulkanRenderer::drawCommands(VkCommandBuffer _commandBuffer)
 		// Vertices
 		VkBuffer vertexBuffers[] = { command.mesh.vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(_commandBuffer, 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(_commandBuffer, command.mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(commandBuffer, command.mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdBindDescriptorSets(_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &frame.descriptorSet, 0, nullptr);
-		vkCmdDrawIndexed(_commandBuffer, u32(command.mesh.indicesCount), 1, 0, 0, 0);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &frame.descriptorSet, 0, nullptr);
+		vkCmdDrawIndexed(commandBuffer, u32(command.mesh.indicesCount), 1, 0, 0, 0);
 	}
 
 	m_drawCommands.clear();
-}
-
-
-void VulkanRenderer::drawImGui(ImDrawData* _drawData, VkCommandBuffer _commandBuffer)
-{
-	YAE_CAPTURE_FUNCTION();
-
-	ImGui_ImplVulkan_RenderDrawData(_drawData, _commandBuffer);
 }
 
 void VulkanRenderer::drawIm3d(VkCommandBuffer _commandBuffer)
@@ -918,14 +926,6 @@ void VulkanRenderer::destroyMesh(MeshHandle& _inMeshHandle)
 	_inMeshHandle.vertexMemory = VK_NULL_HANDLE;
 }
 
-
-void VulkanRenderer::setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj)
-{
-	m_viewMatrix = _view;
-	m_projMatrix = _proj;
-}
-
-
 Vector2 VulkanRenderer::getFrameBufferSize() const
 {
 	VkExtent2D extent = m_swapChain->getExtent();
@@ -937,53 +937,6 @@ void VulkanRenderer::waitIdle()
 	YAE_CAPTURE_FUNCTION();
 	
 	VK_VERIFY(vkDeviceWaitIdle(m_device));
-}
-
-void VulkanRenderer::initImGui()
-{
-	YAE_CAPTURE_FUNCTION();
-
-	YAE_ASSERT(m_window);
-
-	YAE_VERBOSE_CAT("imgui", "Initializing ImGui...");
-
-	ImGui_ImplVulkan_InitInfo initInfo{};
-	initInfo.Instance = m_instance;
-	initInfo.PhysicalDevice = m_physicalDevice;
-	initInfo.Device = m_device;
-	initInfo.QueueFamily = m_queueIndices.graphicsFamily;
-	initInfo.Queue = m_graphicsQueue;
-	initInfo.PipelineCache = VK_NULL_HANDLE;
-	initInfo.DescriptorPool = m_descriptorPool;
-	initInfo.Subpass = 0;
-	initInfo.MinImageCount = MAX_FRAMES_IN_FLIGHT;          // >= 2
-	initInfo.ImageCount = u32(m_swapChain->m_images.size());		// >= MinImageCount
-	initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;           // >= VK_SAMPLE_COUNT_1_BIT
-	initInfo.Allocator = nullptr;
-	initInfo.VmaAllocator = m_allocator;
-	initInfo.CheckVkResultFn = [](VkResult _err) { VK_VERIFY(_err); };
-
-	bool ret = ImGui_ImplVulkan_Init(&initInfo, m_swapChain->m_renderPass);
-	YAE_ASSERT(ret);
-
-	// Upload Fonts
-	{
-		// Use any command queue
-		VkCommandBuffer commandBuffer = vulkan::beginSingleTimeCommands(m_device, m_commandPool);
-		ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-		vulkan::endSingleTimeCommands(m_device, m_commandPool, m_graphicsQueue, commandBuffer);
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
-	}
-
-	YAE_VERBOSE_CAT("imgui", "Initialized ImGui");
-}
-
-void VulkanRenderer::shutdownImGui()
-{
-	YAE_CAPTURE_FUNCTION();
-
-	ImGui_ImplVulkan_Shutdown();
-	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 }
 
 void VulkanRenderer::initIm3d()
@@ -1465,3 +1418,5 @@ void VulkanRenderer::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _w
 }
 
 } // namespace yae
+
+#endif // YAE_IMPLEMENTS_RENDERER_VULKAN

@@ -9,7 +9,7 @@
 #include <yae/profiler.h>
 #include <yae/logger.h>
 #include <yae/hash.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/Renderer.h>
 
 #include <shaderc/shaderc.h>
 

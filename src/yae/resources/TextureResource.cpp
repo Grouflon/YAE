@@ -1,7 +1,7 @@
 #include "TextureResource.h"
 
 #include <yae/filesystem.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/Renderer.h>
 
 void* yae_stbi_malloc(size_t _sz)
 {

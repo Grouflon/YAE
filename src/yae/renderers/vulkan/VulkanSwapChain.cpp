@@ -1,6 +1,6 @@
 #include "VulkanSwapChain.h"
 
-#include <yae/vulkan/vulkan.h>
+#include "vulkan.h"
 #include <yae/math.h>
 
 namespace yae {

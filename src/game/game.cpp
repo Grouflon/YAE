@@ -8,7 +8,7 @@
 #include <yae/input.h>
 #include <yae/application.h>
 #include <yae/math.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/renderers/vulkan/VulkanRenderer.h>
 
 #include <im3d.h>
 
@@ -111,10 +111,10 @@ void updateGame(float _dt)
 	}
 
 	// RELOAD SHADERS
-	if (input().isCtrlDown() && input().wasKeyJustPressed(GLFW_KEY_Q))
+	/*if (input().isCtrlDown() && input().wasKeyJustPressed(GLFW_KEY_Q))
 	{
 		renderer().reloadIm3dShaders();
-	}
+	}*/
 
 	// MOVE CAMERA
 	bool fpsModeEnabled = input().isMouseButtonDown(1);
@@ -173,7 +173,7 @@ void updateGame(float _dt)
 	}
 
 
-	Im3d::EnableSorting(true);
+	/*Im3d::EnableSorting(true);
 	// Axis
     Im3d::SetSize(5.f);
     Im3d::BeginLines();
@@ -238,6 +238,7 @@ void updateGame(float _dt)
 	
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
+	*/
 
 	renderer().drawMesh(gameInstance->mesh1Transform, gameInstance->mesh->getMeshHandle());
 	renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());

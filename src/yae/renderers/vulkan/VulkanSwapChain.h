@@ -41,13 +41,6 @@ public:
 	void _destroyRenderPass();
 	void _destroyFrameBuffers();
 	void _destroySyncObjects();
-	
-	// Helper functions
-	/*VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-	const std::vector<VkSurfaceFormatKHR> &availableFormats);
-	VkPresentModeKHR chooseSwapPresentMode(
-	const std::vector<VkPresentModeKHR> &availablePresentModes);
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);*/
 
 	VkFormat m_imageFormat;
 	VkFormat m_depthFormat;

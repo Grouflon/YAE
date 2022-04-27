@@ -1,5 +1,7 @@
 #pragma once
 
+#include <yae/types.h>
+
 #ifndef DEBUG_STRINGHASH
 	#ifdef YAE_DEBUG
 		#define DEBUG_STRINGHASH 1
@@ -7,8 +9,6 @@
 		#define DEBUG_STRINGHASH 0
 	#endif
 #endif
-
-#include <yae/types.h>
 
 #if DEBUG_STRINGHASH
 #include <yae/containers/HashMap.h>

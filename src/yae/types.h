@@ -17,6 +17,7 @@ typedef uint64_t	u64;
 #ifndef YAE_DEBUG
 #define YAE_DEBUG 0
 #endif
+
 #ifndef YAE_RELEASE
 #define YAE_RELEASE 0
 #endif
@@ -24,8 +25,26 @@ typedef uint64_t	u64;
 #ifndef YAE_PLATFORM_WINDOWS
 #define YAE_PLATFORM_WINDOWS 0
 #endif
+
 #ifndef YAE_PLATFORM_WEB
 #define YAE_PLATFORM_WEB 0
+#endif
+
+// RENDERERS
+#ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
+	#if (YAE_PLATFORM_WINDOWS || YAE_PLATFORM_WEB)
+		#define YAE_IMPLEMENTS_RENDERER_OPENGL 1
+	#else
+		#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
+	#endif
+#endif
+
+#ifndef YAE_IMPLEMENTS_RENDERER_VULKAN
+	#if YAE_PLATFORM_WINDOWS
+		#define YAE_IMPLEMENTS_RENDERER_VULKAN 1
+	#else
+		#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
+	#endif
 #endif
 
 // DLL EXPORT
@@ -101,7 +120,7 @@ class Application;
 class ResourceManager;
 class Logger;
 class Profiler;
-class VulkanRenderer;
+class Renderer;
 class InputSystem;
 
 YAELIB_API Program& program();
@@ -113,7 +132,7 @@ YAELIB_API Profiler& profiler();
 YAELIB_API Logger& logger();
 YAELIB_API ResourceManager& resourceManager();
 YAELIB_API InputSystem& input();
-YAELIB_API VulkanRenderer& renderer();
+YAELIB_API Renderer& renderer();
 
 } // namespace yae
 

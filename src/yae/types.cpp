@@ -60,7 +60,7 @@ InputSystem& input()
 }
 
 
-VulkanRenderer& renderer()
+Renderer& renderer()
 {
 	return app().renderer();
 }

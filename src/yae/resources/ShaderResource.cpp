@@ -4,7 +4,7 @@
 #include <yae/platform.h>
 #include <yae/program.h>
 #include <yae/resources/FileResource.h>
-#include <yae/vulkan/VulkanRenderer.h>
+#include <yae/Renderer.h>
 
 #include <shaderc/shaderc.h>
 

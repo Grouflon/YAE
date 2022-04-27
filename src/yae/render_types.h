@@ -66,6 +66,8 @@ struct ShaderHandle
 	VkShaderModule shaderModule;
 };
 
+typedef void* FrameHandle;
+
 struct Vertex {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -75,5 +77,6 @@ struct Vertex {
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
 	}
 };
+
 
 } // namespace yae

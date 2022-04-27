@@ -3,16 +3,21 @@
 #include <yae/platform.h>
 #include <yae/program.h>
 #include <yae/time.h>
-#include <yae/vulkan/VulkanRenderer.h>
-#include <yae/vulkan/im3d_impl_vulkan.h>
 #include <yae/input.h>
 #include <yae/memory.h>
 #include <yae/math.h>
+#include <yae/ImGuiSystem.h>
+
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+#include <yae/renderers/vulkan/VulkanRenderer.h>
+#endif
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+#include <yae/renderers/opengl/OpenGLRenderer.h>
+#endif
 
 #include <GLFW/glfw3.h>
-#include <imgui/imgui.h>
 #include <im3d/im3d.h>
-#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/imgui.h>
 
 namespace yae {
 
@@ -38,9 +43,19 @@ void Application::init(char** _args, int _argCount)
 		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
 	}
 
+
+	// Init Renderer
+#if YAE_PLATFORM_WINDOWS
+	m_renderer = defaultAllocator().create<VulkanRenderer>();
+#elif YAE_PLATFORM_WEB
+	//m_renderer = defaultAllocator().create<OpenGLRenderer>();
+#endif
+
 	// Init Window
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Disable OpenGL context creation
+	glfwDefaultWindowHints();
+	m_renderer->hintWindow();
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
 	m_window = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
 	glfwSetWindowUserPointer(m_window, this);
 	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
@@ -55,36 +70,18 @@ void Application::init(char** _args, int _argCount)
 	m_inputSystem = defaultAllocator().create<InputSystem>();
 	m_inputSystem->init(m_window);
 
-	// Init Vulkan
-	m_vulkanRenderer = defaultAllocator().create<VulkanRenderer>();
-
-#if YAE_DEBUG
-	const bool enableValidationLayers = true;
-#else
-	const bool enableValidationLayers = false;
-#endif
-	m_vulkanRenderer->init(m_window, enableValidationLayers);
+	// Init renderer
+	m_renderer->init(m_window);
 
 	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	m_imgui = ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-	{
-		bool ret = ImGui_ImplGlfw_InitForVulkan(m_window, true);
-		YAE_ASSERT(ret);
-	}
+	m_imGuiSystem = defaultAllocator().create<ImGuiSystem>();
+	m_imGuiSystem->init(m_window, m_renderer);
 
 	// Setup Im3d
-	m_im3d = toolAllocator().create<Im3d::Context>();
+	/*m_im3d = toolAllocator().create<Im3d::Context>();
 	Im3d::SetContext(*m_im3d);
 
-	m_vulkanRenderer->initImGui();
-	m_vulkanRenderer->initIm3d();
+	m_renderer->initIm3d();*/
 
 	m_clock.reset();
 
@@ -105,6 +102,7 @@ bool Application::doFrame()
 	{
 		YAE_CAPTURE_SCOPE("beginFrame");
 
+		// This is weird that this is here, it should be just before rendering
 		Vector2 viewportSize = renderer().getFrameBufferSize();
 		float fov = 45.f * D2R;
 		float aspectRatio = viewportSize.x / viewportSize.y;
@@ -120,10 +118,10 @@ bool Application::doFrame()
 
 		//glfwPollEvents();
 		m_inputSystem->update();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
 
-		im3d_FrameData frameData;
+		m_imGuiSystem->newFrame();
+
+		/*im3d_FrameData frameData;
 		frameData.deltaTime = dt;
 		frameData.cursorPosition = input().getMousePosition();
 		frameData.viewportSize = viewportSize;
@@ -136,7 +134,7 @@ bool Application::doFrame()
 
 		frameData.actionKeyStates[Im3d::Action_Select] = input().isMouseButtonDown(0);
 
-		im3d_NewFrame(frameData);
+		im3d_NewFrame(frameData);*/
 	}
 
 	program().updateGame(dt);
@@ -219,32 +217,22 @@ bool Application::doFrame()
 	//ImGui::ShowDemoWindow(&s_showDemoWindow);
 
     // Rendering
-	VkCommandBuffer commandBuffer = m_vulkanRenderer->beginFrame();
-	m_vulkanRenderer->beginSwapChainRenderPass(commandBuffer);	
+	FrameHandle frameHandle = m_renderer->beginFrame();
 
     // Mesh
-    m_vulkanRenderer->drawCommands(commandBuffer);
+    m_renderer->drawCommands(frameHandle);
 
 	// Im3d
-	{
+	/*{
 		Im3d::EndFrame();
-		m_vulkanRenderer->drawIm3d(commandBuffer);
-	}
+		m_renderer->drawIm3d(commandBuffer);
+	}*/
 
 	// ImGui
-	{
-		ImGui::Render();
-		ImDrawData* imguiDrawData = ImGui::GetDrawData();
-		const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
-		if (!isMinimized)
-		{
-			m_vulkanRenderer->drawImGui(imguiDrawData, commandBuffer);
-		}	
-	}
+	m_imGuiSystem->render(frameHandle);
 
 	// End Frame
-	m_vulkanRenderer->endSwapChainRenderPass(commandBuffer);
-	m_vulkanRenderer->endFrame();
+	m_renderer->endFrame();
 
 	return true;
 }
@@ -255,23 +243,22 @@ void Application::shutdown()
 	
 	program().shutdownGame();
 
-	m_vulkanRenderer->shutdownIm3d();
-	m_vulkanRenderer->shutdownImGui();
+	/*m_renderer->shutdownIm3d();
 
 	// @NOTE: Can't unset context, since the setter uses a ref
 	toolAllocator().destroy(m_im3d);
-	m_im3d = nullptr;
+	m_im3d = nullptr;*/
 
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext(m_imgui);
-	m_imgui = nullptr;
+	m_imGuiSystem->shutdown();
+	defaultAllocator().destroy(m_imGuiSystem);
+	m_imGuiSystem = nullptr;
 
-	m_vulkanRenderer->shutdown();
-	defaultAllocator().destroy<VulkanRenderer>(m_vulkanRenderer);
-	m_vulkanRenderer = nullptr;
+	m_renderer->shutdown();
+	defaultAllocator().destroy(m_renderer);
+	m_renderer = nullptr;
 
 	m_inputSystem->shutdown();
-	defaultAllocator().destroy<InputSystem>(m_inputSystem);
+	defaultAllocator().destroy(m_inputSystem);
 	m_inputSystem = nullptr;
 
 	glfwDestroyWindow(m_window);
@@ -296,17 +283,17 @@ InputSystem& Application::input() const
 }
 
 
-VulkanRenderer& Application::renderer() const
+Renderer& Application::renderer() const
 {
-	YAE_ASSERT(m_vulkanRenderer != nullptr);
-	return *m_vulkanRenderer;
+	YAE_ASSERT(m_renderer != nullptr);
+	return *m_renderer;
 }
 
 
 void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
 {
 	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
-	application->m_vulkanRenderer->notifyFrameBufferResized(_width, _height);
+	application->m_renderer->notifyFrameBufferResized(_width, _height);
 }
 
 
