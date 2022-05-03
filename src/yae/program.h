@@ -4,6 +4,10 @@
 #include <yae/date.h>
 #include <yae/containers/Array.h>
 
+#ifndef STATIC_GAME_API
+#define STATIC_GAME_API 0
+#endif
+
 // shaderc forward declarations
 struct shaderc_compiler;
 

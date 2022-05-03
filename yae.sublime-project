@@ -53,7 +53,7 @@
 				},*/
 				{
 					"name" : "compile Web_Debug",
-					"cmd" : "make PLATFORM=Web CONFIG=Debug application"
+					"cmd" : "make PLATFORM=Web CONFIG=Debug monobuild"
 				},
 				{
 					"name" : "clean Web_Debug",
@@ -78,6 +78,10 @@
 				{
 					"name": "debug",
 					"shell_cmd": "start remedybg session.rdbg"
+				},
+				{
+					"name": "debug Web",
+					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/yae.html"
 				},
 				{
 					"name": "debug visual Debug",

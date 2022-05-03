@@ -8,7 +8,7 @@
 #include <yae/input.h>
 #include <yae/application.h>
 #include <yae/math.h>
-#include <yae/renderers/vulkan/VulkanRenderer.h>
+#include <yae/Renderer.h>
 
 #include <im3d.h>
 

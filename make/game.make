@@ -1,13 +1,10 @@
--include header.make
+-include make/header.make
 
 BIN = $(BINDIR)/game.dll
 
-CPPFLAGS += -Wno-unused-variable -Wno-unused-function
+-include make/game_common.make
+
 LDFLAGS += -shared
-
-SRCS += $(call rwildcard,src/game,*.cpp)
-
-INCLUDEDIRS +=
 
 LIBDIRS += \
   $(BINDIR)
@@ -21,4 +18,4 @@ DEFINES += \
   IMGUI_API=__declspec(dllimport) \
   _MT _DLL
 
--include footer.make
+-include make/footer.make

@@ -11,7 +11,13 @@
 #include <yae/hash.h>
 #include <yae/Renderer.h>
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <shaderc/shaderc.h>
+#endif
+
+#if STATIC_GAME_API == 1
+#include <game/game.h>
+#endif
 
 // anonymous functions
 
@@ -87,9 +93,12 @@ void Program::init(char** _args, int _argCount)
 
     // Setup directories
     filesystem::setWorkingDirectory(m_rootDirectory.c_str());
+
+#if STATIC_GAME_API == 0
 	filesystem::createDirectory(m_intermediateDirectory.c_str());
     filesystem::deletePath(m_hotReloadDirectory.c_str());
 	filesystem::createDirectory(m_hotReloadDirectory.c_str());
+#endif
 
 	YAE_LOGF("exe path: %s",  getExePath());
 	YAE_LOGF("bin directory: %s",  getBinDirectory());
@@ -101,6 +110,7 @@ void Program::init(char** _args, int _argCount)
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
 	// Shader compiler
 	// @NOTE: this will probably go in the Device part of the renderer at some point
 	{
@@ -109,7 +119,9 @@ void Program::init(char** _args, int _argCount)
 		m_shaderCompiler = shaderc_compiler_initialize();
 		YAE_ASSERT(m_shaderCompiler != nullptr);
 	}
+#endif
 
+#if STATIC_GAME_API == 0
 	// Prepare Game API for hot reload
 	if (m_hotReloadGameAPI)
 	{
@@ -119,6 +131,9 @@ void Program::init(char** _args, int _argCount)
 	{
 		_loadGameAPI(_getGameDLLPath().c_str());
 	}
+#else
+	_loadGameAPI(_getGameDLLPath().c_str());
+#endif
 
     /*
     logger.setCategoryVerbosity("glfw", yae::LogVerbosity_Verbose);
@@ -137,8 +152,10 @@ void Program::shutdown()
 
 	_unloadGameAPI();
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
 	shaderc_compiler_release(m_shaderCompiler);
 	m_shaderCompiler = nullptr;
+#endif
 
 	m_defaultAllocator->destroy(m_resourceManager);
 	m_resourceManager = nullptr;
@@ -187,7 +204,9 @@ void Program::run()
 		YAE_CAPTURE_START("frame");
 
     	shouldExit = true;
+#if STATIC_GAME_API == 0
     	bool shouldReloadGameAPI = false;
+#endif
     	for (Application* application : m_applications)
 		{
 			m_currentApplication = application;
@@ -195,13 +214,16 @@ void Program::run()
 			if (application->doFrame())
 				shouldExit = false;
 
+#if STATIC_GAME_API == 0
 			// Force DLL reload
 			if (application->input().isCtrlDown() && application->input().wasKeyJustPressed(GLFW_KEY_R))
 			{
 				shouldReloadGameAPI = true;
 			}
+#endif
 		}
 
+#if STATIC_GAME_API == 0
 		// Hot Reload Game API
 		if (m_hotReloadGameAPI)
 		{
@@ -217,6 +239,7 @@ void Program::run()
 				_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
 			}	
 		}
+#endif
 
 #if YAE_PROFILING_ENABLED
 		m_profiler->update();
@@ -348,9 +371,12 @@ void Program::initGame()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if STATIC_GAME_API == 1
+	::initGame();
+#else
 	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
-
 	m_gameAPI.gameInit();
+#endif
 }
 
 
@@ -358,9 +384,12 @@ void Program::updateGame(float _dt)
 {
 	YAE_CAPTURE_FUNCTION();
 
-	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
-
+#if STATIC_GAME_API == 1
+	::updateGame(_dt);
+#else
+	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr)
 	m_gameAPI.gameUpdate(_dt);
+#endif
 }
 
 
@@ -368,16 +397,21 @@ void Program::shutdownGame()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if STATIC_GAME_API == 1
+	::shutdownGame();
+#else
 	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
-
 	m_gameAPI.gameShutdown();
+#endif
 }
 
 
 void Program::_loadGameAPI(const char* _path)
 {
 	YAE_CAPTURE_FUNCTION();
-
+#if STATIC_GAME_API == 1
+	onLibraryLoaded();
+#else
 	m_gameAPI.libraryHandle = platform::loadDynamicLibrary(_path);
 	YAE_ASSERT(m_gameAPI.libraryHandle);
 
@@ -392,6 +426,7 @@ void Program::_loadGameAPI(const char* _path)
 	YAE_ASSERT(m_gameAPI.gameShutdown);
 
 	m_gameAPI.onLibraryLoaded();
+#endif
 
 	YAE_LOGF_CAT("game_module", "Loaded Game API from \"%s\"", _path);
 }
@@ -401,12 +436,16 @@ void Program::_unloadGameAPI()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if STATIC_GAME_API == 1
+	onLibraryUnloaded();
+#else
 	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
 	
 	m_gameAPI.onLibraryUnloaded();
 	
 	platform::unloadDynamicLibrary(m_gameAPI.libraryHandle);
 	m_gameAPI = {};
+#endif
 
 	YAE_LOG_CAT("game_module", "Unloaded Game API");
 }

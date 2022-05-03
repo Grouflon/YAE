@@ -30,6 +30,7 @@ CFLAGS := -std=c14
 CXXFLAGS := -std=c++14
 # C/C++ flags
 CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension
+CPPFLAGS += -g #generate symbols
 # linker flags
 LDFLAGS := 
 # flags required for dependency generation; passed to compilers
@@ -93,7 +94,6 @@ LIBS += user32 kernel32 gdi32 imm32 shell32
 DEFINES += \
 	YAE_PLATFORM_WINDOWS
 
-CPPFLAGS += -g #generate symbols
 LDFLAGS += -Xlinker /NODEFAULTLIB
 LDFLAGS += -Xlinker /ignore:4099 # Warning about missing pdbs for external libs, we don't care
 
@@ -113,11 +113,17 @@ CC = emcc
 CXX = emcc
 LD = emcc
 CPPFLAGS += \
-	-Wno-unknown-pragmas
+	-Wno-unknown-pragmas \
+
 DEFINES += \
 	YAE_PLATFORM_WEB
 
-LDFLAGS += -s USE_GLFW=3
+LDFLAGS += \
+	-s USE_GLFW=3 \
+	-gsource-map \
+	--source-map-base=http://localhost:6931/bin/Web_Debug/
+	# allow the web browser debugger to have c++ functions information 
+
 endif
 
 

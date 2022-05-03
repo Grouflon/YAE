@@ -10,7 +10,7 @@ PLATFORM := Win64
 CONFIG := Release
 # ======================
 
-PROJECTS := yae game application
+PROJECTS := yae game application monobuild
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -18,20 +18,25 @@ all: $(PROJECTS)
 
 yae:
 	@echo ==== Building yae ($(PLATFORM):$(CONFIG)) ====
-	@${MAKE} --no-print-directory -C . -f yae.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/yae.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 game: yae
 	@echo ==== Building game ($(PLATFORM):$(CONFIG)) ====
-	@${MAKE} --no-print-directory -C . -f game.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/game.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 application: yae game
 	@echo ==== Building application ($(PLATFORM):$(CONFIG)) ====
-	@${MAKE} --no-print-directory -C . -f application.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/application.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+
+monobuild: 
+	@echo ==== Building monobuild (Web:$(CONFIG)) ====
+	@${MAKE} --no-print-directory -C . -f make/monobuild.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 clean:
-	@${MAKE} --no-print-directory -C . -f yae.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
-	@${MAKE} --no-print-directory -C . -f game.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
-	@${MAKE} --no-print-directory -C . -f application.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/yae.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/game.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/application.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/monobuild.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 help:
 	@echo "Usage: make [PLATFORM=name] [CONFIG=name] [target]"
@@ -51,5 +56,5 @@ help:
 	@echo "   yae"
 	@echo "   game"
 	@echo "   application"
+	@echo "   monobuild"
 	@echo ""
-	@echo "For more information, see https://github.com/premake/premake-core/wiki"

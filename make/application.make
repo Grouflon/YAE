@@ -1,10 +1,8 @@
--include header.make
+-include make/header.make
 
 BIN = $(BINDIR)/main.exe
 
-SRCS += src/main.cpp
-
-INCLUDEDIRS +=
+-include make/application_common.make
 
 LIBDIRS += \
 	$(BINDIR)
@@ -16,4 +14,4 @@ DEFINES += \
 	MIRROR_IMPORT \
 	IMGUI_API=__declspec(dllimport)
 
--include footer.make
+-include make/footer.make

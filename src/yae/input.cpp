@@ -1,5 +1,7 @@
 #include "input.h"
 
+#define YAE_GAMEPAD_SUPPORTED (YAE_PLATFORM_WEB == 0)
+
 namespace yae {
 
 
@@ -53,6 +55,7 @@ void InputSystem::update()
 	}
 	
 
+#if YAE_GAMEPAD_SUPPORTED
 	// Gamepads
 	//  Connections / disconnections
 	// @NOTE(2021/04/24|remi): Gamepads mapping is really erratic in terms of Id inside GLFW, that's why we put an indirection between GLFW and our api
@@ -124,6 +127,7 @@ void InputSystem::update()
 			axisState.value = glfwGamepadState.axes[j];
 		}
 	}
+#endif
 }
 
 
