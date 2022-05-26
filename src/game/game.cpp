@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include <vector>
-
+#include <glm/gtx/quaternion.hpp>
 MIRROR_CLASS_DEFINITION(ConfigData);
 
 using namespace yae;
@@ -83,7 +83,9 @@ void initGame()
 
 	app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
-	gameInstance->mesh1Transform[3][0] = 1.f;
+	gameInstance->mesh1Transform = glm::toMat4(Quaternion(PI*.5f, PI*-.25f, 0.f));
+	gameInstance->mesh1Transform[3][0] = 0.f;
+	gameInstance->mesh1Transform[3][1] = .5f;
 
 	gameInstance->mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
 	gameInstance->mesh->useLoad();
@@ -241,6 +243,6 @@ void updateGame(float _dt)
 	*/
 
 	renderer().drawMesh(gameInstance->mesh1Transform, gameInstance->mesh->getMeshHandle());
-	renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
+	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
 }

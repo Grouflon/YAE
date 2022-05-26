@@ -130,7 +130,9 @@ void Profiler::dumpCapture(const char* _captureName, String& _outString) const
 
 void Profiler::update()
 {
-	YAE_CAPTURE_FUNCTION();
+	// the cleanEvents function is not all right and remove events while their indices are still in the stack
+	// let's come back to it later
+	//YAE_CAPTURE_FUNCTION();
 
 	_cleanEvents();
 	

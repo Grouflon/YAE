@@ -10,9 +10,10 @@
 #include <yae/logger.h>
 #include <yae/hash.h>
 #include <yae/Renderer.h>
+#include <yae/ShaderCompiler.h>
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-#include <shaderc/shaderc.h>
+#if YAE_PLATFORM_WEB
+#include <emscripten.h>
 #endif
 
 #if STATIC_GAME_API == 1
@@ -30,6 +31,18 @@ void ImGuiMemFree(void* _ptr, void* _userData)
 {
     return yae::toolAllocator().deallocate(_ptr);
 }
+
+void GLFWErrorCallback(int _error, const char* _description)
+{
+    YAE_ERRORF_CAT("glfw", "Glfw Error 0x%04x: %s", _error, _description);
+}
+
+#if YAE_PLATFORM_WEB
+void DoProgramFrame()
+{
+	yae::program()._doFrame();
+}
+#endif
 
 // !anonymous functions
 
@@ -110,15 +123,9 @@ void Program::init(char** _args, int _argCount)
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-	// Shader compiler
-	// @NOTE: this will probably go in the Device part of the renderer at some point
-	{
-		YAE_CAPTURE_SCOPE("init_shader_compiler");
-
-		m_shaderCompiler = shaderc_compiler_initialize();
-		YAE_ASSERT(m_shaderCompiler != nullptr);
-	}
+#if YAE_USE_SHADERCOMPILER
+	m_shaderCompiler = m_defaultAllocator->create<ShaderCompiler>();
+	m_shaderCompiler->init();
 #endif
 
 #if STATIC_GAME_API == 0
@@ -135,6 +142,19 @@ void Program::init(char** _args, int _argCount)
 	_loadGameAPI(_getGameDLLPath().c_str());
 #endif
 
+	// Init GLFW
+	{
+		YAE_CAPTURE_SCOPE("glfwInit");
+
+    	glfwSetErrorCallback(&GLFWErrorCallback);
+
+		int result = glfwInit();
+		YAE_ASSERT(result == GLFW_TRUE);
+		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
+	}
+
+    logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
+
     /*
     logger.setCategoryVerbosity("glfw", yae::LogVerbosity_Verbose);
     logger.setCategoryVerbosity("vulkan", yae::LogVerbosity_Verbose);
@@ -150,10 +170,18 @@ void Program::shutdown()
 
 	m_resourceManager->flushResources();
 
+	{
+		YAE_CAPTURE_SCOPE("glfwTerminate");
+
+		glfwTerminate();
+		YAE_VERBOSE_CAT("glfw", "Terminated glfw");	
+	}
+
 	_unloadGameAPI();
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-	shaderc_compiler_release(m_shaderCompiler);
+#if YAE_USE_SHADERCOMPILER
+	m_shaderCompiler->shutdown();
+	m_defaultAllocator->destroy(m_shaderCompiler);
 	m_shaderCompiler = nullptr;
 #endif
 
@@ -179,10 +207,10 @@ void Program::shutdown()
 	s_programInstance = nullptr;
 }
 
-
 void Program::run()
 {
 	YAE_CAPTURE_START("init");
+
 	for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
@@ -198,57 +226,16 @@ void Program::run()
         printf("\n");
     }
 
-    bool shouldExit = true;
+#if YAE_PLATFORM_WEB
+    emscripten_set_main_loop(&DoProgramFrame, 0, true);
+#else
+    bool shouldContinue = false;
     do
     {
-		YAE_CAPTURE_START("frame");
-
-    	shouldExit = true;
-#if STATIC_GAME_API == 0
-    	bool shouldReloadGameAPI = false;
-#endif
-    	for (Application* application : m_applications)
-		{
-			m_currentApplication = application;
-
-			if (application->doFrame())
-				shouldExit = false;
-
-#if STATIC_GAME_API == 0
-			// Force DLL reload
-			if (application->input().isCtrlDown() && application->input().wasKeyJustPressed(GLFW_KEY_R))
-			{
-				shouldReloadGameAPI = true;
-			}
-#endif
-		}
-
-#if STATIC_GAME_API == 0
-		// Hot Reload Game API
-		if (m_hotReloadGameAPI)
-		{
-			// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
-			Date lastWriteTime = filesystem::getFileLastWriteTime(_getGameDLLPath().c_str());
-			Date timeSinceLastWriteTime = date::now() - lastWriteTime;
-			bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 0);
-			shouldReloadGameAPI = shouldReloadGameAPI || isDLLOutDated;
-			
-			if (shouldReloadGameAPI)
-			{
-				_unloadGameAPI();
-				_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
-			}	
-		}
-#endif
-
-#if YAE_PROFILING_ENABLED
-		m_profiler->update();
-#endif
-
-    	YAE_CAPTURE_STOP("frame");
+    	shouldContinue = _doFrame();
     }
-    while (!shouldExit);
-    m_currentApplication = nullptr;
+    while (shouldContinue);
+#endif
 
     {
         yae::String dump;
@@ -266,6 +253,7 @@ void Program::run()
 		application->shutdown();
 	}
 	m_currentApplication = nullptr;
+
     YAE_CAPTURE_STOP("shutdown");
 
     {
@@ -403,6 +391,59 @@ void Program::shutdownGame()
 	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
 	m_gameAPI.gameShutdown();
 #endif
+}
+
+
+bool Program::_doFrame()
+{
+	// the profiler::cleanEvents function is not all right and remove events while their indices are still in the stack
+	// let's come back to it later
+	//YAE_CAPTURE_FUNCTION();
+
+	bool shouldContinue = false;
+	for (Application* application : m_applications)
+	{
+		m_currentApplication = application;
+
+		if (application->doFrame())
+			shouldContinue = true;
+	}
+	m_currentApplication = nullptr;
+
+#if STATIC_GAME_API == 0
+	bool shouldReloadGameAPI = false;
+	for (Application* application : m_applications)
+	{
+		// Force DLL reload
+		if (application->input().isCtrlDown() && application->input().wasKeyJustPressed(GLFW_KEY_R))
+		{
+			shouldReloadGameAPI = true;
+		}
+	}
+
+	// Hot Reload Game API
+	if (m_hotReloadGameAPI)
+	{
+		// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
+		Date lastWriteTime = filesystem::getFileLastWriteTime(_getGameDLLPath().c_str());
+		Date timeSinceLastWriteTime = date::now() - lastWriteTime;
+		bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 0);
+		shouldReloadGameAPI = shouldReloadGameAPI || isDLLOutDated;
+		
+		if (shouldReloadGameAPI)
+		{
+			YAE_CAPTURE_SCOPE("ReloadGameAPI");
+			_unloadGameAPI();
+			_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
+		}	
+	}
+#endif
+
+#if YAE_PROFILING_ENABLED
+	m_profiler->update();
+#endif
+
+	return shouldContinue;
 }
 
 

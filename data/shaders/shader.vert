@@ -1,6 +1,17 @@
-#version 450
+#version 100
 
-layout(binding = 0) uniform UniformBufferObject
+uniform mat4 view;
+uniform mat4 proj;
+uniform mat4 model;
+
+attribute vec3 inPosition;
+attribute vec3 inColor;
+attribute vec2 inTexCoord;
+
+varying vec3 fragColor;
+varying vec2 fragTexCoord;
+
+/*layout(binding = 0) uniform UniformBufferObject
 {
 	mat4 view;
 	mat4 proj;
@@ -16,10 +27,11 @@ layout(location = 2) in vec2 inTexCoord;
 
 layout(location = 0) out vec3 outFragColor;
 layout(location = 1) out vec2 outFragTexCoord;
+*/
 
 void main()
 {
-	gl_Position = ubo.proj * ubo.view * push.model * vec4(inPosition, 1.0);
-	outFragColor = inColor;
-	outFragTexCoord = inTexCoord;
+	gl_Position = proj * view * model * vec4(inPosition, 1.0);
+	fragColor = inColor;
+	fragTexCoord = inTexCoord;
 }

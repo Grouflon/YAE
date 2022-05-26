@@ -18,6 +18,7 @@ class Application;
 class ResourceManager;
 class Logger;
 class Profiler;
+class ShaderCompiler;
 
 typedef void (*GameFunctionPtr)();
 typedef void (*GameUpdateFunctionPtr)(float);
@@ -61,7 +62,7 @@ public:
 	Logger& logger();
 	Profiler& profiler();
 
-	shaderc_compiler* shaderCompiler() { return m_shaderCompiler; }
+	ShaderCompiler* shaderCompiler() { return m_shaderCompiler; }
 
 	// Game API functions
 	void initGame();
@@ -70,6 +71,7 @@ public:
 
 // private
 
+	bool _doFrame();
 	void _loadGameAPI(const char* _path);
 	void _unloadGameAPI();
 	void _copyAndLoadGameAPI(const char* _dllPath, const char* _symbolsPath);
@@ -82,7 +84,7 @@ public:
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;
-	shaderc_compiler* m_shaderCompiler = nullptr;
+	ShaderCompiler* m_shaderCompiler = nullptr;
 
 	Array<Application*> m_applications;
 	Application* m_currentApplication = nullptr;

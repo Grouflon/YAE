@@ -4,26 +4,22 @@
 #include <yae/render_types.h>
 #include <yae/math_types.h>
 
-#include <mirror/mirror.h>
-
 typedef struct GLFWwindow GLFWwindow;
 
 namespace yae {
 
 class YAELIB_API Renderer
 {
-	MIRROR_CLASS(Renderer)
-	(
-	);
-
 public:
 	virtual ~Renderer() {}
-
-	virtual void hintWindow() {}
 
 	virtual bool init(GLFWwindow* _window) = 0;
 	virtual void waitIdle() = 0;
 	virtual void shutdown() = 0;
+
+	virtual RendererType getType() const = 0;
+
+	virtual void hintWindow() {}
 
 	virtual FrameHandle beginFrame() = 0;
   	virtual void endFrame() = 0;
@@ -39,8 +35,11 @@ public:
 	virtual bool createMesh(Vertex* _vertices, u32 _verticesCount, u32* _indices, u32 _indicesCount, MeshHandle& _outMeshHandle) = 0;
 	virtual void destroyMesh(MeshHandle& _inMeshHandle) = 0;
 
-	virtual bool createShader(const void* _code, size_t _codeSize, ShaderHandle& _outShaderHandle) = 0;
+	virtual bool createShader(ShaderType _type, const char* _source, size_t _sourceSize, ShaderHandle& _outShaderHandle) = 0;
 	virtual void destroyShader(ShaderHandle& _shaderHandle) = 0;
+
+	virtual bool createShaderProgram(ShaderHandle* _shaderHandles, u16 _shaderHandleCount, ShaderProgramHandle& _outShaderProgramHandle) = 0;
+	virtual void destroyShaderProgram(ShaderProgramHandle& _shaderProgramHandle) = 0;
 
 	virtual void drawMesh(const Matrix4& _transform, const MeshHandle& _meshHandle) = 0;
 

@@ -13,6 +13,12 @@ VK_DEFINE_HANDLE(VmaAllocation);
 
 namespace yae {
 
+enum class RendererType : u8
+{
+	Vulkan,
+	OpenGL
+};
+
 const u32 INVALID_QUEUE = ~0u;
 
 struct QueueFamilyIndices
@@ -44,6 +50,7 @@ struct SwapChainSupportDetails
 	}
 };
 
+/*
 struct TextureHandle
 {
 	VkImage image = VK_NULL_HANDLE;
@@ -51,7 +58,10 @@ struct TextureHandle
 	VkImageView view = VK_NULL_HANDLE;
 	VkSampler sampler = VK_NULL_HANDLE;
 };
+*/
+typedef void* TextureHandle;
 
+/*
 struct MeshHandle
 {
 	VkBuffer vertexBuffer = VK_NULL_HANDLE;
@@ -60,11 +70,17 @@ struct MeshHandle
 	VmaAllocation indexMemory = VK_NULL_HANDLE;
 	VkDeviceSize indicesCount = 0;
 };
+*/
+typedef void* MeshHandle;
 
+/*
 struct ShaderHandle
 {
 	VkShaderModule shaderModule;
 };
+*/
+typedef void* ShaderHandle;
+typedef void* ShaderProgramHandle;
 
 typedef void* FrameHandle;
 
@@ -78,5 +94,12 @@ struct Vertex {
 	}
 };
 
+enum class ShaderType : u8
+{
+	UNDEFINED = 0,
+	VERTEX,
+	GEOMETRY,
+	FRAGMENT,
+};
 
 } // namespace yae

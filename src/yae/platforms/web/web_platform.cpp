@@ -10,13 +10,13 @@ void setOutputColor(OutputColor _color)
 
 i64 getCycles()
 {
-	return 0;
+	return 1;
 }
 
 
 i64 getFrequency()
 {
-	return 0;
+	return 1;
 }
 
 

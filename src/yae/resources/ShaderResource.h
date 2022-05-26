@@ -7,13 +7,6 @@
 
 namespace yae {
 
-enum ShaderType
-{
-	SHADERTYPE_VERTEX,
-	SHADERTYPE_GEOMETRY,
-	SHADERTYPE_FRAGMENT,
-};
-
 class YAELIB_API ShaderResource : public Resource
 {
 	MIRROR_CLASS(ShaderResource)

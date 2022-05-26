@@ -23,7 +23,7 @@ YAELIB_API void stopCapture(const char* _captureName);
 #define YAE_CAPTURE_START(_captureName) yae::profiling::startCapture(_captureName)
 #define YAE_CAPTURE_STOP(_captureName) yae::profiling::stopCapture(_captureName)
 #define YAE_CAPTURE_SCOPE(_scopeName) yae::profiling::CaptureScope __scope##__LINE__(_scopeName)
-#define YAE_CAPTURE_FUNCTION() YAE_CAPTURE_SCOPE(__FUNCTION__)
+#define YAE_CAPTURE_FUNCTION() YAE_CAPTURE_SCOPE(__PRETTY_FUNCTION__)
 #else
 #define YAE_CAPTURE_START(_captureName)
 #define YAE_CAPTURE_STOP(_captureName)

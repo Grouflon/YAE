@@ -4,6 +4,10 @@
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+#include <imgui/backends/imgui_impl_opengl3.h>
+#include <yae/renderers/opengl/OpenGLRenderer.h>
+#endif
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <yae/renderers/vulkan/vulkan.h>
 #include <yae/renderers/vulkan/VulkanRenderer.h>
@@ -30,14 +34,33 @@ void ImGuiSystem::init(GLFWwindow* _window, Renderer* _renderer)
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-	{
-		bool ret = ImGui_ImplGlfw_InitForVulkan(_window, true);
-		YAE_ASSERT(ret);
-	}
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-	if (VulkanRenderer* vulkanRenderer = mirror::Cast<VulkanRenderer*>(m_renderer))
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+	if (m_renderer->getType() == RendererType::OpenGL)
 	{
+		 OpenGLRenderer* openGLRenderer = static_cast<OpenGLRenderer*>(m_renderer);
+		{
+			bool ret = ImGui_ImplGlfw_InitForOpenGL(_window, true);
+			YAE_ASSERT(ret);
+		}
+
+		{
+			bool ret = ImGui_ImplOpenGL3_Init(openGLRenderer->getShaderVersion());
+			YAE_ASSERT(ret);
+		}
+	}
+#endif
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+	if (m_renderer->getType() == RendererType::Vulkan)
+	{
+		VulkanRenderer* vulkanRenderer = static_cast<VulkanRenderer*>(m_renderer);
+
+		{
+			bool ret = ImGui_ImplGlfw_InitForVulkan(_window, true);
+			YAE_ASSERT(ret);	
+		}
+		
+
 		ImGui_ImplVulkan_InitInfo initInfo{};
 		initInfo.Instance = vulkanRenderer->m_instance;
 		initInfo.PhysicalDevice = vulkanRenderer->m_physicalDevice;
@@ -54,8 +77,10 @@ void ImGuiSystem::init(GLFWwindow* _window, Renderer* _renderer)
 		initInfo.VmaAllocator = vulkanRenderer->m_allocator;
 		initInfo.CheckVkResultFn = [](VkResult _err) { VK_VERIFY(_err); };
 
-		bool ret = ImGui_ImplVulkan_Init(&initInfo, vulkanRenderer->m_swapChain->m_renderPass);
-		YAE_ASSERT(ret);
+		{
+			bool ret = ImGui_ImplVulkan_Init(&initInfo, vulkanRenderer->m_swapChain->m_renderPass);
+			YAE_ASSERT(ret);	
+		}
 
 		// Upload Fonts
 		{
@@ -76,21 +101,34 @@ void ImGuiSystem::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+	if (m_renderer->getType() == RendererType::OpenGL)
+	{
+		ImGui_ImplOpenGL3_Shutdown();
+	}
+#endif
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
-	if (VulkanRenderer* vulkanRenderer = mirror::Cast<VulkanRenderer*>(m_renderer))
+	if (m_renderer->getType() == RendererType::Vulkan)
 	{
 		ImGui_ImplVulkan_Shutdown();
-		YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 	}
 #endif
 
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(m_imguiContext);
 	m_imguiContext = nullptr;
+
+	YAE_VERBOSE_CAT("imgui", "Shutdown ImGui");
 }
 
 void ImGuiSystem::newFrame()
 {
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+	if (m_renderer->getType() == RendererType::OpenGL)
+	{
+		ImGui_ImplOpenGL3_NewFrame();
+	}
+#endif
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 }
@@ -99,20 +137,26 @@ void ImGuiSystem::render(FrameHandle _frameHandle)
 {
 	YAE_CAPTURE_FUNCTION();
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-	if (VulkanRenderer* vulkanRenderer = mirror::Cast<VulkanRenderer*>(m_renderer))
-	{
-		VkCommandBuffer commandBuffer = (VkCommandBuffer)_frameHandle;
+	ImGui::Render();
 
-		ImGui::Render();
-		ImDrawData* imguiDrawData = ImGui::GetDrawData();
-		const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
-		if (!isMinimized)
+	ImDrawData* imguiDrawData = ImGui::GetDrawData();
+	const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
+	if (!isMinimized)
+	{
+#if YAE_IMPLEMENTS_RENDERER_OPENGL
+		if (m_renderer->getType() == RendererType::OpenGL)
 		{
-			ImGui_ImplVulkan_RenderDrawData(imguiDrawData, commandBuffer);
-		}	
-	}
+			ImGui_ImplOpenGL3_RenderDrawData(imguiDrawData);
+		}
 #endif
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+		if (m_renderer->getType() == RendererType::Vulkan)
+		{
+			VkCommandBuffer commandBuffer = (VkCommandBuffer)_frameHandle;
+			ImGui_ImplVulkan_RenderDrawData(imguiDrawData, commandBuffer);
+		}
+#endif
+	}
 }
 
 } // namespace yae

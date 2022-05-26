@@ -5,13 +5,15 @@
 #include <yae/program.h>
 #include <yae/resources/FileResource.h>
 #include <yae/Renderer.h>
+#include <yae/ShaderCompiler.h>
 
-#include <shaderc/shaderc.h>
+//#include <shaderc/shaderc.h>
 
 namespace yae {
 
 namespace { // anonymous
 
+/*
 String getCompiledShaderDirectory()
 {
 	String compiledShaderDirectory = String(program().getIntermediateDirectory(), &scratchAllocator()) + "shaders/";
@@ -23,21 +25,23 @@ void ensureCompiledShaderDirectory()
 {
 	yae::filesystem::createDirectory(getCompiledShaderDirectory().c_str());
 }
+*/
 
 
 const char* shaderTypeToString(ShaderType _type)
 {
 	switch(_type)
 	{
-		case SHADERTYPE_VERTEX: return "vertex";
-		case SHADERTYPE_GEOMETRY: return "geometry";
-		case SHADERTYPE_FRAGMENT: return "fragment";
+		case ShaderType::UNDEFINED: return "undefined";
+		case ShaderType::VERTEX: return "vertex";
+		case ShaderType::GEOMETRY: return "geometry";
+		case ShaderType::FRAGMENT: return "fragment";
 	}
 	return "";
 }
 
 
-shaderc_shader_kind shaderTypeToShadercType(ShaderType _type)
+/*shaderc_shader_kind shaderTypeToShadercType(ShaderType _type)
 {
 	switch(_type)
 	{
@@ -46,7 +50,7 @@ shaderc_shader_kind shaderTypeToShadercType(ShaderType _type)
 		case SHADERTYPE_FRAGMENT: return shaderc_fragment_shader;
 	}
 	return shaderc_glsl_infer_from_source;
-}
+}*/
 
 
 String buildShaderName(const char* _path, ShaderType _type, const char* _entryPoint, const char** _defines, size_t _defineCount)
@@ -88,7 +92,30 @@ void ShaderResource::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	ensureCompiledShaderDirectory();
+	FileHandle file(m_path.c_str());
+	size_t contentSize = 0;
+	void* content = nullptr;
+	{
+		YAE_CAPTURE_SCOPE("read_shader_source");
+
+		if (!file.open(FileHandle::OPENMODE_READ))
+		{
+			_log(RESOURCELOGTYPE_ERROR, string::format("Could not open file \"%s\".", m_path.c_str()).c_str());
+			return;
+		}
+
+		contentSize = file.getSize();
+		content = scratchAllocator().allocate(contentSize);
+		file.read(content, contentSize);
+	}
+
+	if (!renderer().createShader(m_shaderType, (const char*)content, contentSize, m_shaderHandle))
+	{
+		_log(RESOURCELOGTYPE_ERROR, "Failed to create shader on the renderer.");
+	}
+	scratchAllocator().deallocate(content);
+
+	/*ensureCompiledShaderDirectory();
 
 	if (!filesystem::doesPathExists(m_path.c_str()))
 	{
@@ -127,84 +154,56 @@ void ShaderResource::_doLoad()
 			file.read(content, contentSize);
 		}
 
-		shaderc_compilation_result_t result;
+		if (program().shaderCompiler() != nullptr)
 		{
-			YAE_CAPTURE_SCOPE("compile_shader");
-
-			shaderc_compile_options_t options = shaderc_compile_options_initialize();
-			YAE_ASSERT(options != nullptr);
-
-			for(const String& define : m_defines)
+			DataArray<const char*> defines(&scratchAllocator());
+			for (const String& define : m_defines)
 			{
-				const char* name = define.c_str();
-				size_t nameLength = define.size();
-				const char* value = "";
-				size_t valueLength = 0;
-
-				const char* equal = strchr(name, '=');
-				if (equal != nullptr)
-				{
-					value = equal + 1;
-					valueLength = nameLength - size_t(equal - name) - 1;
-					nameLength = size_t(equal - name);
-				}
-				shaderc_compile_options_add_macro_definition(options, name, nameLength, value, valueLength);
+				defines.push_back(define.c_str());
 			}
 
-			result = shaderc_compile_into_spv(
-				program().shaderCompiler(), 
-				(const char *)content,
+			ShaderCompilationParams params;
+			params.type = m_shaderType;
+			params.shaderName = m_path.c_str();
+			params.entryPoint = m_entryPoint.c_str();
+			params.defines = defines.data();
+			params.defineCount = defines.size();
+
+			ShaderCompilationResult result = program().shaderCompiler()->compile(
+				(const char*)content,
 				contentSize,
-				shaderTypeToShadercType(m_shaderType),
-				m_path.c_str(),
-				m_entryPoint.c_str(),
-				options
+				params
 			);
 
-			shaderc_compile_options_release(options);
-		}
-
-		scratchAllocator().deallocate(content);
-
-		if (result == nullptr)
-		{
-			_log(RESOURCELOGTYPE_ERROR, "Compilation process failed.");
-			return;
-		}
-
-		shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
-		if (status != shaderc_compilation_status_success)
-		{
-			size_t numWarnings = shaderc_result_get_num_warnings(result);
-			size_t numErrors = shaderc_result_get_num_errors(result);
-			if (numErrors > 0)
+			const void* compiledBinary = nullptr;
+			size_t compiledBinarySize = 0;
+			if (!program().shaderCompiler()->getResultData(result, compiledBinary, compiledBinarySize))
 			{
-				_log(RESOURCELOGTYPE_ERROR, shaderc_result_get_error_message(result));
-			}
-			else if (numWarnings > 0)
-			{
-				_log(RESOURCELOGTYPE_WARNING, shaderc_result_get_error_message(result));
-			}
-			shaderc_result_release(result);
-	    	return;
-		}
-
-		{
-			YAE_CAPTURE_SCOPE("write_compiled_file");
-
-			FileHandle compiledFileHandle(compiledShaderPath.c_str());
-	    	if (!compiledFileHandle.open(FileHandle::OPENMODE_WRITE))
-	    	{
-				_log(RESOURCELOGTYPE_ERROR, string::format("Could not open \"%s\" for write.", compiledShaderPath.c_str()).c_str());
-				shaderc_result_release(result);
+				program().shaderCompiler()->releaseResult(result);
+				_log(RESOURCELOGTYPE_ERROR, "Failed to compile shader.");
 				return;
-	    	}
-	    	compiledFileHandle.write(shaderc_result_get_bytes(result), shaderc_result_get_length(result));
-	    	compiledFileHandle.close();	
-		}
+			}
 
-		renderer().createShader(shaderc_result_get_bytes(result), shaderc_result_get_length(result), m_shaderHandle);
-		shaderc_result_release(result);
+			{
+				YAE_CAPTURE_SCOPE("write_compiled_file");
+
+				FileHandle compiledFileHandle(compiledShaderPath.c_str());
+		    	if (!compiledFileHandle.open(FileHandle::OPENMODE_WRITE))
+		    	{
+					_log(RESOURCELOGTYPE_ERROR, string::format("Could not open \"%s\" for write.", compiledShaderPath.c_str()).c_str());
+					program().shaderCompiler()->releaseResult(result);
+					return;
+		    	}
+		    	compiledFileHandle.write(compiledBinary, compiledBinarySize);
+		    	compiledFileHandle.close();	
+			}
+
+			if (!renderer().createShader(m_shaderType, compiledBinary, compiledBinarySize, m_shaderHandle))
+			{
+				_log(RESOURCELOGTYPE_ERROR, "Failed to create shader on the renderer.");
+			}
+			program().shaderCompiler()->releaseResult(result);
+		}
 	}
 	else
 	{
@@ -229,9 +228,13 @@ void ShaderResource::_doLoad()
 			return;
 		}
     	
-    	renderer().createShader(compiledFile->getContent(), compiledFile->getContentSize(), m_shaderHandle);
+    	if (!renderer().createShader(compiledFile->getContent(), compiledFile->getContentSize(), m_shaderHandle))
+    	{
+			_log(RESOURCELOGTYPE_ERROR, "Failed to create shader on the renderer.");
+		}
 		compiledFile->releaseUnuse();
 	}
+	*/
 }
 
 

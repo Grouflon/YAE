@@ -34,21 +34,12 @@ void Application::init(char** _args, int _argCount)
 {
 	YAE_CAPTURE_FUNCTION();
 
-	// Init GLFW
-	{
-		YAE_CAPTURE_SCOPE("glfwInit");
-
-		int result = glfwInit();
-		YAE_ASSERT(result == GLFW_TRUE);
-		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
-	}
-
-
 	// Init Renderer
 #if YAE_PLATFORM_WINDOWS
-	m_renderer = defaultAllocator().create<VulkanRenderer>();
+	m_renderer = defaultAllocator().create<OpenGLRenderer>();
+	//m_renderer = defaultAllocator().create<VulkanRenderer>();
 #elif YAE_PLATFORM_WEB
-	//m_renderer = defaultAllocator().create<OpenGLRenderer>();
+	m_renderer = defaultAllocator().create<OpenGLRenderer>();
 #endif
 
 	// Init Window
@@ -264,9 +255,6 @@ void Application::shutdown()
 	glfwDestroyWindow(m_window);
 	m_window = nullptr;
 	YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
-
-	glfwTerminate();
-	YAE_VERBOSE_CAT("glfw", "Terminated glfw");
 }
 
 

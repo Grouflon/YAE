@@ -2,8 +2,6 @@
 
 #include <yae/types.h>
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-
 #include <yae/render_types.h>
 #include <yae/math_types.h>
 #include <yae/containers/Array.h>
@@ -21,17 +19,14 @@ class TextureResource;
 
 class YAELIB_API VulkanRenderer : public Renderer
 {
-	MIRROR_CLASS(VulkanRenderer)
-	(
-		MIRROR_PARENT(Renderer)
-	);
-
 public:
-	virtual void hintWindow() override;
-
 	virtual bool init(GLFWwindow* _window) override;
 	virtual void waitIdle() override;
 	virtual void shutdown() override;
+
+	virtual RendererType getType() const override { return RendererType::Vulkan; }
+
+	virtual void hintWindow() override;
 
 	virtual FrameHandle beginFrame() override;
   	virtual void endFrame() override;
@@ -129,5 +124,3 @@ public:
 };
 
 }
-
-#endif // YAE_IMPLEMENTS_RENDERER_VULKAN

@@ -25,14 +25,15 @@ CXX := clang++
 LD := clang++
 
 # C flags
-CFLAGS := -std=c14
+CFLAGS := -std=c11
 # C++ flags
 CXXFLAGS := -std=c++14
 # C/C++ flags
-CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension
+CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension -Wno-void-pointer-to-int-cast -Wno-int-to-void-pointer-cast
 CPPFLAGS += -g #generate symbols
 # linker flags
 LDFLAGS := 
+LDFLAGS += -g #generate symbols
 # flags required for dependency generation; passed to compilers
 DEPFLAGS = -MT $@ -MD -MP -MF $(DEPDIR)/$*.Td
 

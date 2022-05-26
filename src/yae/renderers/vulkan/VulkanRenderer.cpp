@@ -1,10 +1,7 @@
 #include "VulkanRenderer.h"
 
-#if YAE_IMPLEMENTS_RENDERER_VULKAN
-
 #include "vulkan.h"
 #include "VulkanSwapChain.h"
-#include "imgui_impl_vulkan.h"
 #include "im3d_impl_vulkan.h"
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/TextureResource.h>
@@ -1418,5 +1415,3 @@ void VulkanRenderer::_copyBufferToImage(VkBuffer _buffer, VkImage _image, u32 _w
 }
 
 } // namespace yae
-
-#endif // YAE_IMPLEMENTS_RENDERER_VULKAN
