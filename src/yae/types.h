@@ -88,12 +88,12 @@ typedef uint64_t	u64;
 
 // ASSERTS (should not depend on any engine construct)
 #if YAE_ASSERT_ENABLED
-#define YAE_ASSERT(_cond)					if (!(_cond)) { printf("%s", #_cond);       YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { printf("%s", _msg);         YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { printf(_fmt, __VA_ARGS__);  YAE_DEBUG_BREAK; }
-#define YAE_VERIFY(_cond) 					if (!(_cond)) { printf("%s", #_cond);       YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { printf("%s", _msg);         YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { printf(_fmt, __VA_ARGS__);  YAE_DEBUG_BREAK; }
+#define YAE_ASSERT(_cond)					if (!(_cond)) { printf("Assert failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { printf("Assert failed: %s\n", _msg);         YAE_DEBUG_BREAK; }
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { printf("Assert failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }
+#define YAE_VERIFY(_cond) 					if (!(_cond)) { printf("Verify failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { printf("Verify failed: %s\n", _msg);         YAE_DEBUG_BREAK; }
+#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { printf("Verify failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }
 #else
 #define YAE_ASSERT(cond)
 #define YAE_ASSERT_MSG(_cond, _msg)
