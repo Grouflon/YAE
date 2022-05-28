@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <yae/types.h>
+#include <yae/math.h>
 
 namespace yae {
 
@@ -152,7 +153,30 @@ public:
 
 	virtual void* reallocate(void* _memory, size_t _size, u8 _align = DEFAULT_ALIGN) override
 	{
-		YAE_ASSERT_MSG(false, "Not implemented.");
+		if (_memory == nullptr)
+		{
+			return allocate(_size, _align);
+		}
+
+		for (size_t i = 0; i <= m_cursor; ++i)
+		{
+			if (m_buffer + i == _memory)
+			{
+				u8* start = (u8*)memory::alignForward(m_buffer + i, _align);
+				u8* bufferEnd = m_buffer + BUFFER_SIZE;
+				size_t availableSize = bufferEnd - start;
+				YAE_ASSERT_MSGF(availableSize >= _size, "Out of memory: %zu available, %zu requested", availableSize, _size);
+				if (start != _memory)
+				{
+					u8* previousStart = (u8*)_memory;
+					u8* previousEnd = m_buffer + m_cursor;
+					memcpy(m_buffer + m_cursor, m_buffer + i, yae::min((i64)_size, (i64)(previousEnd - previousStart)));
+				}
+				m_cursor = (start + _size) - m_buffer;
+				return start;
+			}
+		}
+		YAE_ASSERT_MSGF(false, "Can't reallocate, Memory %p not found in allocator", _memory);
 		return nullptr;
 	}
 
