@@ -54,6 +54,7 @@ DEFINES := \
 	GLM_FORCE_RADIANS \
 	GLM_FORCE_DEPTH_ZERO_TO_ONE \
 	IM3D_CONFIG=\"yae/yae_im3d_config.h\"\
+	IMGUI_USER_CONFIG=\"yae/yae_imconfig.h\"\
 	YAE_CONFIG=\"$(CONFIG)\"
 
 LIBS :=
