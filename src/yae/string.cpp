@@ -82,15 +82,7 @@ void String::reserve(size_t _size)
 	size_t sizeRequired = _size + 1;
 	if (sizeRequired > m_bufferSize)
 	{
-		void* buffer = m_allocator->allocate(sizeRequired);
-		memcpy(buffer, m_buffer, m_bufferSize);
-		if (m_buffer != nullptr)
-		{
-			m_allocator->deallocate(m_buffer);
-			m_buffer = nullptr;
-		}
-		YAE_ASSERT(m_buffer == nullptr);
-		m_buffer = (char*)buffer;
+		m_buffer = (char*)m_allocator->reallocate(m_buffer, sizeRequired);
 		m_bufferSize = sizeRequired;
 		YAE_ASSERT_MSG(m_buffer != nullptr, "Allocation failed");
 	}
