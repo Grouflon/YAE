@@ -246,6 +246,8 @@ void InputSystem::notifyKeyEvent(int _key, int _scancode, int _action, int _mods
     {
         keyState.down = false;
     }
+
+	YAE_VERBOSEF_CAT("input", "key event: %d, %d, %d, %d", _key, _scancode, _action, _mods);
 }
 
 
@@ -308,12 +310,16 @@ void InputSystem::notifyMouseButtonEvent(int _button, int _action, int _mods)
     {
         buttonState.down = false;
     }
+
+	YAE_VERBOSEF_CAT("input", "mouse button event: %d, %d, %d", _button, _action, _mods);
 }
 
 
 void InputSystem::notifyMouseScrollEvent(double _xOffset, double _yOffset)
 {
 	m_mouseScrollDelta = Vector2(float(_xOffset), float(_yOffset));
+
+	YAE_VERBOSEF_CAT("input", "mouse scroll event: %.2f, %.2f", _xOffset, _yOffset);
 }
 
 
