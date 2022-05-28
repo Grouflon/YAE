@@ -144,6 +144,7 @@ bool Application::doFrame()
         if (ImGui::BeginMenu("Profiling"))
         {
         	ImGui::MenuItem("Memory", NULL, &m_showMemoryProfiler);
+        	ImGui::MenuItem("Frame rate", NULL, &m_showFrameRate);
 
             ImGui::EndMenu();
         }
@@ -202,6 +203,14 @@ bool Application::doFrame()
     	showAllocatorInfo("Scratch", scratchAllocator());
     	showAllocatorInfo("Tool", toolAllocator());
     	showAllocatorInfo("Malloc", mallocAllocator());
+    	ImGui::End();
+    }
+
+    if (m_showFrameRate)
+    {
+    	ImGui::Begin("Frame Rate", &m_showMemoryProfiler, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoInputs);
+    	ImGui::Text("dt: %.2f ms", dt*1000.f);
+    	ImGui::Text("%.2f fps", dt != 0.f ? (1.f/dt) : 0.f);
     	ImGui::End();
     }
 

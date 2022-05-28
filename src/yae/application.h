@@ -65,6 +65,7 @@ private:
 	void* m_userData = nullptr;
 
 	bool m_showMemoryProfiler = false;
+	bool m_showFrameRate = false;
 };
 
 } // namespace yae
