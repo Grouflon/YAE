@@ -139,7 +139,7 @@ void updateGame(float _dt)
 		float rotationSpeed = .2f;
 		Vector2 rotationInputRate = -input().getMouseDelta();
 		gameInstance->yaw += mod(rotationInputRate.x * rotationSpeed, 360.f);
-		gameInstance->pitch += clamp(rotationInputRate.y * rotationSpeed, -90.f, 90.f);
+		gameInstance->pitch -= clamp(rotationInputRate.y * rotationSpeed, -90.f, 90.f);
 		Quaternion cameraRotation = Quaternion(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
 		app().setCameraRotation(cameraRotation);
 
