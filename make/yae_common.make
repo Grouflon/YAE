@@ -26,25 +26,12 @@ endif
 # Renderers setup
 USE_OPENGL := 0
 USE_VULKAN := 0
-USE_SHADERCOMPILER := 0
 
 ifeq ($(PLATFORM), Win64)
 	USE_OPENGL := 1
-	USE_SHADERCOMPILER := 1
 endif
 ifeq ($(PLATFORM), Web)
 	USE_OPENGL := 1
-endif
-
-ifeq ($(USE_SHADERCOMPILER), 1)
-	DEFINES += YAE_USE_SHADERCOMPILER=1
-	LIBDIRS += extern/shaderc/lib/x64/
-
-	ifeq ($(CONFIG), Debug)
-		LIBS += shaderc_combinedd
-	else
-		LIBS += shaderc_combined
-	endif
 endif
 
 ifeq ($(USE_VULKAN), 1)

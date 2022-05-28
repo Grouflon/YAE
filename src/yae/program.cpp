@@ -10,7 +10,6 @@
 #include <yae/logger.h>
 #include <yae/hash.h>
 #include <yae/Renderer.h>
-#include <yae/ShaderCompiler.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
@@ -63,12 +62,20 @@ Program::Program(Allocator* _defaultAllocator, Allocator* _scratchAllocator, All
 	, m_intermediateDirectory(_defaultAllocator)
 	, m_hotReloadDirectory(_defaultAllocator)
 {
-
+	YAE_ASSERT(s_programInstance == nullptr);
+	s_programInstance = this;
+    m_logger = m_defaultAllocator->create<Logger>();
 }
 
 
 Program::~Program()
 {
+	YAE_ASSERT(s_programInstance == this);
+	
+	m_defaultAllocator->destroy(m_logger);
+	m_logger = nullptr;
+	s_programInstance = nullptr;
+
 	m_toolAllocator = nullptr;
 	m_scratchAllocator = nullptr;
 	m_defaultAllocator = nullptr;
@@ -77,9 +84,9 @@ Program::~Program()
 
 void Program::init(char** _args, int _argCount)
 {
-	YAE_ASSERT(s_programInstance == nullptr);
+	YAE_ASSERT(s_programInstance == this);
+
 	YAE_ASSERT(_args != nullptr && _argCount >= 1);
-	s_programInstance = this;	
 
 	m_args = _args;
 	m_argCount = _argCount;
@@ -93,7 +100,6 @@ void Program::init(char** _args, int _argCount)
 		}
 	}
 
-    m_logger = m_defaultAllocator->create<Logger>();
 	m_profiler = m_defaultAllocator->create<Profiler>(m_toolAllocator);
 
 	YAE_CAPTURE_FUNCTION();
@@ -123,11 +129,6 @@ void Program::init(char** _args, int _argCount)
 
 	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
 
-#if YAE_USE_SHADERCOMPILER
-	m_shaderCompiler = m_defaultAllocator->create<ShaderCompiler>();
-	m_shaderCompiler->init();
-#endif
-
 #if STATIC_GAME_API == 0
 	// Prepare Game API for hot reload
 	if (m_hotReloadGameAPI)
@@ -153,8 +154,6 @@ void Program::init(char** _args, int _argCount)
 		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
 	}
 
-    logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
-
     /*
     logger.setCategoryVerbosity("glfw", yae::LogVerbosity_Verbose);
     logger.setCategoryVerbosity("vulkan", yae::LogVerbosity_Verbose);
@@ -179,12 +178,6 @@ void Program::shutdown()
 
 	_unloadGameAPI();
 
-#if YAE_USE_SHADERCOMPILER
-	m_shaderCompiler->shutdown();
-	m_defaultAllocator->destroy(m_shaderCompiler);
-	m_shaderCompiler = nullptr;
-#endif
-
 	m_defaultAllocator->destroy(m_resourceManager);
 	m_resourceManager = nullptr;
 
@@ -193,18 +186,9 @@ void Program::shutdown()
 	m_defaultAllocator->destroy(m_profiler);
 	m_profiler = nullptr;
 
-	m_defaultAllocator->destroy(m_logger);
-	m_logger = nullptr;
-
 #if DEBUG_STRINGHASH
 	clearStringHashRepository();
 #endif
-
-	m_defaultAllocator = nullptr;
-	m_scratchAllocator = nullptr;
-	m_toolAllocator = nullptr;
-
-	s_programInstance = nullptr;
 }
 
 void Program::run()

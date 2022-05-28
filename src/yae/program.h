@@ -8,9 +8,6 @@
 #define STATIC_GAME_API 0
 #endif
 
-// shaderc forward declarations
-struct shaderc_compiler;
-
 namespace yae {
 
 class Allocator;
@@ -18,7 +15,6 @@ class Application;
 class ResourceManager;
 class Logger;
 class Profiler;
-class ShaderCompiler;
 
 typedef void (*GameFunctionPtr)();
 typedef void (*GameUpdateFunctionPtr)(float);
@@ -62,8 +58,6 @@ public:
 	Logger& logger();
 	Profiler& profiler();
 
-	ShaderCompiler* shaderCompiler() { return m_shaderCompiler; }
-
 	// Game API functions
 	void initGame();
 	void updateGame(float _dt);
@@ -84,7 +78,6 @@ public:
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;
-	ShaderCompiler* m_shaderCompiler = nullptr;
 
 	Array<Application*> m_applications;
 	Application* m_currentApplication = nullptr;
