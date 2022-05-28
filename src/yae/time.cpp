@@ -5,16 +5,6 @@
 
 #include <climits>
 
-namespace { // anonymous namespace
-
-i64 getFrequency()
-{
-	static i64 s_frequency = yae::platform::getFrequency(); // appparently this never changes over the program
-	return s_frequency;
-}
-
-} // anonymous namespace
-
 namespace yae {
 
 Time Time::operator+(const Time& _rhs) const
@@ -109,7 +99,7 @@ namespace time {
 
 Time now()
 {
-	return yae::Time(platform::getCycles());
+	return yae::platform::getCurrentTime();
 }
 
 Time max()
@@ -119,12 +109,12 @@ Time max()
 
 i64 timeToNanoSeconds(Time _time)
 {
-	return (_time.time * 1000000000) / getFrequency();
+	return yae::platform::timeToNanoSeconds(_time.time);
 }
 
 i64 timeToMicroSeconds(Time _time)
 {
-	return (_time.time * 1000000) / getFrequency();
+	return timeToNanoSeconds(_time) / 1000;
 }
 
 double timeToMilliSeconds64(Time _time)

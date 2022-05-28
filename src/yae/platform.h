@@ -21,9 +21,11 @@ namespace platform {
 YAELIB_API void setOutputColor(OutputColor _color);	
 
 // Time
-YAELIB_API i64 getCycles();
-YAELIB_API i64 getFrequency();
-YAELIB_API u64 getSystemTime();
+YAELIB_API i64 getCurrentTime();
+YAELIB_API i64 timeToNanoSeconds(i64 _platformTime);
+//YAELIB_API i64 getCycles();
+//YAELIB_API i64 getFrequency();
+//YAELIB_API u64 getSystemTime();
 
 // File system
 YAELIB_API void setWorkingDirectory(const char* _path);

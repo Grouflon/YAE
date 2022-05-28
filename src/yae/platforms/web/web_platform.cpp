@@ -1,5 +1,7 @@
 #include <yae/platform.h>
 
+#include <emscripten.h>
+
 namespace yae {
 
 namespace platform {
@@ -8,21 +10,17 @@ void setOutputColor(OutputColor _color)
 {
 }
 
-i64 getCycles()
+
+i64 getCurrentTime()
 {
-	return 1;
+	double time = emscripten_get_now(); // in ms
+	return i64(time * 1000 * 1000); // in ns
 }
 
 
-i64 getFrequency()
+i64 timeToNanoSeconds(i64 _platformTime)
 {
-	return 1;
-}
-
-
-u64 getSystemTime()
-{
-	return 0u;
+	return _platformTime;
 }
 
 

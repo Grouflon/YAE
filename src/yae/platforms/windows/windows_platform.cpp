@@ -5,6 +5,7 @@
 
 #include <windows.h>
 #include <dbghelp.h>
+#include <chrono>
 
 namespace yae {
 
@@ -27,29 +28,18 @@ void setOutputColor(OutputColor _color)
 	SetConsoleTextAttribute(hConsole, colorAttribute);
 }
 
-i64 getCycles()
+
+i64 getCurrentTime()
 {
-	LARGE_INTEGER largeInteger;
-	QueryPerformanceCounter(&largeInteger);
-	return largeInteger.QuadPart;
+	auto stdTime = std::chrono::high_resolution_clock::now().time_since_epoch();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(stdTime).count();
 }
 
 
-i64 getFrequency()
+i64 timeToNanoSeconds(i64 _platformTime)
 {
-	LARGE_INTEGER frequency;
-	QueryPerformanceFrequency(&frequency);
-	return frequency.QuadPart;
+	return _platformTime;
 }
-
-
-u64 getSystemTime()
-{
-	FILETIME filetime = {};
-	GetSystemTimeAsFileTime(&filetime);
-	return u64(filetime.dwLowDateTime) | u64(filetime.dwHighDateTime) >> 32;
-}
-
 
 void setWorkingDirectory(const char* _path)
 {
