@@ -39,10 +39,6 @@ typedef uint64_t	u64;
 	#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
 #endif
 
-#ifndef YAE_USE_SHADERCOMPILER
-	#define YAE_USE_SHADERCOMPILER 0
-#endif
-
 // DLL EXPORT
 #ifndef YAELIB_API
 	#ifdef YAELIB_EXPORT
