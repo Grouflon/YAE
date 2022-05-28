@@ -15,12 +15,11 @@ class YAELIB_API ShaderResource : public Resource
 	);
 
 public:
-	ShaderResource(const char* _path, ShaderType _type, const char* _entryPoint = "main", const char** _defines = nullptr, size_t _defineCount = 0);
+	ShaderResource(const char* _path, ShaderType _type);
 	virtual~ ShaderResource();
 
 	const ShaderHandle& getShaderHandle() const { return m_shaderHandle; }
 	ShaderType getShaderType() const { return m_shaderType; }
-	const char* getEntryPoint() const { return m_entryPoint.c_str(); }
 
 // private:
 	virtual void _doLoad() override;
@@ -29,14 +28,12 @@ public:
 	ShaderHandle m_shaderHandle;
 	ShaderType m_shaderType;
 	String m_path;
-	String m_entryPoint;
-	Array<String> m_defines;
 };
 
 template <>
 struct YAELIB_API ResourceIDGetter<ShaderResource>
 {
-	static ResourceID GetId(const char* _path, ShaderType _type, const char* _entryPoint = "main", const char** _defines = nullptr, size_t _defineCount = 0);
+	static ResourceID GetId(const char* _path, ShaderType _type);
 };
 
 } // namespace yae

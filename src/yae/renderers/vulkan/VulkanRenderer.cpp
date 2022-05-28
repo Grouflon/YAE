@@ -882,6 +882,8 @@ bool VulkanRenderer::createShader(const void* _code, size_t _codeSize, ShaderHan
 {
 	YAE_CAPTURE_FUNCTION();
 
+	// @NOTE(remi): We should compile the shader on the go using the shaderc lib
+
 	YAE_ASSERT(_outShaderHandle.shaderModule == VK_NULL_HANDLE);
 
 	VkShaderModuleCreateInfo createInfo{};

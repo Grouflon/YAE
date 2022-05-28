@@ -80,11 +80,11 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	m_texture->useLoad();
 	YAE_ASSERT(m_texture->isLoaded());
 
-	m_vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", ShaderType::VERTEX, "main");
+	m_vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", ShaderType::VERTEX);
 	m_vertexShader->useLoad();
 	YAE_ASSERT(m_vertexShader->isLoaded());
 
-	m_fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", ShaderType::FRAGMENT, "main");
+	m_fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", ShaderType::FRAGMENT);
 	m_fragmentShader->useLoad();
 	YAE_ASSERT(m_fragmentShader->isLoaded());
 
