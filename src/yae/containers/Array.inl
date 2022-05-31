@@ -224,6 +224,15 @@ T& DataArray<T>::push_back(const T& _item)
 
 
 template <typename T>
+void DataArray<T>::push_back(const T* _items, u32 _itemCount)
+{
+	u32 oldSize = this->m_size;
+	resize(this->m_size + _itemCount);
+	memcpy(this->m_data + oldSize, _items, sizeof(T) * _itemCount);
+}
+
+
+template <typename T>
 void DataArray<T>::pop_back()
 {
 	this->m_size = this->m_size - 1;

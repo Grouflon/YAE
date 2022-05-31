@@ -64,6 +64,7 @@ public:
 	void clear();
 	void shrink();
 	T& push_back(const T& _item);
+	void push_back(const T* _items, u32 _itemCount);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
 	void reserve(u32 _newCapacity);
