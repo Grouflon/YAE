@@ -116,6 +116,8 @@ void InputSystem::update()
 			{
 				buttonState.down = bool(glfwGamepadState.buttons[j]);
 				++buttonState.changesCount;
+
+				YAE_VERBOSEF_CAT("input", "gamepad %d button event: %d, %d", i, j, buttonState.down);
 			}
 		}
 
@@ -125,6 +127,12 @@ void InputSystem::update()
 			AxisState& axisState = gamepadState.axisStates[j];
 			axisState.delta = glfwGamepadState.axes[j] - axisState.value;
 			axisState.value = glfwGamepadState.axes[j];
+
+
+			if (axisState.delta != 0.f)
+			{
+				YAE_VERBOSEF_CAT("input", "gamepad %d axis event: %d, %.2f", i, j, axisState.value);
+			}
 		}
 	}
 #endif
