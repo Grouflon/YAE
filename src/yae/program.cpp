@@ -384,6 +384,8 @@ bool Program::_doFrame()
 	// let's come back to it later
 	//YAE_CAPTURE_FUNCTION();
 
+	YAE_CAPTURE_START("frame");
+
 	bool shouldContinue = false;
 	for (Application* application : m_applications)
 	{
@@ -422,6 +424,16 @@ bool Program::_doFrame()
 		}	
 	}
 #endif
+
+	if (!shouldContinue)
+	{
+		m_profiler->dropCapture("frame");
+	}
+	else
+	{
+		YAE_CAPTURE_STOP("frame");
+	}
+
 
 #if YAE_PROFILING_ENABLED
 	m_profiler->update();

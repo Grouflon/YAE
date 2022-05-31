@@ -163,20 +163,27 @@ void OpenGLRenderer::notifyFrameBufferResized(int _width, int _height)
 
 void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	glGetError();
 
-	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
-    YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(*m_vertices.data()), m_vertices.data(), GL_STATIC_DRAW));
+	{
+		YAE_CAPTURE_SCOPE("prepare buffers");
 
-    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
-    YAE_GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(*m_indices.data()), m_indices.data(), GL_STATIC_DRAW));
+		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
+	    YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(*m_vertices.data()), m_vertices.data(), GL_STATIC_DRAW));
 
-    YAE_GL_VERIFY(glEnableVertexAttribArray(0));
-	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
-	YAE_GL_VERIFY(glEnableVertexAttribArray(2));
-	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0));
-	YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
-	YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));
+	    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
+	    YAE_GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(*m_indices.data()), m_indices.data(), GL_STATIC_DRAW));
+
+	    YAE_GL_VERIFY(glEnableVertexAttribArray(0));
+		YAE_GL_VERIFY(glEnableVertexAttribArray(1));
+		YAE_GL_VERIFY(glEnableVertexAttribArray(2));
+		YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0));
+		YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
+		YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));	
+	}
+	
 
 	YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
     YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
@@ -189,6 +196,8 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 
 	for (auto& pair : m_drawCommands)
 	{
+		YAE_CAPTURE_SCOPE("draw command pass");
+
 		YAE_GL_VERIFY(glUseProgram((GLuint)pair.key));
 
 		GLint viewProjLocation = glGetUniformLocation((GLuint)m_shader, "viewProj");
