@@ -21,6 +21,7 @@ public:
 
 	void startCapture(const char* _captureName);
 	void stopCapture(const char* _captureName);
+	void dropCapture(const char* _captureName);
 
 	void dumpCapture(const char* _captureName, String& _outString) const;
 

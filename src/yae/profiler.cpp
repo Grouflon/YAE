@@ -78,6 +78,13 @@ void Profiler::stopCapture(const char* _captureName)
 }
 
 
+void Profiler::dropCapture(const char* _captureName)
+{
+	StringHash nameHash(_captureName);
+	m_runningCaptures.remove(nameHash);
+}
+
+
 void Profiler::dumpCapture(const char* _captureName, String& _outString) const
 {
 	StringHash nameHash(_captureName);
