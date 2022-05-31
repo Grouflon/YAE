@@ -89,6 +89,8 @@ struct Vertex {
 	glm::vec3 color;
 	glm::vec2 texCoord;
 
+	Vertex() {}
+	Vertex(const glm::vec3 _pos, const glm::vec3& _color, const glm::vec2& _texCoord) : pos(_pos), color(_color), texCoord(_texCoord) {}
 	bool operator==(const Vertex& other) const {
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
 	}

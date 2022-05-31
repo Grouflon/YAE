@@ -20,13 +20,10 @@ public:
 	MeshResource(const char* _path);
 	virtual ~MeshResource();
 
-	const MeshHandle& getMeshHandle() const { return m_meshHandle; }
-
 // private:
 	virtual void _doLoad() override;
 	virtual void _doUnload() override;
 
-	MeshHandle m_meshHandle;
 	DataArray<Vertex> m_vertices;
 	DataArray<u32> m_indices;
 };

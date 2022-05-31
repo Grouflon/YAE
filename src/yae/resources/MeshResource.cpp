@@ -1,7 +1,6 @@
 #include "MeshResource.h"
 
 #include <yae/filesystem.h>
-#include <yae/Renderer.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
@@ -83,13 +82,6 @@ void MeshResource::_doLoad()
 			}
 		}
 	}
-
-	bool result = renderer().createMesh(m_vertices.data(), m_vertices.size(), m_indices.data(), m_indices.size(), m_meshHandle);
-	if (!result)
-	{
-		_log(RESOURCELOGTYPE_ERROR, "Failed to create mesh with the renderer");
-		return;
-	}
 }
 
 
@@ -97,8 +89,6 @@ void MeshResource::_doUnload()
 {
 	YAE_CAPTURE_FUNCTION();
 	
-	renderer().destroyMesh(m_meshHandle);
-
 	m_vertices.clear();
 	m_indices.clear();
 }

@@ -17,7 +17,8 @@ int main(int _argc, char** _argv)
 
     {
         yae::Program program(&allocator, &scratchAllocator, &toolAllocator);
-        //program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
+        program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
+        //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
         program.init(_argv, _argc);
 
         yae::Application app = yae::Application(APPLICATION_NAME, 800u, 600u);

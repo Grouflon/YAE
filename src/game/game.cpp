@@ -4,6 +4,8 @@
 #include <yae/serialization.h>
 #include <yae/resources/FileResource.h>
 #include <yae/resources/MeshResource.h>
+#include <yae/resources/TextureResource.h>
+#include <yae/resources/FontResource.h>
 #include <yae/math_types.h>
 #include <yae/input.h>
 #include <yae/application.h>
@@ -11,6 +13,7 @@
 #include <yae/Renderer.h>
 
 #include <im3d.h>
+#include <imgui.h>
 
 #include <stdio.h>
 #include <vector>
@@ -69,6 +72,8 @@ public:
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
 
 	MeshResource* mesh = nullptr;
+	TextureResource* texture = nullptr;
+	FontResource* font = nullptr;
 };
 
 void onLibraryUnloaded()
@@ -87,9 +92,20 @@ void initGame()
 	gameInstance->mesh1Transform[3][0] = 0.f;
 	gameInstance->mesh1Transform[3][1] = .5f;
 
+	gameInstance->mesh2Transform[3][0] = 1.f;
+	gameInstance->mesh2Transform[3][1] = -1.f;
+
 	gameInstance->mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
 	gameInstance->mesh->useLoad();
 	YAE_ASSERT(gameInstance->mesh->isLoaded());
+
+	gameInstance->texture = findOrCreateResource<TextureResource>("./data/textures/viking_room.png");
+	gameInstance->texture->useLoad();
+	YAE_ASSERT(gameInstance->texture->isLoaded());
+
+	gameInstance->font = findOrCreateResource<FontResource>("data/fonts/Roboto-Regular.ttf", 32);
+	gameInstance->font->useLoad();
+	YAE_ASSERT(gameInstance->font->isLoaded());
 }
 
 void shutdownGame()
@@ -97,6 +113,8 @@ void shutdownGame()
 	GameInstance* gameInstance = (GameInstance*)app().getUserData();
 
 	gameInstance->mesh->releaseUnuse();
+	gameInstance->texture->releaseUnuse();
+	gameInstance->font->releaseUnuse();
 
 	defaultAllocator().destroy(gameInstance);
 	app().setUserData(nullptr);
@@ -174,6 +192,10 @@ void updateGame(float _dt)
 		app().setCameraPosition(cameraPosition);
 	}
 
+    ImGui::SetNextWindowSize(ImVec2(600, 512));
+    ImGui::Begin("Image");
+	ImGui::Image((void*)(intptr_t)gameInstance->font->m_fontTexture, ImVec2(512, 512));
+	ImGui::End();
 
 	/*Im3d::EnableSorting(true);
 	// Axis
@@ -242,7 +264,59 @@ void updateGame(float _dt)
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 	*/
 
-	renderer().drawMesh(gameInstance->mesh1Transform, gameInstance->mesh->getMeshHandle());
+	/*
+	glm::vec3 color(1.f, 1.f, 1.f);
+	float scale = 1.f;
+	Vertex vertices[] =
+	{
+		Vertex(glm::vec3(-scale, -scale, 0.f), color, glm::vec2(0.f, 0.f)),
+		Vertex(glm::vec3(scale, -scale, 0.f), color, glm::vec2(1.f, 0.f)),
+		Vertex(glm::vec3(scale, scale, 0.f), color, glm::vec2(1.f, 1.f)),
+		Vertex(glm::vec3(-scale, scale, 0.f), color, glm::vec2(0.f, 0.f)),
+	};
+	u32 indices[] =
+	{
+		0, 1, 2,
+		0, 2, 3,
+	};
+
+	renderer().drawMesh(
+		gameInstance->mesh1Transform,
+		vertices, countof(vertices),
+		indices, countof(indices),
+		gameInstance->texture->getTextureHandle()
+	);
+
+	renderer().drawMesh(
+		gameInstance->mesh2Transform,
+		vertices, countof(vertices),
+		indices, countof(indices),
+		gameInstance->texture->getTextureHandle()
+	);
+	*/
+
+	renderer().drawMesh(
+		gameInstance->mesh1Transform,
+		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(), 
+		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
+		gameInstance->texture->getTextureHandle()
+	);
+
+	renderer().drawMesh(
+		gameInstance->mesh2Transform,
+		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(),
+		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
+		gameInstance->texture->getTextureHandle()
+	);
+
+	renderer().drawMesh(
+		gameInstance->mesh1Transform,
+		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(), 
+		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
+		gameInstance->texture->getTextureHandle()
+	);
+
+	renderer().drawText(gameInstance->mesh2Transform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
 }
