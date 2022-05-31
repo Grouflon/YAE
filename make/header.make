@@ -47,6 +47,7 @@ INCLUDEDIRS := \
 	extern/im3d/ \
 	extern/glm/ \
 	extern/VulkanMemoryAllocator/ \
+	extern/stb/ \
 	$(VK_SDK_PATH)/include
 
 DEFINES := \
