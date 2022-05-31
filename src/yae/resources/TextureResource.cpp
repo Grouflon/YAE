@@ -3,32 +3,8 @@
 #include <yae/filesystem.h>
 #include <yae/Renderer.h>
 
-void* yae_stbi_malloc(size_t _sz)
-{
-	return yae::scratchAllocator().allocate(_sz);
-}
-
-void* yae_stbi_realloc(void* _p, size_t _newsz)
-{
-	return yae::scratchAllocator().reallocate(_p, _newsz);
-}
-
-void yae_stbi_free(void* _p)
-{
-	yae::scratchAllocator().deallocate(_p);
-}
-
-#define STBI_ASSERT(x)            YAE_ASSERT(x)
-#define STBI_MALLOC(sz)           yae_stbi_malloc(sz);
-#define STBI_REALLOC(p,newsz)     yae_stbi_realloc(p, newsz);
-#define STBI_FREE(p)              yae_stbi_free(p);
-#define STB_IMAGE_IMPLEMENTATION
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-compare"
-#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
-#pragma clang diagnostic pop
 
 namespace yae {
 
@@ -44,7 +20,6 @@ TextureResource::~TextureResource()
 {
 
 }
-
 
 void TextureResource::_doLoad()
 {
@@ -66,7 +41,7 @@ void TextureResource::_doLoad()
 	
 
 	YAE_ASSERT(pixels);
-	bool result = renderer().createTexture(pixels, m_width, m_height, m_channels, m_textureHandle);
+	bool result = renderer().createTexture(pixels, m_width, m_height, GL_RGBA, m_textureHandle);
 	stbi_image_free(pixels);
 
 	if (!result)
