@@ -1,7 +1,7 @@
 #include "OpenGLRenderer.h"
 
-#include <yae/resources/TextureResource.h>
 #include <yae/resources/ShaderResource.h>
+#include <yae/resources/FontResource.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -12,6 +12,7 @@
 #endif
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <GLFW/glfw3.h>
+
 
 const int OPENGL_VERSION_MAJOR = 2;
 const int OPENGL_VERSION_MINOR = 0;
@@ -91,24 +92,56 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
 	YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));
 
-	m_vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", ShaderType::VERTEX);
-	m_vertexShader->useLoad();
-	YAE_ASSERT(m_vertexShader->isLoaded());
-
-	m_fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", ShaderType::FRAGMENT);
-	m_fragmentShader->useLoad();
-	YAE_ASSERT(m_fragmentShader->isLoaded());
-
-	ShaderHandle shaders[] =
+	// Mesh shader
 	{
-		m_vertexShader->getShaderHandle(),
-		m_fragmentShader->getShaderHandle()
-	};
-	YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_shader));
+		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", ShaderType::VERTEX);
+		vertexShader->useLoad();
+		YAE_ASSERT(vertexShader->isLoaded());
 
-	YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 0, "inPosition"));
-	YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 1, "inColor"));
-	YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 2, "inTexCoord"));
+		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", ShaderType::FRAGMENT);
+		fragmentShader->useLoad();
+		YAE_ASSERT(fragmentShader->isLoaded());
+
+		ShaderHandle shaders[] =
+		{
+			vertexShader->getShaderHandle(),
+			fragmentShader->getShaderHandle()
+		};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_shader));
+
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 0, "inPosition"));
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 1, "inColor"));
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 2, "inTexCoord"));
+
+		fragmentShader->releaseUnuse();
+		vertexShader->releaseUnuse();
+	}
+
+	// Font shader
+	{
+		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/font.vert", ShaderType::VERTEX);
+		vertexShader->useLoad();
+		YAE_ASSERT(vertexShader->isLoaded());
+
+		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/font.frag", ShaderType::FRAGMENT);
+		fragmentShader->useLoad();
+		YAE_ASSERT(fragmentShader->isLoaded());
+
+		ShaderHandle shaders[] =
+		{
+			vertexShader->getShaderHandle(),
+			fragmentShader->getShaderHandle()
+		};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_fontShader));
+
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 0, "inPosition"));
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 1, "inColor"));
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 2, "inTexCoord"));
+
+		fragmentShader->releaseUnuse();
+		vertexShader->releaseUnuse();
+	}
+
 
 	m_window = _window;
 	return true;
@@ -116,14 +149,11 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 
 void OpenGLRenderer::shutdown()
 {
+	destroyShaderProgram(m_fontShader);
+	m_fontShader = nullptr;
+
 	destroyShaderProgram(m_shader);
 	m_shader = nullptr;
-
-	m_fragmentShader->releaseUnuse();
-	m_fragmentShader = nullptr;
-
-	m_vertexShader->releaseUnuse();
-	m_vertexShader = nullptr;
 }
 
 FrameHandle OpenGLRenderer::beginFrame()
@@ -131,7 +161,7 @@ FrameHandle OpenGLRenderer::beginFrame()
 	int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	return nullptr;
@@ -187,10 +217,13 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 
 	YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
     YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
+    YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
     YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
     YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
     YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
     YAE_GL_VERIFY(glCullFace(GL_FRONT));
+    YAE_GL_VERIFY(glEnable(GL_BLEND));
+	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     Matrix4 viewProj = m_projMatrix * m_viewMatrix;
 
@@ -198,19 +231,20 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 	{
 		YAE_CAPTURE_SCOPE("draw command pass");
 
-		YAE_GL_VERIFY(glUseProgram((GLuint)pair.key));
+		GLuint shader = (GLuint)pair.key;
+		YAE_GL_VERIFY(glUseProgram(shader));
 
-		GLint viewProjLocation = glGetUniformLocation((GLuint)m_shader, "viewProj");
+		GLint viewProjLocation = glGetUniformLocation((GLuint)shader, "viewProj");
 		YAE_GL_VERIFY();
 		if (viewProjLocation >= 0)
 		{
 			YAE_GL_VERIFY(glUniformMatrix4fv(viewProjLocation, 1, GL_FALSE, (float*)&viewProj));
 		}
 
-		GLint modelLocation = glGetUniformLocation((GLuint)m_shader, "model");
+		GLint modelLocation = glGetUniformLocation((GLuint)shader, "model");
 		YAE_GL_VERIFY();
 
-		GLint textureLocation = glGetUniformLocation((GLuint)m_shader, "texture");
+		GLint textureLocation = glGetUniformLocation((GLuint)shader, "texture");
 		YAE_GL_VERIFY();
 		if (textureLocation >= 0)
 		{
@@ -405,7 +439,72 @@ void OpenGLRenderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices
 
 void OpenGLRenderer::drawText(const Matrix4& _transform, const FontResource* _font, const char* _text)
 {
+	glm::vec3 _color(1.f, 1.f, 1.f);
 
+	u32 shaderId = (u32)m_fontShader;
+	DataArray<DrawCommand>* commandArray = m_drawCommands.get(shaderId);
+	if (commandArray == nullptr)
+	{
+		commandArray = &m_drawCommands.set(shaderId, DataArray<DrawCommand>());
+	}
+
+	u32 indicesStart = m_indices.size();
+	u32 verticesStart = m_vertices.size();
+	u32 textLength = strlen(_text);
+
+	m_vertices.resize(m_vertices.size() + textLength * 4);
+	m_indices.resize(m_indices.size() + textLength * 6);
+
+	float xPos = 0.f;
+	float yPos = 0.f;
+	Vertex vertices[4];
+	vertices[0].color = _color;
+	vertices[1].color = _color;
+	vertices[2].color = _color;
+	vertices[3].color = _color;
+	u32 indices[6] =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	stbtt_aligned_quad quad;
+	u32 indicesOffset = verticesStart;
+	for (u32 i = 0; i < textLength; ++i)
+	{
+
+		stbtt_GetPackedQuad(
+			_font->m_packedChar,
+			_font->m_atlasWidth, _font->m_atlasHeight,
+			_text[i],
+			&xPos, &yPos,
+			&quad,
+			1
+		);
+
+		vertices[0].pos = glm::vec3(quad.x0, quad.y0, 0.f);
+		vertices[1].pos = glm::vec3(quad.x1, quad.y0, 0.f);
+		vertices[2].pos = glm::vec3(quad.x1, quad.y1, 0.f);
+		vertices[3].pos = glm::vec3(quad.x0, quad.y1, 0.f);
+		vertices[0].texCoord = glm::vec2(quad.s0, quad.t0);
+		vertices[1].texCoord = glm::vec2(quad.s1, quad.t0);
+		vertices[2].texCoord = glm::vec2(quad.s1, quad.t1);
+		vertices[3].texCoord = glm::vec2(quad.s0, quad.t1);
+		memcpy(m_vertices.data() + verticesStart + (i * 4), vertices, sizeof(*vertices) * 4);
+
+		for (u32 j = 0; j < 6; ++j)
+		{
+			m_indices[indicesStart + (i * 6) + j] = indices[j] + indicesOffset;
+		}
+		indicesOffset += 4;
+	}
+
+	DrawCommand command;
+	command.transform = _transform;
+	command.indexOffset = indicesStart;
+	command.elementCount = textLength * 6;
+	command.textureId = (u32)_font->m_fontTexture;
+	commandArray->push_back(command);
 }
 
 

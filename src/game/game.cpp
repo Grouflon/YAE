@@ -70,6 +70,7 @@ public:
 	bool fpsModeEnabled = false;
 	Matrix4 mesh1Transform = Matrix4::IDENTITY;
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
+	Matrix4 fontTransform = Matrix4::IDENTITY;
 
 	MeshResource* mesh = nullptr;
 	TextureResource* texture = nullptr;
@@ -103,7 +104,7 @@ void initGame()
 	gameInstance->texture->useLoad();
 	YAE_ASSERT(gameInstance->texture->isLoaded());
 
-	gameInstance->font = findOrCreateResource<FontResource>("data/fonts/Roboto-Regular.ttf", 32);
+	gameInstance->font = findOrCreateResource<FontResource>("data/fonts/Roboto-Regular.ttf", 64);
 	gameInstance->font->useLoad();
 	YAE_ASSERT(gameInstance->font->isLoaded());
 }
@@ -192,10 +193,12 @@ void updateGame(float _dt)
 		app().setCameraPosition(cameraPosition);
 	}
 
+	/*
     ImGui::SetNextWindowSize(ImVec2(600, 512));
     ImGui::Begin("Image");
 	ImGui::Image((void*)(intptr_t)gameInstance->font->m_fontTexture, ImVec2(512, 512));
 	ImGui::End();
+	*/
 
 	/*Im3d::EnableSorting(true);
 	// Axis
@@ -272,7 +275,7 @@ void updateGame(float _dt)
 		Vertex(glm::vec3(-scale, -scale, 0.f), color, glm::vec2(0.f, 0.f)),
 		Vertex(glm::vec3(scale, -scale, 0.f), color, glm::vec2(1.f, 0.f)),
 		Vertex(glm::vec3(scale, scale, 0.f), color, glm::vec2(1.f, 1.f)),
-		Vertex(glm::vec3(-scale, scale, 0.f), color, glm::vec2(0.f, 0.f)),
+		Vertex(glm::vec3(-scale, scale, 0.f), color, glm::vec2(0.f, 1.f)),
 	};
 	u32 indices[] =
 	{
@@ -308,15 +311,14 @@ void updateGame(float _dt)
 		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
 		gameInstance->texture->getTextureHandle()
 	);
+	/*
+	*/
 
-	renderer().drawMesh(
-		gameInstance->mesh1Transform,
-		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(), 
-		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
-		gameInstance->texture->getTextureHandle()
-	);
-
-	renderer().drawText(gameInstance->mesh2Transform, gameInstance->font, "Hello World!");
+	float fontScale = 0.005f;
+	gameInstance->fontTransform = Matrix4::IDENTITY;
+	gameInstance->fontTransform = glm::scale(gameInstance->fontTransform, glm::vec3(fontScale, fontScale, fontScale));
+	gameInstance->fontTransform = glm::translate(gameInstance->fontTransform, glm::vec3(210.f, 20.f, 0.f));
+	renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
 }

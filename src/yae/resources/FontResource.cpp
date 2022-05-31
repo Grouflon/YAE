@@ -35,15 +35,15 @@ void FontResource::_doLoad()
 
 	stbtt_InitFont(&m_font, (const u8*)m_fontFile->getContent(), 0);
 
-	int width = 512;
-	int height = 512;
-	u8* fontBitmap = (u8*)scratchAllocator().allocate(width*height);
+	m_atlasWidth = 512;
+	m_atlasHeight = 512;
+	u8* fontBitmap = (u8*)scratchAllocator().allocate(m_atlasWidth*m_atlasHeight);
 	stbtt_pack_context pc;
-	YAE_VERIFY(stbtt_PackBegin(&pc, fontBitmap, width, height, 0, 1, nullptr) == 1);
+	YAE_VERIFY(stbtt_PackBegin(&pc, fontBitmap, m_atlasWidth, m_atlasHeight, 0, 1, nullptr) == 1);
 	YAE_VERIFY(stbtt_PackFontRange(&pc, (const u8*)m_fontFile->getContent(), 0, float(m_fontSize), 0, 256, m_packedChar) == 1);
 	stbtt_PackEnd(&pc);
 
-	YAE_VERIFY(renderer().createTexture(fontBitmap, width, height, GL_ALPHA, m_fontTexture) == true);
+	YAE_VERIFY(renderer().createTexture(fontBitmap, m_atlasWidth, m_atlasHeight, GL_ALPHA, m_fontTexture) == true);
 
 	scratchAllocator().deallocate(fontBitmap);
 }

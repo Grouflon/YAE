@@ -43,12 +43,12 @@ public:
 
 //private:
 	GLFWwindow* m_window = nullptr;
-	ShaderResource* m_vertexShader = nullptr;
-	ShaderResource* m_fragmentShader = nullptr;
+
+	ShaderProgramHandle m_shader = nullptr;
+	ShaderProgramHandle m_fontShader = nullptr;
 
 	i32 m_vertexBufferObject = 0;
 	i32 m_indexBufferObject = 0;
-	ShaderProgramHandle m_shader = nullptr;
 	/*
 	i32 m_uniformLocation_view = 0;
 	i32 m_uniformLocation_proj = 0;

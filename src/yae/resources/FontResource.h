@@ -29,6 +29,8 @@ public:
 
 	String m_path;
 	u32 m_fontSize = 0;
+	u32 m_atlasWidth;
+	u32 m_atlasHeight;
 
 	stbtt_fontinfo m_font;
 	stbtt_packedchar m_packedChar[256];
