@@ -10,7 +10,7 @@
 #include <yae/input.h>
 #include <yae/application.h>
 #include <yae/math.h>
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 
 #include <im3d.h>
 #include <imgui.h>

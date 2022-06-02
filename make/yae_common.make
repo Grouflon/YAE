@@ -1,6 +1,6 @@
 SRCS += $(call rwildcard,src/yae,*.cpp)
 SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/platforms,*.cpp), $(SRCS)))
-SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/renderers,*.cpp), $(SRCS)))
+SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/rendering/renderers,*.cpp), $(SRCS)))
 SRCS += $(wildcard extern/imgui/*.cpp)
 SRCS += extern/imgui/backends/imgui_impl_glfw.cpp
 SRCS += $(wildcard extern/im3d/*.cpp)
@@ -35,7 +35,7 @@ ifeq ($(PLATFORM), Web)
 endif
 
 ifeq ($(USE_VULKAN), 1)
-	SRCS += $(call rwildcard,src/yae/renderers/vulkan,*.cpp)
+	SRCS += $(call rwildcard,src/yae/rendering/renderers/vulkan,*.cpp)
 	DEFINES += \
 		YAE_IMPLEMENTS_RENDERER_VULKAN=1 \
 		GLFW_INCLUDE_VULKAN \
@@ -50,7 +50,7 @@ endif
 
 ifeq ($(USE_OPENGL), 1)
 	SRCS += \
-		$(call rwildcard,src/yae/renderers/opengl,*.cpp) \
+		$(call rwildcard,src/yae/rendering/renderers/opengl,*.cpp) \
 		extern/gl3w/src/gl3w.c \
 		extern/imgui/backends/imgui_impl_opengl3.cpp \
 

@@ -1,18 +1,18 @@
 #include "ImGuiSystem.h"
 
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 
 #if YAE_IMPLEMENTS_RENDERER_OPENGL
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <yae/renderers/opengl/OpenGLRenderer.h>
+#include <yae/rendering/renderers/opengl/OpenGLRenderer.h>
 #endif
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
-#include <yae/renderers/vulkan/vulkan.h>
-#include <yae/renderers/vulkan/VulkanRenderer.h>
-#include <yae/renderers/vulkan/VulkanSwapChain.h>
-#include <yae/renderers/vulkan/imgui_impl_vulkan.h>
+#include <yae/rendering/renderers/vulkan/vulkan.h>
+#include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
+#include <yae/rendering/renderers/vulkan/VulkanSwapChain.h>
+#include <yae/rendering/renderers/vulkan/imgui_impl_vulkan.h>
 #include <VulkanMemoryAllocator/vk_mem_alloc.h>
 #endif
 

@@ -2,7 +2,7 @@
 
 #include <yae/filesystem.h>
 #include <yae/string.h>
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 #include <yae/resources/FileResource.h>
 
 #include <GLFW/glfw3.h>

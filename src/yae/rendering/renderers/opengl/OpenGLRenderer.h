@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 #include <yae/containers/HashMap.h>
 
 namespace yae {

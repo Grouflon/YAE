@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/render_types.h>
+#include <yae/rendering/render_types.h>
 #include <yae/math_types.h>
 
 typedef struct GLFWwindow GLFWwindow;

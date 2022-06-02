@@ -9,10 +9,10 @@
 #include <yae/ImGuiSystem.h>
 
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
-#include <yae/renderers/vulkan/VulkanRenderer.h>
+#include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
 #endif
 #if YAE_IMPLEMENTS_RENDERER_OPENGL
-#include <yae/renderers/opengl/OpenGLRenderer.h>
+#include <yae/rendering/renderers/opengl/OpenGLRenderer.h>
 #endif
 
 #include <GLFW/glfw3.h>

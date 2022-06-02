@@ -5,9 +5,6 @@
 #include <yae/types.h>
 
 struct json_value_s;
-struct json_string_s;
-struct json_object_s;
-struct json_object_element_s;
 
 namespace mirror {
 class TypeDesc;

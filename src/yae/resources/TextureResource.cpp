@@ -1,7 +1,7 @@
 #include "TextureResource.h"
 
 #include <yae/filesystem.h>
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>

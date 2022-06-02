@@ -9,7 +9,7 @@
 #include <yae/profiler.h>
 #include <yae/logger.h>
 #include <yae/hash.h>
-#include <yae/Renderer.h>
+#include <yae/rendering/Renderer.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
