@@ -452,6 +452,8 @@ void Program::_loadGameAPI(const char* _path)
 	m_gameAPI.libraryHandle = platform::loadDynamicLibrary(_path);
 	YAE_ASSERT(m_gameAPI.libraryHandle);
 
+	mirror::GetTypeSet().resolveTypes();
+
 	m_gameAPI.gameInit = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "initGame");
 	m_gameAPI.gameUpdate = (GameUpdateFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "updateGame");
 	m_gameAPI.gameShutdown = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "shutdownGame");

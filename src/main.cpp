@@ -4,6 +4,7 @@
 #include <yae/application.h>
 #include <yae/logger.h>
 
+#include <mirror.h>
 #include <stdio.h>
 #include <cstdlib>
 
@@ -11,6 +12,8 @@
 
 int main(int _argc, char** _argv)
 {
+    mirror::GetTypeSet().resolveTypes();
+
     yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator scratchAllocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator toolAllocator = yae::FixedSizeAllocator(1024*1024*32);

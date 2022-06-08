@@ -11,7 +11,7 @@ LIBS += \
 	yae
 
 DEFINES += \
-	MIRROR_IMPORT \
-	IMGUI_API=__declspec(dllimport)
+	MIRROR_API=__declspec(dllimport) \
+	IMGUI_API=__declspec(dllimport) \
 
 -include make/footer.make

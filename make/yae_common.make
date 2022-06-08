@@ -4,8 +4,6 @@ SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/rendering/renderers,*.
 SRCS += $(wildcard extern/imgui/*.cpp)
 SRCS += extern/imgui/backends/imgui_impl_glfw.cpp
 SRCS += $(wildcard extern/im3d/*.cpp)
-SRCS += $(wildcard extern/mirror/*.cpp)
-SRCS += extern/mirror/Tools/BinarySerializer.cpp
 
 INCLUDEDIRS +=
 

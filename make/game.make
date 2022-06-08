@@ -14,7 +14,7 @@ LIBS += \
 
 DEFINES += \
   YAEGAME_EXPORT \
-  MIRROR_IMPORT \
+  MIRROR_API=__declspec(dllimport) \
   IMGUI_API=__declspec(dllimport) \
   _MT _DLL
 

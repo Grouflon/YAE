@@ -13,7 +13,7 @@ LIBS += \
 LDFLAGS += -shared
 DEFINES += \
 	YAELIB_EXPORT \
-	MIRROR_EXPORT \
+	MIRROR_API=__declspec(dllexport) \
 	IMGUI_API=__declspec(dllexport) \
 	_MT _DLL
 
