@@ -22,11 +22,11 @@ MIRROR_CLASS_DEFINITION(ConfigData);
 
 using namespace yae;
 
+MIRROR_CLASS_DEFINITION(SuperResource);
 
 void onLibraryLoaded()
 {
-	/*
-	printf("\x1b[31mBA.\r\n");
+	/*printf("\x1b[31mBA.\r\n");
 	YAE_LOG("Bonjour");
 	{
 		FileResource* configFile = findOrCreateResource<FileResource>("./config.json");
@@ -48,18 +48,24 @@ void onLibraryLoaded()
 		printf("hello: %s", (const char*)buffer);
 
 		configFile->releaseUnuse();
-	}
+	}*/
 
-	mirror::PointerTypeDesc* pointerType = (mirror::PointerTypeDesc*)(mirror::GetTypeDesc<ConfigData*>());
+	mirror::Pointer* pointerType = (mirror::Pointer*)(mirror::GetTypeDesc<ConfigData**>());
 	mirror::TypeDesc* type = pointerType->getSubType();
 
-	mirror::TypeSet* typeSet = mirror::GetTypeSet();
+	mirror::TypeSet& typeSet = mirror::GetTypeSet();
 	std::vector<mirror::TypeDesc*> types;
-	for (auto& type : typeSet->getTypes())
+	for (auto& type : typeSet.getTypes())
 	{
+		mirror::Class* clss = type->asClass();
 		YAE_LOG(type->getName());
+		if (clss)
+		{
+			YAE_LOGF("%d", clss->getChildren().size());
+		}
 		types.push_back(type);
-	}*/
+	}
+	int a = 0;
 }
 
 class GameInstance

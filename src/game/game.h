@@ -5,6 +5,7 @@
 #include <mirror/mirror.h>
 
 #include <yae/types.h>
+#include <yae/resource.h>
 
 #ifdef __cplusplus    // If used by C++ code, 
 extern "C" {          // we need to export the C interface
@@ -44,3 +45,26 @@ struct ConfigData
 		MIRROR_MEMBER(someChar)()
 	);
 };
+
+namespace yae {
+class SuperResource : public Resource
+{
+	MIRROR_CLASS(SuperResource)
+	(
+		MIRROR_PARENT(yae::Resource)
+	);
+
+public:
+	SuperResource(const char* _path) : Resource(_path) {}
+	virtual~ SuperResource() {}
+
+	virtual void _doLoad() override {}
+	virtual void _doUnload() override {}
+};
+
+template <>
+struct YAELIB_API ResourceIDGetter<SuperResource>
+{
+	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
+};
+}
