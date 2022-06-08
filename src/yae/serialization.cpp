@@ -344,8 +344,6 @@ void JsonSerializer::_write(void* _data, const mirror::TypeDesc* _type)
 		}
 		break;
 		case mirror::Type_Enum:
-		case mirror::Type_std_string:
-		case mirror::Type_std_vector:
 		case mirror::Type_FixedSizeArray:
 		default:
 			YAE_ASSERT_MSG(false, "Not implemented");
@@ -475,8 +473,6 @@ void JsonSerializer::_read(void* _data, const mirror::TypeDesc* _type)
 	}
 	break;
 	case mirror::Type_Enum:
-	case mirror::Type_std_string:
-	case mirror::Type_std_vector:
 	case mirror::Type_FixedSizeArray:
 	default:
 		YAE_ASSERT_MSG(false, "Not implemented");
