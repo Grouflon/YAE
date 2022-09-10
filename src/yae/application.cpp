@@ -62,7 +62,7 @@ void Application::init(char** _args, int _argCount)
 	m_inputSystem->init(m_window);
 
 	// Init renderer
-	m_renderer->init(m_window);
+	YAE_VERIFY(m_renderer->init(m_window) == true);
 
 	// Setup Dear ImGui context
 	m_imGuiSystem = defaultAllocator().create<ImGuiSystem>();
