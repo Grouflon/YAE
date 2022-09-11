@@ -126,6 +126,12 @@ YAELIB_API ResourceManager& resourceManager();
 YAELIB_API InputSystem& input();
 YAELIB_API Renderer& renderer();
 
+YAELIB_API void setAllocators(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator);
+
+extern Allocator* g_defaultAllocator;
+extern Allocator* g_scratchAllocator;
+extern Allocator* g_toolAllocator;
+
 } // namespace yae
 
 // BASE INCLUDES

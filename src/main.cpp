@@ -20,9 +20,10 @@ int main(int _argc, char** _argv)
     yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator scratchAllocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator toolAllocator = yae::FixedSizeAllocator(1024*1024*32);
+    yae::setAllocators(&allocator, &scratchAllocator, &toolAllocator);
 
     {
-        yae::Program program(&allocator, &scratchAllocator, &toolAllocator);
+        yae::Program program;
         program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
         program.init(_argv, _argc);

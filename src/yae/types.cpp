@@ -5,6 +5,10 @@
 
 namespace yae {
 
+Allocator* g_defaultAllocator = nullptr;
+Allocator* g_scratchAllocator = nullptr;
+Allocator* g_toolAllocator = nullptr;
+
 Program& program()
 {
 	YAE_ASSERT(Program::s_programInstance != nullptr);
@@ -20,19 +24,22 @@ Application& app()
 
 Allocator& defaultAllocator()
 {
-	return program().defaultAllocator();
+	YAE_ASSERT(g_defaultAllocator != nullptr);
+	return *g_defaultAllocator;
 }
 
 
 Allocator& scratchAllocator()
 {
-	return program().scratchAllocator();
+	YAE_ASSERT(g_scratchAllocator != nullptr);
+	return *g_scratchAllocator;
 }
 
 
 Allocator& toolAllocator()
 {
-	return program().toolAllocator();
+	YAE_ASSERT(g_toolAllocator != nullptr);
+	return *g_toolAllocator;
 }
 
 
@@ -63,6 +70,13 @@ InputSystem& input()
 Renderer& renderer()
 {
 	return app().renderer();
+}
+
+void setAllocators(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator)
+{
+	g_defaultAllocator = _defaultAllocator;
+	g_defaultAllocator = _scratchAllocator;
+	g_defaultAllocator = _toolAllocator;
 }
 
 

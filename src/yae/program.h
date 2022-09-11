@@ -32,7 +32,7 @@ struct GameAPI
 class YAELIB_API Program
 {
 public:
-	Program(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator);
+	Program();
 	~Program();
 
 	void init(char** _args, int _argCount);
@@ -51,9 +51,6 @@ public:
 
 	// Services getters
 	Application& currentApplication();
-	Allocator& defaultAllocator();
-	Allocator& scratchAllocator();
-	Allocator& toolAllocator();
 	ResourceManager& resourceManager();
 	Logger& logger();
 	Profiler& profiler();
@@ -72,9 +69,6 @@ public:
 	String _getGameDLLPath() const;
 	String _getGameDLLSymbolsPath() const;
 
-	Allocator* m_defaultAllocator = nullptr;
-	Allocator* m_scratchAllocator = nullptr;
-	Allocator* m_toolAllocator = nullptr;
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;

@@ -51,20 +51,17 @@ namespace yae {
 Program* Program::s_programInstance = nullptr;
 
 
-Program::Program(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator)
-	: m_defaultAllocator(_defaultAllocator)
-	, m_scratchAllocator(_scratchAllocator)
-	, m_toolAllocator(_toolAllocator)
-	, m_applications(_defaultAllocator)
-	, m_exePath(_defaultAllocator)
-	, m_binDirectory(_defaultAllocator)
-	, m_rootDirectory(_defaultAllocator)
-	, m_intermediateDirectory(_defaultAllocator)
-	, m_hotReloadDirectory(_defaultAllocator)
+Program::Program()
+	: m_applications(&defaultAllocator())
+	, m_exePath(&defaultAllocator())
+	, m_binDirectory(&defaultAllocator())
+	, m_rootDirectory(&defaultAllocator())
+	, m_intermediateDirectory(&defaultAllocator())
+	, m_hotReloadDirectory(&defaultAllocator())
 {
 	YAE_ASSERT(s_programInstance == nullptr);
 	s_programInstance = this;
-    m_logger = m_defaultAllocator->create<Logger>();
+    m_logger = defaultAllocator().create<Logger>();
 }
 
 
@@ -72,13 +69,9 @@ Program::~Program()
 {
 	YAE_ASSERT(s_programInstance == this);
 	
-	m_defaultAllocator->destroy(m_logger);
+	defaultAllocator().destroy(m_logger);
 	m_logger = nullptr;
 	s_programInstance = nullptr;
-
-	m_toolAllocator = nullptr;
-	m_scratchAllocator = nullptr;
-	m_defaultAllocator = nullptr;
 }
 
 
@@ -100,7 +93,7 @@ void Program::init(char** _args, int _argCount)
 		}
 	}
 
-	m_profiler = m_defaultAllocator->create<Profiler>(m_toolAllocator);
+	m_profiler = defaultAllocator().create<Profiler>(&toolAllocator());
 
 	YAE_CAPTURE_FUNCTION();
 
@@ -127,7 +120,7 @@ void Program::init(char** _args, int _argCount)
 
     ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
 
-	m_resourceManager = m_defaultAllocator->create<ResourceManager>();
+	m_resourceManager = defaultAllocator().create<ResourceManager>();
 
 #if STATIC_GAME_API == 0
 	// Prepare Game API for hot reload
@@ -178,12 +171,12 @@ void Program::shutdown()
 
 	_unloadGameAPI();
 
-	m_defaultAllocator->destroy(m_resourceManager);
+	defaultAllocator().destroy(m_resourceManager);
 	m_resourceManager = nullptr;
 
 	ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
 
-	m_defaultAllocator->destroy(m_profiler);
+	defaultAllocator().destroy(m_profiler);
 	m_profiler = nullptr;
 
 #if DEBUG_STRINGHASH
@@ -294,27 +287,6 @@ Application& Program::currentApplication()
 {
 	YAE_ASSERT(m_currentApplication != nullptr);
 	return *m_currentApplication;
-}
-
-
-Allocator& Program::defaultAllocator()
-{
-	YAE_ASSERT(m_defaultAllocator != nullptr);
-	return *m_defaultAllocator;
-}
-
-
-Allocator& Program::scratchAllocator()
-{
-	YAE_ASSERT(m_scratchAllocator != nullptr);
-	return *m_scratchAllocator;
-}
-
-
-Allocator& Program::toolAllocator()
-{
-	YAE_ASSERT(m_toolAllocator != nullptr);
-	return *m_toolAllocator;
 }
 
 
