@@ -11,6 +11,14 @@ HashMap<Key, T>::HashMap(Allocator* _allocator)
 
 
 template<typename Key, typename T>
+bool HashMap<Key, T>::has(Key _key) const
+{
+	FindResult result = _find(_key);
+	return result.dataIndex != END_OF_LIST;
+}
+
+
+template<typename Key, typename T>
 const T* HashMap<Key, T>::get(Key _key) const
 {
 	FindResult result = _find(_key);
