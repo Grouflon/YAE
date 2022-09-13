@@ -154,6 +154,7 @@ bool createDirectory(const char* _path)
 
 Date getFileLastWriteTime(const char* _path)
 {
+#if YAE_PLATFORM_WEB == 0
 	std::error_code errorCode;
 	auto ftime = std::experimental::filesystem::last_write_time(_path, errorCode);
 	if (errorCode.value() != 0)
@@ -161,6 +162,10 @@ Date getFileLastWriteTime(const char* _path)
 
     std::time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
     return Date(i64(cftime));
+#else
+    YAE_ASSERT_MSG(false, "getFileLastWriteTime is not supported for Web yet");
+    return Date(0);
+#endif
 }
 
 

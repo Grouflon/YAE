@@ -270,7 +270,6 @@ void FixedSizeAllocator::deallocate(void* _memory)
 void FixedSizeAllocator::check()
 {
 	size_t totalSize = 0;
-	size_t currentBlock = 0;
 	Header* block = m_firstBlock;
 	while (block != nullptr)
 	{
@@ -280,8 +279,6 @@ void FixedSizeAllocator::check()
 
 		totalSize += _getBlockSize(block);
 		block = block->next;
-
-		++currentBlock;
 	}
 	YAE_ASSERT(totalSize == m_memorySize);
 }

@@ -13,10 +13,18 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <GLFW/glfw3.h>
 
-
+#if YAE_PLATFORM_WEB == 0
+const int OPENGL_VERSION_MAJOR = 3;
+const int OPENGL_VERSION_MINOR = 3;
+const char* OPENGL_SHADER_VERSION = "#version 100";
+#define YAE_OPENGL_ES 0
+#else
 const int OPENGL_VERSION_MAJOR = 2;
 const int OPENGL_VERSION_MINOR = 0;
 const char* OPENGL_SHADER_VERSION = "#version 100";
+#define YAE_OPENGL_ES 1
+#endif
+
 
 #define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error 0x%04x -> " #_instruction, ___error); }
 
@@ -43,7 +51,12 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 
 void OpenGLRenderer::hintWindow()
 {
+#if YAE_OPENGL_ES
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#else
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+#endif
+
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_VERSION_MAJOR);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, OPENGL_VERSION_MINOR);
 
@@ -57,15 +70,16 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 
 #if YAE_PLATFORM_WEB == 0
 	// TODO: Move gl3w init to the device part
-	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) != GL3W_OK)
+	int gl3wInitResult = gl3wInit();
+	if (gl3wInitResult != GL3W_OK)
 	{
-		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
+		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w. Return code: %d", gl3wInitResult);
 		return false;
 	}
 
-	if (gl3wInit() != GL3W_OK)
+	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) == false)
 	{
-		YAE_ERROR_CAT("opengl", "Failed to initialize gl3w");
+		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
 		return false;
 	}
 
@@ -78,13 +92,21 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	}
 #endif
 
+	YAE_GL_VERIFY(glGenVertexArrays(1, &m_vao));
+	YAE_GL_VERIFY(glBindVertexArray(m_vao));
+
 	GLuint buffers[2] = {} ; // 0 is vertices, 1 is indices
-    YAE_GL_VERIFY(glGenBuffers(2, buffers));
-    m_vertexBufferObject = buffers[0];
-    m_indexBufferObject = buffers[1];
+	YAE_GL_VERIFY(glGenBuffers(2, buffers));
+	m_vertexBufferObject = buffers[0];
+	m_indexBufferObject = buffers[1];
 
 	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
-    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
+	YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
+
+	int maxVertexAttribs;
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+	YAE_ASSERT(maxVertexAttribs >= 3);
+
 	YAE_GL_VERIFY(glEnableVertexAttribArray(0));
 	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
 	YAE_GL_VERIFY(glEnableVertexAttribArray(2));
@@ -154,6 +176,14 @@ void OpenGLRenderer::shutdown()
 
 	destroyShaderProgram(m_shader);
 	m_shader = nullptr;
+
+	GLuint buffers[2] = { m_vertexBufferObject, m_indexBufferObject};
+	glDeleteBuffers(2, buffers);
+	m_vertexBufferObject = 0;
+	m_indexBufferObject = 0;
+
+	glDeleteVertexArrays(1, &m_vao);
+	m_vao = 0;
 }
 
 FrameHandle OpenGLRenderer::beginFrame()
@@ -277,9 +307,46 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 	m_indices.clear();
 }
 
-bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _format, TextureHandle& _outTextureHandle)
+bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
 {
 	YAE_CAPTURE_FUNCTION();
+
+	GLuint internalFormat;
+	GLuint format;
+
+#if YAE_OPENGL_ES
+	switch(_channels)
+	{
+		case 1:
+		{
+			internalFormat = GL_ALPHA;
+			format = GL_ALPHA;
+		}
+		break;
+		default:
+		{
+			internalFormat = GL_RGBA;
+			format = GL_RGBA;
+		}
+		break;
+	}
+#else
+	switch(_channels)
+	{
+		case 1:
+		{
+			internalFormat = GL_R8;
+			format = GL_RED;
+		}
+		break;
+		default:
+		{
+			internalFormat = GL_RGBA8;
+			format = GL_RGBA;
+		}
+		break;
+	}
+#endif
 
 	GLuint textureId;
     YAE_GL_VERIFY(glGenTextures(1, &textureId));
@@ -289,11 +356,11 @@ bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _fo
     YAE_GL_VERIFY(glTexImage2D(
     	GL_TEXTURE_2D,    // target
     	0,                // level
-    	_format,          // internal format
+    	internalFormat,   // internal format
     	_width,           // width
     	_height,          // height
     	0,                // border, must be 0
-    	_format,          // format
+    	format,           // format
     	GL_UNSIGNED_BYTE, // type
     	_data
     ));
@@ -322,10 +389,16 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
 		default: break;
 	}
 
-	GLint codeSize = _codeSize;
+	const char* defines = "";
+#if YAE_OPENGL_ES
+	defines = "#define OPENGL_ES=1";
+#endif
+
+	const char* code[] = {defines, _code};
+	GLint codeSize[] = {-1, (GLint)_codeSize};
 	GLuint shaderId = glCreateShader(glShaderType);
 	YAE_ASSERT(shaderId != 0);
-	YAE_GL_VERIFY(glShaderSource(shaderId, 1, &_code, &codeSize));
+	YAE_GL_VERIFY(glShaderSource(shaderId, 2, code, codeSize));
 	YAE_GL_VERIFY(glCompileShader(shaderId));
 
 	GLint status = 0, logLength = 0;

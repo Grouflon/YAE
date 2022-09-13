@@ -8,9 +8,11 @@ varying vec2 fragTexCoord;
 
 void main()
 {
-	float alpha = texture2D(texture, fragTexCoord).w;
-	gl_FragColor = vec4(fragColor.r, fragColor.g, fragColor.b, alpha);
-	//gl_FragColor = vec4(alpha, 1.0, 1.0, 1.0);
-	//gl_FragColor = vec4(fragTexCoord.y, fragTexCoord.y, 1.0, 1.0);
-	//gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+	vec4 pixel = texture2D(texture, fragTexCoord);
+	// OpenGL ES puts the alpha in the a channel, but OpenGL 3.3 puts it in the red channel
+#ifdef OPENGL_ES
+	gl_FragColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.w);
+#else
+	gl_FragColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.x);
+#endif
 }

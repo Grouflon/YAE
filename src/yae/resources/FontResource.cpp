@@ -43,7 +43,7 @@ void FontResource::_doLoad()
 	YAE_VERIFY(stbtt_PackFontRange(&pc, (const u8*)m_fontFile->getContent(), 0, float(m_fontSize), 0, 256, m_packedChar) == 1);
 	stbtt_PackEnd(&pc);
 
-	YAE_VERIFY(renderer().createTexture(fontBitmap, m_atlasWidth, m_atlasHeight, GL_ALPHA, m_fontTexture) == true);
+	YAE_VERIFY(renderer().createTexture(fontBitmap, m_atlasWidth, m_atlasHeight, 1, m_fontTexture) == true);
 
 	scratchAllocator().deallocate(fontBitmap);
 }

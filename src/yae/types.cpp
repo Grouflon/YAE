@@ -75,8 +75,8 @@ Renderer& renderer()
 void setAllocators(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator)
 {
 	g_defaultAllocator = _defaultAllocator;
-	g_defaultAllocator = _scratchAllocator;
-	g_defaultAllocator = _toolAllocator;
+	g_scratchAllocator = _scratchAllocator;
+	g_toolAllocator = _toolAllocator;
 }
 
 

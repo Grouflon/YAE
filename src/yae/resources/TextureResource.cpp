@@ -41,7 +41,7 @@ void TextureResource::_doLoad()
 	
 
 	YAE_ASSERT(pixels);
-	bool result = renderer().createTexture(pixels, m_width, m_height, GL_RGBA, m_textureHandle);
+	bool result = renderer().createTexture(pixels, m_width, m_height, 4, m_textureHandle);
 	stbi_image_free(pixels);
 
 	if (!result)

@@ -47,8 +47,9 @@ public:
 	ShaderProgramHandle m_shader = nullptr;
 	ShaderProgramHandle m_fontShader = nullptr;
 
-	i32 m_vertexBufferObject = 0;
-	i32 m_indexBufferObject = 0;
+	u32 m_vao = 0;
+	u32 m_vertexBufferObject = 0;
+	u32 m_indexBufferObject = 0;
 	/*
 	i32 m_uniformLocation_view = 0;
 	i32 m_uniformLocation_proj = 0;
