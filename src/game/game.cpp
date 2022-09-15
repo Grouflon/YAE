@@ -12,7 +12,7 @@
 #include <yae/math.h>
 #include <yae/rendering/Renderer.h>
 #include <yae/containers/Array.h>
-#include <yae/serialization/Serializer.h>
+#include <yae/serialization/BinarySerializer.h>
 
 #include <im3d.h>
 #include <imgui.h>
@@ -53,6 +53,7 @@ void onLibraryLoaded()
 	}*/
 
 	// Reflection
+#if false
 	mirror::Pointer* pointerType = (mirror::Pointer*)(mirror::GetTypeDesc<ConfigData**>());
 	mirror::TypeDesc* type = pointerType->getSubType();
 
@@ -68,55 +69,73 @@ void onLibraryLoaded()
 		}
 		types.push_back(type);
 	}
+#endif
 
 	// Serializer
+#if true
+	struct Nest
+    {
+    	bool a;
+    	bool b;
+    	float c;
+    };
     struct Sfouf
     {
         u32 a;
         float b;
         yae::Array<yae::Array<u8>> array;
         bool c;
+        Nest nest;
     };
+    
     auto doSerialize = [](yae::Serializer& _serializer, Sfouf& _sfouf)
     {
-        // Si l'erreur peut venir de la data, error. Si l'erreur vient du code, assert
-        /*
         YAE_VERIFY(_serializer.beginSerializeObject());
-        YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
-        YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
-        u32 arraySize = _sfouf.array.size();
-        YAE_VERIFY(_serializer.beginSerializeArray(arraySize, "array"));
-        _sfouf.array.resize(arraySize);
-        for (auto element : _sfouf.array)
         {
-            YAE_VERIFY(_serializer.serialize(element));
-        }
-        YAE_VERIFY(_serializer.endSerializeArray());
-        YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
+        	if (_serializer.getMode() == SerializationMode::WRITE)
+        	{
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
+		        YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
+        	}
+
+	        u32 arraySize = _sfouf.array.size();
+	        YAE_VERIFY(_serializer.beginSerializeArray(arraySize, "array"));
+	        {
+		        _sfouf.array.resize(arraySize);
+		        for (auto& array : _sfouf.array)
+		        {
+		            u32 arraySize2 = array.size();
+		            YAE_VERIFY(_serializer.beginSerializeArray(arraySize2));
+		            {
+		            	array.resize(arraySize2);
+			            for (auto& element : array)
+			            {
+			                YAE_VERIFY(_serializer.serialize(element));
+			            }
+		            }
+		            YAE_VERIFY(_serializer.endSerializeArray());
+		        }
+	        }
+	        YAE_VERIFY(_serializer.endSerializeArray());
+
+        	YAE_VERIFY(_serializer.beginSerializeObject("nest"));
+        	{
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.a, "a"));
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.b, "b"));
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.c, "c"));
+        	}
+        	YAE_VERIFY(_serializer.endSerializeObject());
+
+
+	        if (_serializer.getMode() == SerializationMode::READ)
+        	{
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
+	        	YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
+		        //YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
+        	}
+	    }
         YAE_VERIFY(_serializer.endSerializeObject());
-        */
-
-        YAE_VERIFY(_serializer.serialize(_sfouf.a));
-        YAE_VERIFY(_serializer.serialize(_sfouf.b));
-
-        u32 arraySize = _sfouf.array.size();
-        YAE_VERIFY(_serializer.beginSerializeArray(arraySize));
-        _sfouf.array.resize(arraySize);
-        for (auto& array : _sfouf.array)
-        {
-            u32 arraySize2 = array.size();
-            YAE_VERIFY(_serializer.beginSerializeArray(arraySize2));
-            array.resize(arraySize2);
-            for (auto& element : array)
-            {
-                YAE_VERIFY(_serializer.serialize(element));
-            }
-            YAE_VERIFY(_serializer.endSerializeArray());
-        }
-        
-        YAE_VERIFY(_serializer.endSerializeArray());
-
-        YAE_VERIFY(_serializer.serialize(_sfouf.c));
     };
 
     Allocator& allocator = defaultAllocator();
@@ -135,6 +154,9 @@ void onLibraryLoaded()
     sfoufWrite.array[2][3] = 2;
     sfoufWrite.array[2][4] = 1;
     sfoufWrite.c = true;
+    sfoufWrite.nest.a = true;
+    sfoufWrite.nest.b = false;
+    sfoufWrite.nest.c = 7.2f;
     serializer.beginWrite();
     doSerialize(serializer, sfoufWrite);
 
@@ -150,7 +172,7 @@ void onLibraryLoaded()
     serializer.endRead();
 
     allocator.deallocate(data);
-
+#endif
     int a = 0;
 }
 
