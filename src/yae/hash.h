@@ -23,6 +23,7 @@ class YAELIB_API StringHash
 public:
 	StringHash();
 	StringHash(const char* _str);
+	StringHash(u32 _hash);
 	~StringHash();
 
 	u32 getHash() const { return m_hash; }
@@ -35,6 +36,7 @@ public:
 	bool operator<=(const StringHash& _rhs) const;
 	bool operator>=(const StringHash& _rhs) const;
 	u32 operator%(u32 _rhs) const;
+	operator u32() const;
 
 private:
 	u32 m_hash;
@@ -54,6 +56,8 @@ class StringHashRepository
 public:
 	StringHashRepository();
 	const char* registerStringHash(u32 _hash, const char* _string);
+	const char* getString(u32 _hash) const;
+
 	void clear();
 
 private:
