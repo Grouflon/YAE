@@ -4,7 +4,6 @@
 #include <yae/memory.h>
 
 #include <cstring>
-#include <string>
 #include <algorithm>
 
 namespace yae {
@@ -189,10 +188,20 @@ String& String::replace(size_t _position, size_t _count, const char* _replacemen
 	size_t baseLength = m_length;
 	size_t count = std::min(baseLength - _position, _count);
 	size_t replacementLen = strlen(_replacement);
-	resize(baseLength + replacementLen - count);
+
+	if (_count < replacementLen) // if replacement string is longer, resize before
+	{
+		resize(baseLength + replacementLen - count);
+	}
+
 	char* bufferPosition = m_buffer + _position;
 	memcpy(bufferPosition + replacementLen, bufferPosition + count, baseLength - (_position + count));
 	memcpy(bufferPosition, _replacement, replacementLen);
+
+	if (_count > replacementLen) // if replacement string is shorted, resize after
+	{
+		resize(baseLength + replacementLen - count);
+	}
 
 	return *this;
 }
