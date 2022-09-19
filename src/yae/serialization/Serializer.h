@@ -25,7 +25,7 @@ public:
 	virtual void beginWrite();
 	virtual void endWrite();
 
-	virtual void beginRead(void* _data, u32 _dataSize);
+	virtual void beginRead();
 	virtual void endRead();
 
 	virtual bool serialize(bool& _value, const char* _key = nullptr) = 0;
@@ -45,9 +45,6 @@ public:
 
 	virtual bool beginSerializeObject(const char* _key = nullptr) = 0;
 	virtual bool endSerializeObject() = 0;
-
-	virtual void* getData() const = 0;
-	virtual u32 getDataSize() const = 0;
 
 	const char* getLastError() const;
 

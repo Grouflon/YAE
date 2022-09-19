@@ -2,6 +2,30 @@
 
 #include <yae/memory.h>
 
+/*
+Memory layout:
+
+dataBlock ~b
+ dataSize 32b
+ data ~b
+
+ArrayDataBlock
+ dataSize 32b
+ data ~b
+  arrayElementCount 32b
+  dataBlock []~b
+
+object data block
+ dataSize 32b
+ data ~b
+  objectDataSize 32b
+  objectData ~b
+  addressMapElementCount 32b
+  addressMap []64b
+  	keyhash 32b
+  	offset 32b
+*/
+
 namespace yae {
 
 const u32 SIZE_FIELD_SIZE = sizeof(u32); // Size of a size field in the binary buffer
@@ -16,11 +40,15 @@ BinarySerializer::BinarySerializer(Allocator* _allocator)
 
 BinarySerializer::~BinarySerializer()
 {
+	m_allocator->deallocate(m_writeData);
 }
 
 void BinarySerializer::beginWrite()
 {
 	YAE_ASSERT(m_bufferStack.size() == 0);
+	m_allocator->deallocate(m_writeData);
+	m_writeData = nullptr;
+	m_writeDataSize = 0;
 	Serializer::beginWrite();
 
 	Buffer buffer;
@@ -39,20 +67,45 @@ void BinarySerializer::endWrite()
 	YAE_ASSERT(m_bufferStack.size() == 1);
 
 	Buffer& buffer = _getTopBuffer();
+
+	YAE_ASSERT(m_writeData == nullptr);
+	m_writeDataSize = buffer.dataSize;
+	m_writeData = m_allocator->allocate(m_writeDataSize);
+	memcpy(m_writeData, buffer.data, m_writeDataSize);
 	m_allocator->deallocate(buffer.data);
 	m_bufferStack.pop_back();
 }
 
-void BinarySerializer::beginRead(void* _data, u32 _dataSize)
+void* BinarySerializer::getWriteData() const
+{
+	YAE_ASSERT_MSG(getMode() == SerializationMode::NONE, "WriteData can't be queried during a serialization. This call should go outside of the begin/end block.");
+	return m_writeData;
+}
+
+u32 BinarySerializer::getWriteDataSize() const
+{
+	YAE_ASSERT_MSG(getMode() == SerializationMode::NONE, "WriteData can't be queried during a serialization. This call should go outside of the begin/end block.");
+	return m_writeDataSize;
+}
+
+void BinarySerializer::setReadData(void* _data, u32 _dataSize)
+{
+	YAE_ASSERT_MSG(getMode() == SerializationMode::NONE, "ReadData can't be set during a serialization. This call should go outside of the begin/end block.");
+	m_readData = _data;
+	m_readDataSize = _dataSize;
+}
+
+void BinarySerializer::beginRead()
 {
 	YAE_ASSERT(m_bufferStack.size() == 0);
+	YAE_ASSERT(m_readDataSize = 0 || m_readData != nullptr);
 
-	Serializer::beginRead(_data, _dataSize);
+	Serializer::beginRead();
 
 	Buffer buffer;
 	buffer.type = BufferType::PLAIN;
-	buffer.data = (u8*)_data;
-	buffer.dataSize = _dataSize;
+	buffer.data = (u8*)m_readData;
+	buffer.dataSize = m_readDataSize;
 	buffer.cursor = 0;
 	buffer.maxCursor = 0;
 	m_bufferStack.push_back(buffer);
@@ -62,6 +115,8 @@ void BinarySerializer::endRead()
 {
 	m_bufferStack.pop_back();
 	YAE_ASSERT(m_bufferStack.size() == 0);
+	m_readData = nullptr;
+	m_readDataSize = 0;
 
 	Serializer::endRead();
 }
@@ -297,18 +352,6 @@ bool BinarySerializer::endSerializeObject()
 	m_bufferStack.pop_back();
 
 	return true;
-}
-
-void* BinarySerializer::getData() const
-{
-	YAE_ASSERT(m_bufferStack.size() > 0);
-	return m_bufferStack[0].data;
-}
-
-u32 BinarySerializer::getDataSize() const
-{
-	YAE_ASSERT(m_bufferStack.size() > 0);
-	return m_bufferStack[0].dataSize;
 }
 
 bool BinarySerializer::_serializeData(void* _data, u32 _size, const char* _id)

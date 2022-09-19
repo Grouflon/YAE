@@ -2,24 +2,26 @@
 
 #include <yae/types.h>
 #include <yae/serialization/Serializer.h>
-#include <yae/hash.h>
 #include <yae/containers/Array.h>
-#include <yae/containers/HashMap.h>
+
+struct json_value_s;
 
 namespace yae {
 
-class YAELIB_API BinarySerializer : public Serializer
+class Allocator;
+
+class YAELIB_API JsonSerializer : public Serializer
 {
 public:
-	BinarySerializer(Allocator* _allocator = nullptr);
-	virtual ~BinarySerializer();
+	JsonSerializer(Allocator* _allocator = nullptr);
+	virtual ~JsonSerializer();
 
 	virtual void beginWrite() override;
 	virtual void endWrite() override;
 	void* getWriteData() const;
-	u32 getWriteDataSize() const;
+	u32 getWriteDataSize();
 
-	void setReadData(void* _data, u32 _dataSize);
+	bool parseSourceData(const void* _data, u32 _dataSize);
 	virtual void beginRead() override;
 	virtual void endRead() override;
 
@@ -43,50 +45,16 @@ public:
 	virtual bool beginSerializeObject(const char* _id = nullptr) override;
 	virtual bool endSerializeObject() override;
 
-//private:
-	struct ArrayBinaryBuffer
-	{
-		ArrayBinaryBuffer() {}
-		u32 elementCount;
-	};
-	struct ObjectBinaryBuffer
-	{
-		ObjectBinaryBuffer() {}
-		ObjectBinaryBuffer(Allocator* _allocator) : index(_allocator) {}
-		HashMap<StringHash, u32> index;
-	};
-	enum class BufferType : u8
-	{
-		PLAIN,
-		ARRAY,
-		OBJECT
-	};
-	struct Buffer
-	{
-		Buffer() {}
-		Buffer(Allocator* _allocator) : object(_allocator) {}
+private:
+	bool _selectNextValue(const char* _id, json_value_s** _outValue);
 
-		BufferType type;
-		u8* data = nullptr;
-		u32 dataSize = 0;
-		u32 cursor = 0;
-		u32 maxCursor = 0;
-		ArrayBinaryBuffer array;
-		ObjectBinaryBuffer object;
-	};
+	DataArray<json_value_s*> m_valueStack;
 
-	bool _serializeData(void* _data, u32 _size, const char* _id = nullptr);
-	bool _serializeDataRaw(void* _data, u32 _size, const char* _id = nullptr); // do not write size in the buffer
-	bool _processId(const char* _id);
-	void _growBuffer(Buffer& _buffer, u32 _addedSize);
-	void _setBufferCursor(Buffer& _buffer, u32 _cursor);
-	Buffer& _getTopBuffer();
-
-	Array<Buffer> m_bufferStack;
 	void* m_writeData = nullptr;
 	u32 m_writeDataSize = 0;
-	void* m_readData = nullptr;
-	u32 m_readDataSize = 0;
+
+	json_value_s* m_writeRootValue = nullptr;
+	json_value_s* m_readRootValue = nullptr;
 };
 
 } // namespace yae

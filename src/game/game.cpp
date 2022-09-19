@@ -1,7 +1,6 @@
 #include "game.h"
 
 #include <yae/hash.h>
-#include <yae/serialization.h>
 #include <yae/resources/FileResource.h>
 #include <yae/resources/MeshResource.h>
 #include <yae/resources/TextureResource.h>
@@ -13,6 +12,9 @@
 #include <yae/rendering/Renderer.h>
 #include <yae/containers/Array.h>
 #include <yae/serialization/BinarySerializer.h>
+#include <yae/serialization/JsonSerializer.h>
+#include <yae/filesystem.h>
+#include <yae/program.h>
 
 #include <im3d.h>
 #include <imgui.h>
@@ -132,14 +134,13 @@ void onLibraryLoaded()
         	{
 	        	YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
 	        	YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
-		        //YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
+		        YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
         	}
 	    }
         YAE_VERIFY(_serializer.endSerializeObject());
     };
 
     Allocator& allocator = defaultAllocator();
-    yae::BinarySerializer serializer(&allocator);
 
     Sfouf sfoufWrite;
     sfoufWrite.a = 2;
@@ -157,21 +158,57 @@ void onLibraryLoaded()
     sfoufWrite.nest.a = true;
     sfoufWrite.nest.b = false;
     sfoufWrite.nest.c = 7.2f;
-    serializer.beginWrite();
-    doSerialize(serializer, sfoufWrite);
-
-    size_t dataSize = serializer.getDataSize();
-    void* data = allocator.allocate(dataSize);
-    memcpy(data, serializer.getData(), dataSize);
-
-    serializer.endWrite();
 
     Sfouf sfoufRead;
-    serializer.beginRead(data, dataSize);
-    doSerialize(serializer, sfoufRead);
-    serializer.endRead();
 
-    allocator.deallocate(data);
+    {
+    	yae::BinarySerializer serializer(&allocator);
+
+	    serializer.beginWrite();
+	    doSerialize(serializer, sfoufWrite);
+	    serializer.endWrite();
+
+	    size_t dataSize = serializer.getWriteDataSize();
+	    void* data = allocator.allocate(dataSize);
+	    memcpy(data, serializer.getWriteData(), dataSize);
+
+	    serializer.setReadData(data, dataSize);
+	    serializer.beginRead();
+	    doSerialize(serializer, sfoufRead);
+	    serializer.endRead();
+
+	    allocator.deallocate(data);	
+    }
+
+    {
+    	JsonSerializer serializer(&allocator);
+    	serializer.beginWrite();
+	    doSerialize(serializer, sfoufWrite);
+	    serializer.endWrite();
+
+	    String path = string::format("%s/sfouf.json", program().getIntermediateDirectory());
+	    filesystem::normalizePath(path);
+	    FileHandle file(path.c_str());
+	    file.open(FileHandle::OPENMODE_WRITE);
+	    file.write(serializer.getWriteData(), serializer.getWriteDataSize() - 1);
+	    file.close();
+
+	    /*
+	    file.open(FileHandle::OPENMODE_READ);
+	    size_t dataSize = file.getSize();
+	    void* data = allocator.allocate(dataSize);
+	    file.read(data, dataSize);
+	    file.close();
+
+	    sfoufRead = {};
+	    YAE_VERIFY(serializer.parseSourceData(data, dataSize));
+	    serializer.beginRead();
+	    doSerialize(serializer, sfoufRead);
+	    serializer.endRead();
+
+	    allocator.deallocate(data);*/
+    }
+
 #endif
     int a = 0;
 }

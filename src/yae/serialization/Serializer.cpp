@@ -37,7 +37,7 @@ void Serializer::endWrite()
 	m_mode = SerializationMode::NONE;
 }
 
-void Serializer::beginRead(void* _data, u32 _dataSize)
+void Serializer::beginRead()
 {
 	YAE_ASSERT(m_mode == SerializationMode::NONE);
 
