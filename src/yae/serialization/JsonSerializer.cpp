@@ -250,7 +250,7 @@ void JsonSerializer::endWrite()
 
 	size_t writeDataSize;
 	void* data = json_write_pretty(root, "\t", "\n", &writeDataSize);
-	m_writeDataSize = (u32)writeDataSize;
+	m_writeDataSize = (u32)writeDataSize - 1; // we dont want the trailing 0
 	YAE_ASSERT(data != nullptr);
 	m_writeData = m_allocator->allocate(m_writeDataSize);
 	memcpy(m_writeData, data, m_writeDataSize);
@@ -710,6 +710,7 @@ bool JsonSerializer::endSerializeArray()
 			++length;
 			currentElement = currentElement->next;
 		}
+		array->length = length;
 	}
 
 	m_valueStack.pop_back();
