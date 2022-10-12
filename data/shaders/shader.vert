@@ -1,14 +1,16 @@
-#version 100
+precision highp float;
 
 uniform mat4 viewProj;
 uniform mat4 model;
 
+/*
 attribute vec3 inPosition;
 attribute vec3 inColor;
 attribute vec2 inTexCoord;
 
 varying vec3 fragColor;
 varying vec2 fragTexCoord;
+*/
 
 /*layout(binding = 0) uniform UniformBufferObject
 {
@@ -19,14 +21,14 @@ varying vec2 fragTexCoord;
 layout(push_constant) uniform Push {
   mat4 model;
 } push;
-
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
-
-layout(location = 0) out vec3 outFragColor;
-layout(location = 1) out vec2 outFragTexCoord;
 */
+
+in vec3 inPosition;
+in vec3 inColor;
+in vec2 inTexCoord;
+
+out vec3 fragColor;
+out vec2 fragTexCoord;
 
 void main()
 {

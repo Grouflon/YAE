@@ -1,18 +1,19 @@
-#version 100
-precision mediump float;
+precision highp float;
 
-uniform sampler2D texture;
+uniform sampler2D texSampler;
 
-varying vec3 fragColor;
-varying vec2 fragTexCoord;
+in vec3 fragColor;
+in vec2 fragTexCoord;
+
+out vec4 outColor;
 
 void main()
 {
-	vec4 pixel = texture2D(texture, fragTexCoord);
+	vec4 pixel = texture(texSampler, fragTexCoord);
 	// OpenGL ES puts the alpha in the a channel, but OpenGL 3.3 puts it in the red channel
 #ifdef OPENGL_ES
-	gl_FragColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.w);
+	outColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.w);
 #else
-	gl_FragColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.x);
+	outColor = vec4(fragColor.r, fragColor.g, fragColor.b, pixel.x);
 #endif
 }

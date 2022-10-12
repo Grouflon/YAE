@@ -123,6 +123,8 @@ DEFINES += \
 
 LDFLAGS += \
 	-s USE_GLFW=3 \
+	-s MIN_WEBGL_VERSION=2 \
+	-s MAX_WEBGL_VERSION=2 \
 	-gsource-map \
 	--source-map-base=http://localhost:6931/bin/Web_Debug/
 	# allow the web browser debugger to have c++ functions information 

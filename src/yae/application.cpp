@@ -7,6 +7,7 @@
 #include <yae/memory.h>
 #include <yae/math.h>
 #include <yae/ImGuiSystem.h>
+#include <yae/Im3dSystem.h>
 
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
@@ -16,7 +17,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <im3d/im3d.h>
 #include <imgui/imgui.h>
 
 namespace yae {
@@ -69,6 +69,9 @@ void Application::init(char** _args, int _argCount)
 	m_imGuiSystem->init(m_window, m_renderer);
 
 	// Setup Im3d
+	m_im3dSystem = defaultAllocator().create<Im3dSystem>();
+	m_im3dSystem->init();
+
 	/*m_im3d = toolAllocator().create<Im3d::Context>();
 	Im3d::SetContext(*m_im3d);
 
@@ -85,7 +88,6 @@ bool Application::doFrame()
 
 	Time frameTime = m_clock.reset();
 	float dt = frameTime.asSeconds();
-	//printf("%f\n", 1.0 / frameTime.asSeconds64());
 
 	if (glfwWindowShouldClose(m_window))
 		return false;
@@ -94,17 +96,9 @@ bool Application::doFrame()
 		YAE_CAPTURE_SCOPE("beginFrame");
 
 		// This is weird that this is here, it should be just before rendering
-		Vector2 viewportSize = renderer().getFrameBufferSize();
-		float fov = 45.f * D2R;
-		float aspectRatio = viewportSize.x / viewportSize.y;
-		//Vector3 position = Vector3(2.f, 2.f, 2.f);
-		//Vector3 target = glm::vec3(0.f, 0.f, 0.f);
-		Matrix4 cameraTransform = makeTransformMatrix(m_cameraPosition, m_cameraRotation, Vector3::ONE);
-		Matrix4 view = inverse(cameraTransform);
-		//Matrix4 view = glm::lookAt(position, target, glm::vec3(0.f, 1.f, 0.f));
-		Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 100.f);
-		proj[1][1] *= -1.f;
-
+		// But im3d seems to need them when its newframe call is done...
+		Matrix4 view = _computeCameraView();
+		Matrix4 proj = _computeCameraProj();
 		renderer().setViewProjectionMatrix(view, proj);
 
 		//glfwPollEvents();
@@ -112,20 +106,14 @@ bool Application::doFrame()
 
 		m_imGuiSystem->newFrame();
 
-		/*im3d_FrameData frameData;
-		frameData.deltaTime = dt;
-		frameData.cursorPosition = input().getMousePosition();
-		frameData.viewportSize = viewportSize;
-		frameData.camera.position = m_cameraPosition;
-		frameData.camera.direction = m_cameraRotation * Vector3::FORWARD;
-		frameData.camera.view = view;
-		frameData.camera.projection = proj;
-		frameData.camera.fov = fov;
-		frameData.camera.orthographic = false;
-
-		frameData.actionKeyStates[Im3d::Action_Select] = input().isMouseButtonDown(0);
-
-		im3d_NewFrame(frameData);*/
+		Im3dCamera im3dCamera = {};
+		im3dCamera.position = m_cameraPosition;
+		im3dCamera.direction = m_cameraRotation * Vector3::FORWARD;
+		im3dCamera.view = view;
+		im3dCamera.projection = proj;
+		im3dCamera.fov = m_cameraFov * D2R;
+		im3dCamera.orthographic = false;
+		m_im3dSystem->newFrame(dt, im3dCamera);
 	}
 
 	program().updateGame(dt);
@@ -223,10 +211,12 @@ bool Application::doFrame()
     m_renderer->drawCommands(frameHandle);
 
 	// Im3d
-	/*{
-		Im3d::EndFrame();
-		m_renderer->drawIm3d(commandBuffer);
-	}*/
+	{
+		m_im3dSystem->endFrame();
+		m_im3dSystem->render(frameHandle);
+		//Im3d::EndFrame();
+		//m_renderer->drawIm3d(commandBuffer);
+	}
 
 	// ImGui
 	m_imGuiSystem->render(frameHandle);
@@ -248,6 +238,9 @@ void Application::shutdown()
 	// @NOTE: Can't unset context, since the setter uses a ref
 	toolAllocator().destroy(m_im3d);
 	m_im3d = nullptr;*/
+	m_im3dSystem->shutdown();
+	defaultAllocator().destroy(m_im3dSystem);
+	m_im3dSystem = nullptr;
 
 	m_imGuiSystem->shutdown();
 	defaultAllocator().destroy(m_imGuiSystem);
@@ -286,7 +279,6 @@ Renderer& Application::renderer() const
 	return *m_renderer;
 }
 
-
 void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
 {
 	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
@@ -312,6 +304,23 @@ void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, dou
 {
 	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
 	application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
+}
+
+Matrix4 Application::_computeCameraView() const
+{
+	Matrix4 cameraTransform = makeTransformMatrix(m_cameraPosition, m_cameraRotation, Vector3::ONE);
+	Matrix4 view = inverse(cameraTransform);
+	return view;
+}
+
+Matrix4 Application::_computeCameraProj() const
+{
+	Vector2 viewportSize = renderer().getFrameBufferSize();
+	float fov = m_cameraFov * D2R;
+	float aspectRatio = viewportSize.x / viewportSize.y;
+	Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 100.f);
+	proj[1][1] *= -1.f;
+	return proj;
 }
 
 } // namespace yae

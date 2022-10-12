@@ -6,16 +6,12 @@
 
 struct GLFWwindow;
 
-namespace Im3d
-{
-	struct Context;
-}
-
 namespace yae {
 
 class Renderer;
 class InputSystem;
 class ImGuiSystem;
+class Im3dSystem;
 
 class YAELIB_API Application
 {
@@ -47,21 +43,25 @@ private:
 	static void _glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods);
 	static void _glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset);
 
+	Matrix4 _computeCameraView() const;
+	Matrix4 _computeCameraProj() const;
+
 	String m_name;
 	u32 m_width = 0;
 	u32 m_height = 0;
 
 	InputSystem* m_inputSystem = nullptr;
 	ImGuiSystem* m_imGuiSystem = nullptr;
+	Im3dSystem* m_im3dSystem = nullptr;
 	Renderer* m_renderer = nullptr;
 
 	GLFWwindow* m_window = nullptr;
-	Im3d::Context* m_im3d = nullptr;
 
 	Clock m_clock;
 
 	Vector3 m_cameraPosition = Vector3::ZERO;
 	Quaternion m_cameraRotation = Quaternion::IDENTITY;
+	float m_cameraFov = 45.f;
 	void* m_userData = nullptr;
 
 	bool m_showMemoryProfiler = false;

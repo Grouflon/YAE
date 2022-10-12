@@ -2,6 +2,7 @@
 
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/FontResource.h>
+#include <yae/resources/FileResource.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -11,22 +12,37 @@
 #include <GL/gl3w.h>
 #endif
 #include <imgui/backends/imgui_impl_glfw.h>
+#include <im3d/im3d.h>
 #include <GLFW/glfw3.h>
 
 #if YAE_PLATFORM_WEB == 0
-const int OPENGL_VERSION_MAJOR = 3;
+const int OPENGL_VERSION_MAJOR = 4;
 const int OPENGL_VERSION_MINOR = 3;
-const char* OPENGL_SHADER_VERSION = "#version 100";
+const char* OPENGL_SHADER_VERSION = "#version 300 es";
 #define YAE_OPENGL_ES 0
 #else
-const int OPENGL_VERSION_MAJOR = 2;
+const int OPENGL_VERSION_MAJOR = 3;
 const int OPENGL_VERSION_MINOR = 0;
-const char* OPENGL_SHADER_VERSION = "#version 100";
+const char* OPENGL_SHADER_VERSION = "#version 300 es";
 #define YAE_OPENGL_ES 1
 #endif
 
 
-#define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error 0x%04x -> " #_instruction, ___error); }
+const char* glErrorToString(GLint _errorCode)
+{
+	switch (_errorCode)
+	{
+		case GL_NO_ERROR: return "GL_NO_ERROR";
+		case GL_INVALID_ENUM: return "GL_INVALID_ENUM";
+		case GL_INVALID_VALUE: return "GL_INVALID_VALUE";
+		case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
+		case GL_OUT_OF_MEMORY: return "GL_OUT_OF_MEMORY";
+		default: return "Unknown error";
+	}
+}
+
+
+#define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error %s(0x%04x) -> " #_instruction, glErrorToString(___error), ___error); }
 
 namespace yae {
 
@@ -68,6 +84,29 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	glfwMakeContextCurrent(_window);
     glfwSwapInterval(1); // Enable vsync
 
+    /*
+    YAE_LOGF("GL_ARB_gl_spirv: %d", glfwExtensionSupported("GL_ARB_gl_spirv"));
+    YAE_LOGF("GL_NV_shader_noperspective_interpolation: %d", glfwExtensionSupported("GL_NV_shader_noperspective_interpolation"));
+    YAE_LOGF("ANGLE_instanced_arrays: %d", glfwExtensionSupported("ANGLE_instanced_arrays"));
+    YAE_LOGF("EXT_blend_minmax: %d", glfwExtensionSupported("EXT_blend_minmax"));
+    YAE_LOGF("EXT_frag_depth: %d", glfwExtensionSupported("EXT_frag_depth"));
+    YAE_LOGF("EXT_shader_texture_lod: %d", glfwExtensionSupported("EXT_shader_texture_lod"));
+    YAE_LOGF("EXT_texture_filter_anisotropic: %d", glfwExtensionSupported("EXT_texture_filter_anisotropic"));
+    YAE_LOGF("OES_element_index_uint: %d", glfwExtensionSupported("OES_element_index_uint"));
+    YAE_LOGF("OES_standard_derivatives: %d", glfwExtensionSupported("OES_standard_derivatives"));
+    YAE_LOGF("OES_texture_float: %d", glfwExtensionSupported("OES_texture_float"));
+    YAE_LOGF("OES_texture_float_linear: %d", glfwExtensionSupported("OES_texture_float_linear"));
+    YAE_LOGF("OES_texture_half_float: %d", glfwExtensionSupported("OES_texture_half_float"));
+    YAE_LOGF("OES_texture_half_float_linear: %d", glfwExtensionSupported("OES_texture_half_float_linear"));
+    YAE_LOGF("OES_vertex_array_object: %d", glfwExtensionSupported("OES_vertex_array_object"));
+    YAE_LOGF("WEBGL_compressed_texture_s3tc: %d", glfwExtensionSupported("WEBGL_compressed_texture_s3tc"));
+    YAE_LOGF("WEBGL_debug_renderer_info: %d", glfwExtensionSupported("WEBGL_debug_renderer_info"));
+    YAE_LOGF("WEBGL_debug_shaders: %d", glfwExtensionSupported("WEBGL_debug_shaders"));
+    YAE_LOGF("WEBGL_depth_texture: %d", glfwExtensionSupported("WEBGL_depth_texture"));
+    YAE_LOGF("WEBGL_draw_buffers: %d", glfwExtensionSupported("WEBGL_draw_buffers"));
+    YAE_LOGF("WEBGL_lose_context: %d", glfwExtensionSupported("WEBGL_lose_context"));
+	*/
+
 #if YAE_PLATFORM_WEB == 0
 	// TODO: Move gl3w init to the device part
 	int gl3wInitResult = gl3wInit();
@@ -91,6 +130,9 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 		glDebugMessageCallback(&glDebugCallback, nullptr);
 	}
 #endif
+
+	const char* glVersion = (const char*)glGetString(GL_VERSION);
+	YAE_LOGF("OpenGL Version: \"%s\"", glVersion);
 
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_vao));
 	YAE_GL_VERIFY(glBindVertexArray(m_vao));
@@ -164,6 +206,7 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 		vertexShader->releaseUnuse();
 	}
 
+	_initIm3d();
 
 	m_window = _window;
 	return true;
@@ -171,6 +214,8 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 
 void OpenGLRenderer::shutdown()
 {
+	_shutdownIm3d();
+
 	destroyShaderProgram(m_fontShader);
 	m_fontShader = nullptr;
 
@@ -229,6 +274,8 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 
 	{
 		YAE_CAPTURE_SCOPE("prepare buffers");
+
+		YAE_GL_VERIFY(glBindVertexArray(m_vao));
 
 		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
 	    YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(*m_vertices.data()), m_vertices.data(), GL_STATIC_DRAW));
@@ -389,16 +436,17 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
 		default: break;
 	}
 
+	const char* version = getShaderVersion();
 	const char* defines = "";
 #if YAE_OPENGL_ES
-	defines = "#define OPENGL_ES=1";
+	defines = "#define OPENGL_ES\n";
 #endif
 
-	const char* code[] = {defines, _code};
-	GLint codeSize[] = {-1, (GLint)_codeSize};
+	const char* code[] = {version, "\n", defines, _code};
+	GLint codeSize[] = {-1, -1, -1, (GLint)_codeSize};
 	GLuint shaderId = glCreateShader(glShaderType);
 	YAE_ASSERT(shaderId != 0);
-	YAE_GL_VERIFY(glShaderSource(shaderId, 2, code, codeSize));
+	YAE_GL_VERIFY(glShaderSource(shaderId, countof(code), code, codeSize));
 	YAE_GL_VERIFY(glCompileShader(shaderId));
 
 	GLint status = 0, logLength = 0;
@@ -580,11 +628,236 @@ void OpenGLRenderer::drawText(const Matrix4& _transform, const FontResource* _fo
 	commandArray->push_back(command);
 }
 
-
 const char* OpenGLRenderer::getShaderVersion() const
 {
 	return OPENGL_SHADER_VERSION;
 }
 
+void OpenGLRenderer::_initIm3d()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	FileResource* im3dShaderFile = findOrCreateResource<FileResource>("./data/shaders/im3d.glsl");
+	im3dShaderFile->useLoad();
+	YAE_ASSERT(im3dShaderFile->isLoaded());
+
+	String shaderSource(&scratchAllocator());
+	shaderSource.resize(im3dShaderFile->getContentSize());
+	memcpy(shaderSource.data(), im3dShaderFile->getContent(), im3dShaderFile->getContentSize());
+
+	// Points
+	{
+		String vsSource = String("#define VERTEX_SHADER\n#define POINTS\n", &scratchAllocator()) + shaderSource;
+		String fsSource = String("#define FRAGMENT_SHADER\n#define POINTS\n", &scratchAllocator()) + shaderSource;
+
+		ShaderHandle vs;
+		YAE_VERIFY(createShader(ShaderType::VERTEX, vsSource.c_str(), vsSource.size(), vs));
+
+		ShaderHandle fs;
+		YAE_VERIFY(createShader(ShaderType::FRAGMENT, fsSource.c_str(), fsSource.size(), fs));
+
+		ShaderHandle shaders[] = {vs, fs};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_im3dShaderPoints));
+
+		destroyShader(fs);
+		destroyShader(vs);
+
+		GLuint blockIndex;
+		YAE_GL_VERIFY(blockIndex = glGetUniformBlockIndex((GLuint)m_im3dShaderPoints, "VertexDataBlock"));
+		YAE_GL_VERIFY(glUniformBlockBinding((GLuint)m_im3dShaderPoints, blockIndex, 0));
+
+		GLint blockSize;
+		YAE_GL_VERIFY(glGetActiveUniformBlockiv((GLuint)m_im3dShaderPoints, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize));
+		YAE_LOGF("blockSize: %d", blockSize);
+
+		m_uniformBufferData.resize(blockSize);
+	}
+
+	// Lines
+	{
+		String vsSource = String("#define VERTEX_SHADER\n#define LINES\n", &scratchAllocator()) + shaderSource;
+		String fsSource = String("#define FRAGMENT_SHADER\n#define LINES\n", &scratchAllocator()) + shaderSource;
+
+		ShaderHandle vs;
+		YAE_VERIFY(createShader(ShaderType::VERTEX, vsSource.c_str(), vsSource.size(), vs));
+
+		ShaderHandle fs;
+		YAE_VERIFY(createShader(ShaderType::FRAGMENT, fsSource.c_str(), fsSource.size(), fs));
+
+		ShaderHandle shaders[] = {vs, fs};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_im3dShaderLines));
+
+		destroyShader(fs);
+		destroyShader(vs);
+
+		GLuint blockIndex;
+		YAE_GL_VERIFY(blockIndex = glGetUniformBlockIndex((GLuint)m_im3dShaderLines, "VertexDataBlock"));
+		YAE_GL_VERIFY(glUniformBlockBinding((GLuint)m_im3dShaderLines, blockIndex, 0));
+
+		GLint blockSize;
+		YAE_GL_VERIFY(glGetActiveUniformBlockiv((GLuint)m_im3dShaderLines, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize));
+		YAE_LOGF("blockSize: %d", blockSize);
+
+		YAE_ASSERT(m_uniformBufferData.size() == (GLuint)blockSize);
+	}
+
+	// Triangles
+	{
+		String vsSource = String("#define VERTEX_SHADER\n#define TRIANGLES\n", &scratchAllocator()) + shaderSource;
+		String fsSource = String("#define FRAGMENT_SHADER\n#define TRIANGLES\n", &scratchAllocator()) + shaderSource;
+
+		ShaderHandle vs;
+		YAE_VERIFY(createShader(ShaderType::VERTEX, vsSource.c_str(), vsSource.size(), vs));
+
+		ShaderHandle fs;
+		YAE_VERIFY(createShader(ShaderType::FRAGMENT, fsSource.c_str(), fsSource.size(), fs));
+
+		ShaderHandle shaders[] = {vs, fs};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_im3dShaderTriangles));
+
+		destroyShader(fs);
+		destroyShader(vs);
+
+		GLuint blockIndex;
+		YAE_GL_VERIFY(blockIndex = glGetUniformBlockIndex((GLuint)m_im3dShaderTriangles, "VertexDataBlock"));
+		YAE_GL_VERIFY(glUniformBlockBinding((GLuint)m_im3dShaderTriangles, blockIndex, 0));
+
+		GLint blockSize;
+		YAE_GL_VERIFY(glGetActiveUniformBlockiv((GLuint)m_im3dShaderTriangles, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize));
+		YAE_LOGF("blockSize: %d", blockSize);
+
+		YAE_ASSERT(m_uniformBufferData.size() == (GLuint)blockSize);
+	}
+	im3dShaderFile->releaseUnuse();
+
+	Im3d::Vec4 vertexData[] =
+		{
+			Im3d::Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+			Im3d::Vec4( 1.0f, -1.0f, 0.0f, 1.0f),
+			Im3d::Vec4(-1.0f,  1.0f, 0.0f, 1.0f),
+			Im3d::Vec4( 1.0f,  1.0f, 0.0f, 1.0f)
+		};
+	YAE_GL_VERIFY(glGenBuffers(1, &m_im3dVertexBuffer));;
+	YAE_GL_VERIFY(glGenVertexArrays(1, &m_im3dVertexArray));
+	YAE_GL_VERIFY(glBindVertexArray(m_im3dVertexArray));
+	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_im3dVertexBuffer));
+	YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), (GLvoid*)vertexData, GL_STATIC_DRAW));
+	YAE_GL_VERIFY(glEnableVertexAttribArray(0));
+	YAE_GL_VERIFY(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::Vec4), (GLvoid*)0));
+	YAE_GL_VERIFY(glBindVertexArray(0));
+
+	YAE_GL_VERIFY(glGenBuffers(1, &m_im3dUniformBuffer));
+}
+
+void OpenGLRenderer::_shutdownIm3d()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_GL_VERIFY(glDeleteBuffers(1, &m_im3dUniformBuffer));
+
+	YAE_GL_VERIFY(glDeleteVertexArrays(1, &m_im3dVertexArray));
+	YAE_GL_VERIFY(glDeleteBuffers(1, &m_im3dVertexBuffer));
+
+	destroyShaderProgram(m_im3dShaderPoints);
+	m_im3dShaderPoints = nullptr;
+
+	destroyShaderProgram(m_im3dShaderLines);
+	m_im3dShaderPoints = nullptr;
+
+	destroyShaderProgram(m_im3dShaderTriangles);
+	m_im3dShaderPoints = nullptr;
+}
+
+void OpenGLRenderer::drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_GL_VERIFY(glEnable(GL_BLEND));
+	YAE_GL_VERIFY(glBlendEquation(GL_FUNC_ADD));
+	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+	YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
+
+	const Vector2 viewportSize = getFrameBufferSize();
+
+    const Matrix4 viewProj = m_projMatrix * m_viewMatrix;
+
+	for (u32 i = 0, n = _drawListCount; i < n; ++i)
+	{
+		auto& drawList = _drawLists[i];
+	
+		/*
+		// The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
+		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
+		{
+		}
+		*/
+	
+		GLenum prim;
+		GLuint sh;
+		int primVertexCount;
+		switch (drawList.m_primType)
+		{
+			case Im3d::DrawPrimitive_Points:
+				prim = GL_TRIANGLE_STRIP;
+				primVertexCount = 1;
+				sh = (GLuint)m_im3dShaderPoints;
+				YAE_GL_VERIFY(glDisable(GL_CULL_FACE)); // points are view-aligned
+				break;
+			case Im3d::DrawPrimitive_Lines:
+				prim = GL_TRIANGLE_STRIP;
+				primVertexCount = 2;
+				sh = (GLuint)m_im3dShaderLines;
+				YAE_GL_VERIFY(glDisable(GL_CULL_FACE)); // lines are view-aligned
+				break;
+			case Im3d::DrawPrimitive_Triangles:
+				prim = GL_TRIANGLES;
+				primVertexCount = 3;
+				sh = (GLuint)m_im3dShaderTriangles;
+				//YAE_GL_VERIFY(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
+				break;
+			default:
+				YAE_ASSERT(false);
+				return;
+		};
+	
+		YAE_GL_VERIFY(glBindVertexArray(m_im3dVertexArray));
+		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_im3dVertexBuffer));
+	
+		YAE_GL_VERIFY(glUseProgram(sh));
+		YAE_GL_VERIFY(glUniform2f(glGetUniformLocation(sh, "uViewport"), viewportSize.x, viewportSize.y));
+		YAE_GL_VERIFY(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)&viewProj));
+	
+	 	// Uniform buffers have a size limit; split the vertex data into several passes.
+		const int kMaxBufferSize = 64 * 1024; // assuming 64kb here but the application should check the implementation limit
+	 	const int kPrimsPerPass = kMaxBufferSize / (sizeof (Im3d::VertexData) * primVertexCount);
+	
+		int remainingPrimCount = drawList.m_vertexCount / primVertexCount;
+		const Im3d::VertexData* vertexData = drawList.m_vertexData;
+		while (remainingPrimCount > 0)
+		{
+			int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
+			int passVertexCount = passPrimCount * primVertexCount;
+	
+			YAE_GL_VERIFY(glBindBuffer(GL_UNIFORM_BUFFER, m_im3dUniformBuffer));
+			GLint bufferSize = (GLsizeiptr)passVertexCount * sizeof(Im3d::VertexData);
+			memcpy(m_uniformBufferData.data(), (GLvoid*)vertexData, bufferSize);
+			//YAE_GL_VERIFY(glBufferData(GL_UNIFORM_BUFFER, bufferSize, (GLvoid*)vertexData, GL_DYNAMIC_DRAW));
+			YAE_GL_VERIFY(glBufferData(GL_UNIFORM_BUFFER, m_uniformBufferData.size() * sizeof(Im3d::VertexData), m_uniformBufferData.data(), GL_DYNAMIC_DRAW));
+			//YAE_GL_VERIFY(glBufferData(GL_UNIFORM_BUFFER, blockSize, nullptr, GL_DYNAMIC_DRAW));
+	
+		 	// instanced draw call, 1 instance per prim
+			YAE_GL_VERIFY(glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_im3dUniformBuffer));
+			YAE_GL_VERIFY(glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passPrimCount)); // for triangles just use the first 3 verts of the strip
+	
+			vertexData += passVertexCount;
+			remainingPrimCount -= passPrimCount;
+		}
+	}
+
+	// Text rendering.
+ 	// This is common to all examples since we're using ImGui to draw the text lists, see im3d_example.cpp.
+	//g_Example->drawTextDrawListsImGui(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
+}
 
 } // namespace yae

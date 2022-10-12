@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#define YAE_ALLOCATION_CALLSTACK_CAPTURE 1
+#define YAE_ALLOCATION_CALLSTACK_CAPTURE 0
 
 #if YAE_DEBUG
 #define YAE_INITIALIZE_MEMORY 1

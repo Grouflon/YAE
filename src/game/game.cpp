@@ -190,10 +190,9 @@ void onLibraryLoaded()
 	    filesystem::normalizePath(path);
 	    FileHandle file(path.c_str());
 	    file.open(FileHandle::OPENMODE_WRITE);
-	    file.write(serializer.getWriteData(), serializer.getWriteDataSize() - 1);
+	    file.write(serializer.getWriteData(), serializer.getWriteDataSize());
 	    file.close();
 
-	    /*
 	    file.open(FileHandle::OPENMODE_READ);
 	    size_t dataSize = file.getSize();
 	    void* data = allocator.allocate(dataSize);
@@ -206,7 +205,7 @@ void onLibraryLoaded()
 	    doSerialize(serializer, sfoufRead);
 	    serializer.endRead();
 
-	    allocator.deallocate(data);*/
+	    allocator.deallocate(data);
     }
 
 #endif
@@ -351,7 +350,7 @@ void updateGame(float _dt)
 	ImGui::End();
 	*/
 
-	/*Im3d::EnableSorting(true);
+	Im3d::EnableSorting(true);
 	// Axis
     Im3d::SetSize(5.f);
     Im3d::BeginLines();
@@ -416,7 +415,6 @@ void updateGame(float _dt)
 	
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
-	*/
 
 	/*
 	glm::vec3 color(1.f, 1.f, 1.f);

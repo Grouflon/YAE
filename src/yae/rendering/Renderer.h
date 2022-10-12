@@ -6,6 +6,11 @@
 
 typedef struct GLFWwindow GLFWwindow;
 
+namespace Im3d
+{
+	struct DrawList;	
+}
+
 namespace yae {
 
 class FontResource;
@@ -42,6 +47,7 @@ public:
 
 	virtual void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const TextureHandle& _textureHandle) = 0;
 	virtual void drawText(const Matrix4& _transform, const FontResource* _font, const char* _text) = 0;
+	virtual void drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount) = 0;
 
 	void setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj);
 

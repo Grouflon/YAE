@@ -4,6 +4,7 @@
 #include <yae/rendering/Renderer.h>
 #include <yae/containers/HashMap.h>
 
+#include <im3d/im3d.h>
 namespace yae {
 
 class ShaderResource;
@@ -38,10 +39,14 @@ public:
 
 	virtual void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const TextureHandle& _textureHandle) override;
 	virtual void drawText(const Matrix4& _transform, const FontResource* _font, const char* _text) override;
+	virtual void drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount) override;
 
 	const char* getShaderVersion() const;
 
 //private:
+	void _initIm3d();
+	void _shutdownIm3d();
+
 	GLFWwindow* m_window = nullptr;
 
 	ShaderProgramHandle m_shader = nullptr;
@@ -50,12 +55,6 @@ public:
 	u32 m_vao = 0;
 	u32 m_vertexBufferObject = 0;
 	u32 m_indexBufferObject = 0;
-	/*
-	i32 m_uniformLocation_view = 0;
-	i32 m_uniformLocation_proj = 0;
-	i32 m_uniformLocation_model = 0;
-	i32 m_uniformLocation_texSampler = 0;
-	*/
 
 	DataArray<Vertex> m_vertices;
 	DataArray<u32> m_indices;
@@ -67,6 +66,15 @@ public:
 		u32 textureId;
 	};
 	HashMap<u32, DataArray<DrawCommand>> m_drawCommands;
+
+	u32 m_im3dVertexArray = 0;
+	u32 m_im3dVertexBuffer = 0;
+	u32 m_im3dUniformBuffer = 0;
+	ShaderProgramHandle m_im3dShaderPoints = nullptr;
+	ShaderProgramHandle m_im3dShaderLines = nullptr;
+	ShaderProgramHandle m_im3dShaderTriangles = nullptr;
+
+	DataArray<Im3d::VertexData> m_uniformBufferData;
 };
 
 } // namespace yae
