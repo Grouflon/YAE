@@ -28,15 +28,10 @@ public:
 	void shutdown();
 
 	void newFrame(float _dt, const Im3dCamera& _camera);
-	void endFrame();
 	void render(FrameHandle _frameHandle);
 
 // private:
 	Im3d::Context* m_im3d = nullptr;
-
-	ShaderProgramHandle m_shaderPoints = 0;
-	ShaderProgramHandle m_shaderLines = 0;
-	ShaderProgramHandle m_shaderTriangles = 0;
 };
 
 } // namespace yae

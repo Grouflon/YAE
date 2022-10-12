@@ -5,15 +5,26 @@
 
 #include <im3d/im3d.h>
 
+#define YAE_IM3D_ENABLED (YAE_PLATFORM_WEB == 0)
+
 namespace yae {
 
 void Im3dSystem::init()
 {
 	m_im3d = toolAllocator().create<Im3d::Context>();
+
+#if YAE_IM3D_ENABLED
+	renderer().initIm3d();
+#endif
 }
 
 void Im3dSystem::shutdown()
 {
+#if YAE_IM3D_ENABLED
+	renderer().shutdownIm3d();
+#endif
+
+	// @NOTE: Can't unset context, since the setter uses a ref
 	toolAllocator().destroy(m_im3d);
 	m_im3d = nullptr;
 }
@@ -26,6 +37,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 
 	Im3d::AppData& ad = Im3d::GetAppData();
 
+#if YAE_IM3D_ENABLED
 	Vector2 viewportSize = renderer().getFrameBufferSize();
 
 	ad.m_deltaTime     = _dt;
@@ -95,22 +107,22 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	ad.m_snapTranslation = 0.0f;
 	ad.m_snapRotation    = 0.0f;
 	ad.m_snapScale       = 0.0f;
+#else
+	ad = {};
+#endif
 
 	Im3d::NewFrame();
-}
-
-void Im3dSystem::endFrame()
-{
-	YAE_CAPTURE_FUNCTION();
-
-	Im3d::EndFrame();
 }
 
 void Im3dSystem::render(FrameHandle _frameHandle)
 {
 	YAE_CAPTURE_FUNCTION();
 
+	Im3d::EndFrame();
+
+#if YAE_IM3D_ENABLED
 	renderer().drawIm3d(Im3d::GetDrawLists(), Im3d::GetDrawListCount());
+#endif
 }
 
 } // namespace yae

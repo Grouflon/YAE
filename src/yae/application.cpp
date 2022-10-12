@@ -29,7 +29,6 @@ Application::Application(const char* _name, u32 _width, u32 _height)
 
 }
 
-
 void Application::init(char** _args, int _argCount)
 {
 	YAE_CAPTURE_FUNCTION();
@@ -72,14 +71,36 @@ void Application::init(char** _args, int _argCount)
 	m_im3dSystem = defaultAllocator().create<Im3dSystem>();
 	m_im3dSystem->init();
 
-	/*m_im3d = toolAllocator().create<Im3d::Context>();
-	Im3d::SetContext(*m_im3d);
-
-	m_renderer->initIm3d();*/
-
 	m_clock.reset();
 
 	program().initGame();
+}
+
+void Application::shutdown()
+{
+	YAE_CAPTURE_FUNCTION();
+	
+	program().shutdownGame();
+
+	m_im3dSystem->shutdown();
+	defaultAllocator().destroy(m_im3dSystem);
+	m_im3dSystem = nullptr;
+
+	m_imGuiSystem->shutdown();
+	defaultAllocator().destroy(m_imGuiSystem);
+	m_imGuiSystem = nullptr;
+
+	m_renderer->shutdown();
+	defaultAllocator().destroy(m_renderer);
+	m_renderer = nullptr;
+
+	m_inputSystem->shutdown();
+	defaultAllocator().destroy(m_inputSystem);
+	m_inputSystem = nullptr;
+
+	glfwDestroyWindow(m_window);
+	m_window = nullptr;
+	YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
 }
 
 bool Application::doFrame()
@@ -211,12 +232,7 @@ bool Application::doFrame()
     m_renderer->drawCommands(frameHandle);
 
 	// Im3d
-	{
-		m_im3dSystem->endFrame();
-		m_im3dSystem->render(frameHandle);
-		//Im3d::EndFrame();
-		//m_renderer->drawIm3d(commandBuffer);
-	}
+	m_im3dSystem->render(frameHandle);
 
 	// ImGui
 	m_imGuiSystem->render(frameHandle);
@@ -227,51 +243,16 @@ bool Application::doFrame()
 	return true;
 }
 
-void Application::shutdown()
-{
-	YAE_CAPTURE_FUNCTION();
-	
-	program().shutdownGame();
-
-	/*m_renderer->shutdownIm3d();
-
-	// @NOTE: Can't unset context, since the setter uses a ref
-	toolAllocator().destroy(m_im3d);
-	m_im3d = nullptr;*/
-	m_im3dSystem->shutdown();
-	defaultAllocator().destroy(m_im3dSystem);
-	m_im3dSystem = nullptr;
-
-	m_imGuiSystem->shutdown();
-	defaultAllocator().destroy(m_imGuiSystem);
-	m_imGuiSystem = nullptr;
-
-	m_renderer->shutdown();
-	defaultAllocator().destroy(m_renderer);
-	m_renderer = nullptr;
-
-	m_inputSystem->shutdown();
-	defaultAllocator().destroy(m_inputSystem);
-	m_inputSystem = nullptr;
-
-	glfwDestroyWindow(m_window);
-	m_window = nullptr;
-	YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
-}
-
-
 void Application::requestExit()
 {
 	glfwSetWindowShouldClose(m_window, true);
 }
-
 
 InputSystem& Application::input() const
 {
 	YAE_ASSERT(m_inputSystem != nullptr);
 	return *m_inputSystem;
 }
-
 
 Renderer& Application::renderer() const
 {
@@ -285,20 +266,17 @@ void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width,
 	application->m_renderer->notifyFrameBufferResized(_width, _height);
 }
 
-
 void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
 {
 	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
 	application->m_inputSystem->notifyKeyEvent(_key, _scancode, _action, _mods);
 }
 
-
 void Application::_glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods)
 {
 	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
 	application->m_inputSystem->notifyMouseButtonEvent(_button, _action, _mods);
 }
-
 
 void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset)
 {

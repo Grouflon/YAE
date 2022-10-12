@@ -1,7 +1,6 @@
 #include <yae/memory.h>
 #include <yae/program.h>
 #include <yae/application.h>
-#include <yae/application.h>
 #include <yae/logger.h>
 
 #include <mirror.h>

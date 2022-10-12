@@ -39,13 +39,14 @@ public:
 
 	virtual void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const TextureHandle& _textureHandle) override;
 	virtual void drawText(const Matrix4& _transform, const FontResource* _font, const char* _text) override;
+
+	virtual void initIm3d() override;
+	virtual void shutdownIm3d() override;
 	virtual void drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount) override;
 
 	const char* getShaderVersion() const;
 
 //private:
-	void _initIm3d();
-	void _shutdownIm3d();
 
 	GLFWwindow* m_window = nullptr;
 
@@ -69,12 +70,9 @@ public:
 
 	u32 m_im3dVertexArray = 0;
 	u32 m_im3dVertexBuffer = 0;
-	u32 m_im3dUniformBuffer = 0;
 	ShaderProgramHandle m_im3dShaderPoints = nullptr;
 	ShaderProgramHandle m_im3dShaderLines = nullptr;
 	ShaderProgramHandle m_im3dShaderTriangles = nullptr;
-
-	DataArray<Im3d::VertexData> m_uniformBufferData;
 };
 
 } // namespace yae
