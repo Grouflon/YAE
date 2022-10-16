@@ -119,7 +119,7 @@ CPPFLAGS += \
 	-Wno-unknown-pragmas \
 
 DEFINES += \
-	YAE_PLATFORM_WEB
+	YAE_PLATFORM_WEB \
 
 LDFLAGS += \
 	-s USE_GLFW=3 \

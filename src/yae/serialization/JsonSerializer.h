@@ -10,7 +10,7 @@ namespace yae {
 
 class Allocator;
 
-class YAELIB_API JsonSerializer : public Serializer
+class YAE_API JsonSerializer : public Serializer
 {
 public:
 	JsonSerializer(Allocator* _allocator = nullptr);

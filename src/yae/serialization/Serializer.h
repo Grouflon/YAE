@@ -1,7 +1,6 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/string.h>
 
 namespace yae {
 
@@ -14,7 +13,7 @@ enum class SerializationMode : u8
 	WRITE
 };
 
-class YAELIB_API Serializer 
+class YAE_API Serializer 
 {
 public:
 	Serializer(Allocator* _allocator = nullptr);

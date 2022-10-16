@@ -1,0 +1,1 @@
+start emrun --serve_after_exit --serve_after_close --serve_root . main.html

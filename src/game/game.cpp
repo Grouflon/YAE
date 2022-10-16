@@ -1,5 +1,9 @@
 #include "game.h"
 
+#include <yae/Module.h>
+#include <yae/containers/Array.h>
+#include <yae/filesystem.h>
+#include <yae/program.h>
 #include <yae/hash.h>
 #include <yae/resources/FileResource.h>
 #include <yae/resources/MeshResource.h>
@@ -7,14 +11,11 @@
 #include <yae/resources/FontResource.h>
 #include <yae/math_types.h>
 #include <yae/input.h>
-#include <yae/application.h>
 #include <yae/math.h>
 #include <yae/rendering/Renderer.h>
-#include <yae/containers/Array.h>
 #include <yae/serialization/BinarySerializer.h>
 #include <yae/serialization/JsonSerializer.h>
-#include <yae/filesystem.h>
-#include <yae/program.h>
+#include <yae/Application.h>
 
 #include <im3d.h>
 #include <imgui.h>
@@ -28,9 +29,9 @@ using namespace yae;
 
 MIRROR_CLASS_DEFINITION(SuperResource);
 
-void onLibraryLoaded()
+void onModuleLoaded(yae::Program* _program, yae::Module* _module)
 {
-	/*printf("\x1b[31mBA.\r\n");
+		/*printf("\x1b[31mBA.\r\n");
 	YAE_LOG("Bonjour");
 	{
 		FileResource* configFile = findOrCreateResource<FileResource>("./config.json");
@@ -207,9 +208,20 @@ void onLibraryLoaded()
 
 	    allocator.deallocate(data);
     }
-
 #endif
     int a = 0;
+}
+
+void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
+{
+}
+
+void initModule(yae::Program* _program, yae::Module* _module)
+{
+}
+
+void shutdownModule(yae::Program* _program, yae::Module* _module)
+{
 }
 
 class GameInstance
@@ -227,15 +239,11 @@ public:
 	FontResource* font = nullptr;
 };
 
-void onLibraryUnloaded()
-{
-}
-
-void initGame()
+void initApplication(Application* _app)
 {
 	GameInstance* gameInstance = defaultAllocator().create<GameInstance>();
 	YAE_ASSERT(gameInstance != nullptr);
-	app().setUserData(gameInstance);
+	app().setUserData("game", gameInstance);
 
 	app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
@@ -259,21 +267,21 @@ void initGame()
 	YAE_ASSERT(gameInstance->font->isLoaded());
 }
 
-void shutdownGame()
+void shutdownApplication(Application* _app)
 {
-	GameInstance* gameInstance = (GameInstance*)app().getUserData();
+	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
 	gameInstance->mesh->releaseUnuse();
 	gameInstance->texture->releaseUnuse();
 	gameInstance->font->releaseUnuse();
 
 	defaultAllocator().destroy(gameInstance);
-	app().setUserData(nullptr);
+	app().setUserData("game", nullptr);
 }
 
-void updateGame(float _dt)
+void updateApplication(Application* _app, float _dt)
 {
-	GameInstance* gameInstance = (GameInstance*)app().getUserData();
+	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
 	// EXIT PROGRAM
 	if (input().isKeyDown(GLFW_KEY_ESCAPE))
@@ -460,8 +468,6 @@ void updateGame(float _dt)
 		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
 		gameInstance->texture->getTextureHandle()
 	);
-	/*
-	*/
 
 	float fontScale = 0.005f;
 	gameInstance->fontTransform = Matrix4::IDENTITY;

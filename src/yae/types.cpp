@@ -1,7 +1,8 @@
 #include "types.h"
 
 #include <yae/program.h>
-#include <yae/application.h>
+#include <yae/Application.h>
+#include <yae/Application.h>
 
 namespace yae {
 
@@ -13,12 +14,6 @@ Program& program()
 {
 	YAE_ASSERT(Program::s_programInstance != nullptr);
 	return *Program::s_programInstance;
-}
-
-
-Application& app()
-{
-	return program().currentApplication();
 }
 
 
@@ -60,12 +55,15 @@ ResourceManager& resourceManager()
 	return program().resourceManager();
 }
 
+Application& app()
+{
+	return program().currentApplication();
+}
 
 InputSystem& input()
 {
 	return app().input();
 }
-
 
 Renderer& renderer()
 {

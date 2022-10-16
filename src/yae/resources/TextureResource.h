@@ -8,7 +8,7 @@
 
 namespace yae {
 
-class YAELIB_API TextureResource : public Resource
+class YAE_API TextureResource : public Resource
 {
 	MIRROR_CLASS(TextureResource)
 	(
@@ -32,7 +32,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<TextureResource>
+struct YAE_API ResourceIDGetter<TextureResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

@@ -10,33 +10,38 @@ PLATFORM := Win64
 CONFIG := Release
 # ======================
 
-PROJECTS := yae game application monobuild
+PROJECTS := yae editor game main
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
+#application.make.uptodate: make/application.make
+	#@echo ==== $< ====
+	#@copy /b $< +,, 
+	#${MAKE} --no-print-directory -C . -f $< clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+
 yae:
 	@echo ==== Building yae ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/yae.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+
+editor: yae
+	@echo ==== Building editor ($(PLATFORM):$(CONFIG)) ====
+	@${MAKE} --no-print-directory -C . -f make/editor.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 game: yae
 	@echo ==== Building game ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/game.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
-application: yae game
-	@echo ==== Building application ($(PLATFORM):$(CONFIG)) ====
-	@${MAKE} --no-print-directory -C . -f make/application.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
-
-monobuild: 
-	@echo ==== Building monobuild (Web:$(CONFIG)) ====
-	@${MAKE} --no-print-directory -C . -f make/monobuild.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+main: yae editor game
+	@echo ==== Building main ($(PLATFORM):$(CONFIG)) ====
+	@${MAKE} --no-print-directory -C . -f make/main.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 clean:
 	@${MAKE} --no-print-directory -C . -f make/yae.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/editor.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 	@${MAKE} --no-print-directory -C . -f make/game.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
-	@${MAKE} --no-print-directory -C . -f make/application.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
-	@${MAKE} --no-print-directory -C . -f make/monobuild.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/main.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 help:
 	@echo "Usage: make [PLATFORM=name] [CONFIG=name] [target]"
@@ -54,7 +59,7 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   yae"
+	@echo "   editor"
 	@echo "   game"
-	@echo "   application"
-	@echo "   monobuild"
+	@echo "   main"
 	@echo ""

@@ -17,7 +17,7 @@ enum LogVerbosity
 
 namespace logging {
 
-YAELIB_API void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _verbosity, const char* _msg);
+YAE_API void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _verbosity, const char* _msg);
 
 template<typename ...Args>
 void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _verbosity, const char* _fmt, Args... _args)

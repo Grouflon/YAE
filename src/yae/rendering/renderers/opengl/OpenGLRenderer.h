@@ -9,7 +9,7 @@ namespace yae {
 
 class ShaderResource;
 
-class YAELIB_API OpenGLRenderer : public Renderer
+class YAE_API OpenGLRenderer : public Renderer
 {
 public:
 	virtual bool init(GLFWwindow* _window) override;

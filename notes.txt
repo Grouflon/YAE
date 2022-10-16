@@ -2,3 +2,17 @@
 - I should try to go away from global scopes, especially global ctors/dtors as much as possible. Not having control over init/deinit order is a big issue.
 - maybe compilation can be sped up with pch
 https://stackoverflow.com/questions/28868049/decrease-clang-compile-time-with-precompiled-headers
+
+À propos du hot-reload complètement indépendant des modules:
+Si on veut pouvoir utiliser explicitement des symboles d'une librairie dans une autre, il faut la lui linker au moment du link. Dés qu'on fait ça, windows va vouloir la charger à la volée dés qu'on va charger notre lib. Sous windows, il existe un moyen de passer en mode "lazy load" (ça s'appelle le DelayLoad, voir plus bas), qui ne déclenche le chargement de la lib dés qu'un symbole de la dite lib est résolu au runtime, mais une fois qu'une lib est chargée comme ça, impossible de la déloader indépendemment dans que le symbole est utilisé. À moins de trouver une solution à ça, ce sera impossible de rendre yae hot-relodable.
+Plus d'infos sur les Delay Loaded Libraries:
+Delay loaded library allows us to choose when the libray is loaded but
+prevents us from unloading the lib whenever we want.
+If we declare the WindowApplication in main, it will be impossible to unload the yae.dll.
+It works though if WindowApplication is declared in the yae module.
+Maybe I am missing something with the __FUnloadDelayLoadedDLL2 function (it always returns false)
+I suspect that it never finds the dll, but I need to be sure
+https://learn.microsoft.com/en-us/cpp/build/reference/linker-support-for-delay-loaded-dlls?view=msvc-170
+https://learn.microsoft.com/en-us/cpp/build/reference/understanding-the-helper-function?view=msvc-170
+https://learn.microsoft.com/en-us/cpp/build/reference/delayload-delay-load-import?view=msvc-170
+https://learn.microsoft.com/en-us/cpp/build/reference/delay-delay-load-import-settings?view=msvc-170

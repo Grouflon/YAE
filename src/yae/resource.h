@@ -10,7 +10,7 @@ namespace yae {
 
 typedef StringHash ResourceID;
 
-YAELIB_API extern const ResourceID UNDEFINED_RESOURCEID;
+YAE_API extern const ResourceID UNDEFINED_RESOURCEID;
 
 
 enum ResourceLogType
@@ -20,13 +20,13 @@ enum ResourceLogType
 	RESOURCELOGTYPE_ERROR,
 };
 
-struct YAELIB_API ResourceLog
+struct YAE_API ResourceLog
 {
 	ResourceLogType type;
 	String message;
 };
 
-class YAELIB_API Resource
+class YAE_API Resource
 {
 	MIRROR_CLASS(Resource)
 	(
@@ -74,7 +74,7 @@ public:
 
 
 
-class YAELIB_API ResourceManager
+class YAE_API ResourceManager
 {
 public:
 	ResourceManager();

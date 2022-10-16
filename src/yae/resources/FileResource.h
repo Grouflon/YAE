@@ -7,7 +7,7 @@
 
 namespace yae {
 
-class YAELIB_API FileResource : public Resource
+class YAE_API FileResource : public Resource
 {
 	MIRROR_CLASS(FileResource)
 	(
@@ -30,7 +30,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<FileResource>
+struct YAE_API ResourceIDGetter<FileResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

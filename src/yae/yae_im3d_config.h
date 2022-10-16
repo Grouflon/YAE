@@ -12,7 +12,7 @@
 #define IM3D_FREE(ptr) ::yae::toolAllocator().deallocate(ptr)
 
 // User-defined API declaration (e.g. __declspec(dllexport)).
-#define IM3D_API YAELIB_API
+#define IM3D_API YAE_API
 
 // Conversion to/from application math types.
 #define IM3D_VEC2_APP \

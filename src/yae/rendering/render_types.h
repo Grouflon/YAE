@@ -6,6 +6,14 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 
+#ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
+	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
+#endif
+
+#ifndef YAE_IMPLEMENTS_RENDERER_VULKAN
+	#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
+#endif
+
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
 VK_DEFINE_HANDLE(VmaAllocator);

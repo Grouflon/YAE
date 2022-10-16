@@ -10,13 +10,13 @@
 
 namespace yae {
 
-YAELIB_API extern const float PI;
-YAELIB_API extern const float D2R;
-YAELIB_API extern const float R2D;
+YAE_API extern const float PI;
+YAE_API extern const float D2R;
+YAE_API extern const float R2D;
 
-YAELIB_API extern const float SMALL_NUMBER;
+YAE_API extern const float SMALL_NUMBER;
 
-struct YAELIB_API Vector2 : public glm::vec2
+struct YAE_API Vector2 : public glm::vec2
 {
 	Vector2() {}
 	Vector2(float _value) { x = _value; y = _value; }
@@ -28,7 +28,7 @@ struct YAELIB_API Vector2 : public glm::vec2
 };
 
 
-struct YAELIB_API Vector3 : public glm::vec3
+struct YAE_API Vector3 : public glm::vec3
 {
 	Vector3() {}
 	Vector3(float _value) { x = _value; y = _value; z = _value; }
@@ -50,7 +50,7 @@ struct YAELIB_API Vector3 : public glm::vec3
 };
 
 
-struct YAELIB_API Vector4 : public glm::vec4
+struct YAE_API Vector4 : public glm::vec4
 {
 	Vector4() {}
 	Vector4(float _value) { x = _value; y = _value; z = _value; w = _value; }
@@ -64,7 +64,7 @@ struct YAELIB_API Vector4 : public glm::vec4
 	static const Vector4 ONE;
 };
 
-struct YAELIB_API Matrix4 : public glm::mat4x4
+struct YAE_API Matrix4 : public glm::mat4x4
 {
 	Matrix4() {}
 	Matrix4(float _value)
@@ -95,7 +95,7 @@ struct YAELIB_API Matrix4 : public glm::mat4x4
 	static const Matrix4 IDENTITY;
 };
 
-struct YAELIB_API Quaternion : public glm::quat
+struct YAE_API Quaternion : public glm::quat
 {
 	Quaternion() {}
 	Quaternion(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
@@ -110,8 +110,8 @@ struct YAELIB_API Quaternion : public glm::quat
 	static const Quaternion IDENTITY;
 };
 
-YAELIB_API String toString(const Vector2& _v);
-YAELIB_API String toString(const Vector3& _v);
-YAELIB_API String toString(const Vector4& _v);
+YAE_API String toString(const Vector2& _v);
+YAE_API String toString(const Vector3& _v);
+YAE_API String toString(const Vector4& _v);
 
 } // namespace yae

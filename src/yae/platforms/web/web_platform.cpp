@@ -1,6 +1,7 @@
 #include <yae/platform.h>
 
 #include <emscripten.h>
+#include <dlfcn.h>
 
 namespace yae {
 
@@ -43,18 +44,19 @@ String getAbsolutePath(const char* _path)
 
 void* loadDynamicLibrary(const char* _path)
 {
-	return nullptr;
+    return dlopen(_path, RTLD_NOW);
 }
 
 
 void unloadDynamicLibrary(void* _libraryHandle)
 {
+	dlclose(_libraryHandle);
 }
 
 
 void* getProcedureAddress(void* _libraryHandle, const char* _procedureName)
 {
-	return nullptr;
+	return dlsym(_libraryHandle, _procedureName);
 }
 
 

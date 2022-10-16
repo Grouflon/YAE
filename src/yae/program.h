@@ -1,12 +1,8 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/date.h>
+#include <yae/Date.h>
 #include <yae/containers/Array.h>
-
-#ifndef STATIC_GAME_API
-#define STATIC_GAME_API 0
-#endif
 
 namespace yae {
 
@@ -15,30 +11,21 @@ class Application;
 class ResourceManager;
 class Logger;
 class Profiler;
+class Module;
 
-typedef void (*GameFunctionPtr)();
-typedef void (*GameUpdateFunctionPtr)(float);
-
-struct GameAPI
-{
-	void* libraryHandle = nullptr;
-	GameFunctionPtr gameInit = nullptr;
-	GameUpdateFunctionPtr gameUpdate = nullptr;
-	GameFunctionPtr gameShutdown = nullptr;
-	GameFunctionPtr onLibraryLoaded = nullptr;
-	GameFunctionPtr onLibraryUnloaded = nullptr;
-};
-
-class YAELIB_API Program
+class YAE_API Program
 {
 public:
 	Program();
 	~Program();
 
+	void registerModule(const char* _moduleName);
+
 	void init(char** _args, int _argCount);
 	void shutdown();
 
 	void run();
+
 
 	void registerApplication(Application* _application);
 	void unregisterApplication(Application* _application);
@@ -55,19 +42,23 @@ public:
 	Logger& logger();
 	Profiler& profiler();
 
-	// Game API functions
-	void initGame();
-	void updateGame(float _dt);
-	void shutdownGame();
+#if YAE_PLATFORM_WEB == 0
+	// Rendering
+	void initGl3w();
+#endif
 
-// private
+	// Modules
+	const DataArray<Module*>& getModules() const;
 
+// private:
 	bool _doFrame();
-	void _loadGameAPI(const char* _path);
-	void _unloadGameAPI();
-	void _copyAndLoadGameAPI(const char* _dllPath, const char* _symbolsPath);
-	String _getGameDLLPath() const;
-	String _getGameDLLSymbolsPath() const;
+
+	void _loadModule(Module* _module, const char* _dllPath);
+	void _unloadModule(Module* _module);
+	void _copyAndLoadModule(Module* _module);
+
+	String _getModuleDLLPath(const char* _moduleName) const;
+	String _getModuleSymbolsPath(const char* _moduleName) const;
 
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
@@ -85,11 +76,10 @@ public:
 	String m_rootDirectory;
 	String m_intermediateDirectory;
 	String m_hotReloadDirectory;
-
-	// Game API
-	bool m_hotReloadGameAPI = false;
-	Date m_gameDLLLastWriteTime = 0;
-	GameAPI m_gameAPI;
+	bool m_isInitialized = false;
+	bool m_isGl3wInitialized = false;
+	bool m_hotReloadEnabled = false;
+	DataArray<Module*> m_modules;
 
 	static Program* s_programInstance;
 };

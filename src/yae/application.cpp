@@ -1,10 +1,11 @@
-#include "application.h"
+#include "Application.h"
 
 #include <yae/platform.h>
 #include <yae/program.h>
+#include <yae/Module.h>
 #include <yae/time.h>
-#include <yae/input.h>
 #include <yae/memory.h>
+#include <yae/input.h>
 #include <yae/math.h>
 #include <yae/ImGuiSystem.h>
 #include <yae/Im3dSystem.h>
@@ -17,7 +18,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <imgui/imgui.h>
 
 namespace yae {
 
@@ -25,6 +25,11 @@ Application::Application(const char* _name, u32 _width, u32 _height)
 	: m_name(_name)
 	, m_width(_width)
 	, m_height(_height)
+{
+
+}
+
+Application::~Application()
 {
 
 }
@@ -72,15 +77,13 @@ void Application::init(char** _args, int _argCount)
 	m_im3dSystem->init();
 
 	m_clock.reset();
-
-	program().initGame();
 }
 
 void Application::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
-	
-	program().shutdownGame();
+
+	renderer().waitIdle();
 
 	m_im3dSystem->shutdown();
 	defaultAllocator().destroy(m_im3dSystem);
@@ -137,93 +140,13 @@ bool Application::doFrame()
 		m_im3dSystem->newFrame(dt, im3dCamera);
 	}
 
-	program().updateGame(dt);
-
-	if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-        	if (ImGui::MenuItem("Exit"))
-        	{
-        		glfwSetWindowShouldClose(m_window, true);
-        	}
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Profiling"))
-        {
-        	ImGui::MenuItem("Memory", NULL, &m_showMemoryProfiler);
-        	ImGui::MenuItem("Frame rate", NULL, &m_showFrameRate);
-
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMainMenuBar();
-    }
-
-    if (m_showMemoryProfiler)
-    {
-    	auto showAllocatorInfo = [](const char* _name, const Allocator& _allocator)
-    	{
-    		char allocatedSizeBuffer[32];
-	    	char allocableSizeBuffer[32];
-	    	auto formatSize = [](size_t _size, char _buf[32])
-	    	{
-	    		if (_size == Allocator::SIZE_NOT_TRACKED)
-	    		{
-	    			snprintf(_buf, 31, "???");
-	    		}
-	    		else
-	    		{
-	    			const char* units[] =
-	    			{
-	    				"b",
-	    				"Kb",
-	    				"Mb",
-	    				"Gb",
-	    				"Tb"
-	    			};
-
-	    			u8 unit = 0;
-	    			u32 mod = 1024 * 10;
-	    			while (_size > mod)
-	    			{
-	    				_size = _size / mod;
-	    				++unit;
-	    			}
-
-	    			snprintf(_buf, 31, "%zu %s", _size, units[unit]);
-	    		}
-	    	};
-
-    		formatSize(_allocator.getAllocatedSize(), allocatedSizeBuffer);
-    		formatSize(_allocator.getAllocableSize(), allocableSizeBuffer);
-
-    		ImGui::Text("%s: %s / %s, %zu allocations",
-	    		_name,
-	    		allocatedSizeBuffer,
-	    		allocableSizeBuffer,
-	    		_allocator.getAllocationCount()
-	    	);
-    	};
-
-    	ImGui::Begin("Memory Profiler", &m_showMemoryProfiler, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize);
-    	showAllocatorInfo("Default", defaultAllocator());
-    	showAllocatorInfo("Scratch", scratchAllocator());
-    	showAllocatorInfo("Tool", toolAllocator());
-    	showAllocatorInfo("Malloc", mallocAllocator());
-    	ImGui::End();
-    }
-
-    if (m_showFrameRate)
-    {
-    	ImGui::Begin("Frame Rate", &m_showMemoryProfiler, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoInputs);
-    	ImGui::Text("dt: %.2f ms", dt*1000.f);
-    	ImGui::Text("%.2f fps", dt != 0.f ? (1.f/dt) : 0.f);
-    	ImGui::End();
-    }
-
-	//ImGui::ShowDemoWindow(&s_showDemoWindow);
+	for (Module* module : program().getModules())
+	{
+		if (module->updateApplicationFunction != nullptr)
+		{
+			module->updateApplicationFunction(this, dt);
+		}
+	}
 
     // Rendering
 	FrameHandle frameHandle = m_renderer->beginFrame();
@@ -260,28 +183,41 @@ Renderer& Application::renderer() const
 	return *m_renderer;
 }
 
+void* Application::getUserData(const char* _name) const
+{
+	StringHash hash = StringHash(_name);
+	void*const* userDataPointer = m_userData.get(hash);
+	return userDataPointer != nullptr ? *userDataPointer : nullptr;
+}
+
+void Application::setUserData(const char* _name, void* _userData)
+{
+	StringHash hash = StringHash(_name);
+	m_userData.set(hash, _userData);
+}
+
 void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
 {
-	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
-	application->m_renderer->notifyFrameBufferResized(_width, _height);
+	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+	Application->m_renderer->notifyFrameBufferResized(_width, _height);
 }
 
 void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
 {
-	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
-	application->m_inputSystem->notifyKeyEvent(_key, _scancode, _action, _mods);
+	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+	Application->m_inputSystem->notifyKeyEvent(_key, _scancode, _action, _mods);
 }
 
 void Application::_glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods)
 {
-	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
-	application->m_inputSystem->notifyMouseButtonEvent(_button, _action, _mods);
+	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+	Application->m_inputSystem->notifyMouseButtonEvent(_button, _action, _mods);
 }
 
 void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset)
 {
-	Application* application = reinterpret_cast<Application*>(glfwGetWindowUserPointer(_window));
-	application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
+	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+	Application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
 }
 
 Matrix4 Application::_computeCameraView() const
@@ -294,6 +230,7 @@ Matrix4 Application::_computeCameraView() const
 Matrix4 Application::_computeCameraProj() const
 {
 	Vector2 viewportSize = renderer().getFrameBufferSize();
+	YAE_ASSERT(!isZero(viewportSize));
 	float fov = m_cameraFov * D2R;
 	float aspectRatio = viewportSize.x / viewportSize.y;
 	Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 100.f);

@@ -12,7 +12,7 @@ namespace yae {
 
 class FileResource;
 
-class YAELIB_API FontResource : public Resource
+class YAE_API FontResource : public Resource
 {
 	MIRROR_CLASS(FontResource)
 	(
@@ -41,7 +41,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<FontResource>
+struct YAE_API ResourceIDGetter<FontResource>
 {
 	static ResourceID GetId(const char* _path, u32 _size) {
 		return ResourceID(FontResource::generateStringId(_path, _size).c_str());

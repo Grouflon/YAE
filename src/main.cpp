@@ -1,7 +1,7 @@
 #include <yae/memory.h>
 #include <yae/program.h>
-#include <yae/application.h>
 #include <yae/logger.h>
+#include <yae/Application.h>
 
 #include <mirror.h>
 #include <stdio.h>
@@ -20,15 +20,18 @@ int main(int _argc, char** _argv)
 
     {
         yae::Program program;
+
         program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
+
+        program.registerModule("editor");
+        program.registerModule("game");
+
         program.init(_argv, _argc);
 
         yae::Application app = yae::Application(APPLICATION_NAME, 800u, 600u);
         program.registerApplication(&app);
-
         program.run();
-
         program.unregisterApplication(&app);
 
         program.shutdown();

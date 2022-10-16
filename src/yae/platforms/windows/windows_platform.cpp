@@ -2,6 +2,7 @@
 
 #include <yae/callstack.h>
 #include <yae/memory.h>
+#include <yae/filesystem.h>
 
 #include <windows.h>
 #include <dbghelp.h>
@@ -79,7 +80,8 @@ void* loadDynamicLibrary(const char* _path)
 
 void unloadDynamicLibrary(void* _libraryHandle)
 {
-	FreeLibrary((HMODULE)_libraryHandle);
+	HMODULE hModule = (HMODULE)_libraryHandle;
+	FreeLibrary(hModule);
 }
 
 

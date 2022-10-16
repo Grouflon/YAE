@@ -17,7 +17,7 @@ struct im3d_FrameData;
 class VulkanSwapChain;
 class TextureResource;
 
-class YAELIB_API VulkanRenderer : public Renderer
+class YAE_API VulkanRenderer : public Renderer
 {
 public:
 	virtual bool init(GLFWwindow* _window) override;

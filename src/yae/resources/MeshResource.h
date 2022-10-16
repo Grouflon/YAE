@@ -9,7 +9,7 @@
 
 namespace yae {
 
-class YAELIB_API MeshResource : public Resource
+class YAE_API MeshResource : public Resource
 {
 	MIRROR_CLASS(MeshResource)
 	(
@@ -29,7 +29,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<MeshResource>
+struct YAE_API ResourceIDGetter<MeshResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

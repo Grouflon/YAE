@@ -15,7 +15,7 @@ MIRROR_CLASS_DEFINITION(FontResource);
 FontResource::FontResource(const char* _path, u32 _size)
 	: Resource(generateStringId(_path, _size).c_str())
 	, m_path(_path)
-	, m_fontSize(_size)
+, m_fontSize(_size)
 {
 }
 

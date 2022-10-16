@@ -52,28 +52,29 @@
 					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Release;Platform=Win64",
 				},*/
 				{
-					"name" : "compile Web_Debug",
-					"cmd" : "make PLATFORM=Web CONFIG=Debug monobuild"
+					"name" : "clean",
+					"shell_cmd" : "make PLATFORM=Win64 CONFIG=Debug clean && make PLATFORM=Win64 CONFIG=DebugOptimized clean && make PLATFORM=Win64 CONFIG=Release clean"
+				},
+
+				{
+					"name" : "compile Win64_Debug",
+					"cmd" : "make PLATFORM=Win64 CONFIG=Debug main"
+				},
+				{
+					"name" : "compile Win64_DebugOptimized",
+					"cmd" : "make PLATFORM=Win64 CONFIG=DebugOptimized main"
+				},
+				{
+					"name" : "compile Win64_Release",
+					"cmd" : "make PLATFORM=Win64 CONFIG=Release main"
 				},
 				{
 					"name" : "clean Web_Debug",
 					"shell_cmd" : "make PLATFORM=Web CONFIG=Debug clean"
 				},
 				{
-					"name" : "clean",
-					"shell_cmd" : "make PLATFORM=Win64 CONFIG=Debug clean && make PLATFORM=Win64 CONFIG=DebugOptimized clean && make PLATFORM=Win64 CONFIG=Release clean"
-				},
-				{
-					"name" : "compile Win64_Debug",
-					"cmd" : "make PLATFORM=Win64 CONFIG=Debug application"
-				},
-				{
-					"name" : "compile Win64_DebugOptimized",
-					"cmd" : "make PLATFORM=Win64 CONFIG=DebugOptimized application"
-				},
-				{
-					"name" : "compile Win64_Release",
-					"cmd" : "make PLATFORM=Win64 CONFIG=Release application"
+					"name" : "compile Web_Debug",
+					"cmd" : "make PLATFORM=Web CONFIG=Debug main"
 				},
 				{
 					"name": "debug",
@@ -81,7 +82,7 @@
 				},
 				{
 					"name": "debug Web",
-					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/yae.html"
+					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/main.html"
 				},
 				{
 					"name": "debug visual Debug",

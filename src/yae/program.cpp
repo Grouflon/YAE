@@ -1,25 +1,32 @@
 #include "program.h"
 
-#include <imgui/imgui.h>
 #include <yae/platform.h>
 #include <yae/filesystem.h>
 #include <yae/resource.h>
-#include <yae/application.h>
-#include <yae/input.h>
+#include <yae/Application.h>
 #include <yae/profiler.h>
 #include <yae/logger.h>
 #include <yae/hash.h>
-#include <yae/rendering/Renderer.h>
+#include <yae/Module.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
+#define YAE_MODULE_EXTENSION "wasm"
+#else
+#include <GL/gl3w.h>
+#define YAE_MODULE_EXTENSION "dll"
 #endif
 
-#if STATIC_GAME_API == 1
-#include <game/game.h>
-#endif
+#include <GLFW/glfw3.h>
+#include <imgui/imgui.h>
+
 
 // anonymous functions
+
+void GLFWErrorCallback(int _error, const char* _description)
+{
+    YAE_ERRORF_CAT("glfw", "Glfw Error 0x%04x: %s", _error, _description);
+}
 
 void* ImGuiMemAlloc(size_t _size, void* _userData)
 {
@@ -29,11 +36,6 @@ void* ImGuiMemAlloc(size_t _size, void* _userData)
 void ImGuiMemFree(void* _ptr, void* _userData)
 {
     return yae::toolAllocator().deallocate(_ptr);
-}
-
-void GLFWErrorCallback(int _error, const char* _description)
-{
-    YAE_ERRORF_CAT("glfw", "Glfw Error 0x%04x: %s", _error, _description);
 }
 
 #if YAE_PLATFORM_WEB
@@ -50,7 +52,6 @@ namespace yae {
 
 Program* Program::s_programInstance = nullptr;
 
-
 Program::Program()
 	: m_applications(&defaultAllocator())
 	, m_exePath(&defaultAllocator())
@@ -58,6 +59,7 @@ Program::Program()
 	, m_rootDirectory(&defaultAllocator())
 	, m_intermediateDirectory(&defaultAllocator())
 	, m_hotReloadDirectory(&defaultAllocator())
+	, m_modules(&defaultAllocator())
 {
 	YAE_ASSERT(s_programInstance == nullptr);
 	s_programInstance = this;
@@ -68,16 +70,38 @@ Program::Program()
 Program::~Program()
 {
 	YAE_ASSERT(s_programInstance == this);
+
+	for (Module* module : m_modules)
+	{
+		defaultAllocator().destroy(module);
+	}
+	m_modules.clear();
 	
 	defaultAllocator().destroy(m_logger);
 	m_logger = nullptr;
 	s_programInstance = nullptr;
 }
 
+void Program::registerModule(const char* _moduleName)
+{
+	YAE_ASSERT_MSG(!m_isInitialized, "Modules but be registered before the program is initialized");
+
+#if YAE_ASSERT_ENABLED
+	for (const Module* module : m_modules)
+	{
+		YAE_ASSERT_MSGF(module->name != _moduleName, "Module \"%s\" has been registered twice.", _moduleName);
+	}
+#endif
+	Module* module = defaultAllocator().create<Module>();
+	module->name = _moduleName;
+	m_modules.push_back(module);
+}
 
 void Program::init(char** _args, int _argCount)
 {
 	YAE_ASSERT(s_programInstance == this);
+
+	m_isInitialized = true;
 
 	YAE_ASSERT(_args != nullptr && _argCount >= 1);
 
@@ -89,7 +113,7 @@ void Program::init(char** _args, int _argCount)
 	{
 		if (strcmp(_args[i], "-hotreload") == 0)
 		{
-			m_hotReloadGameAPI = true;
+			m_hotReloadEnabled = true;
 		}
 	}
 
@@ -106,7 +130,7 @@ void Program::init(char** _args, int _argCount)
     // Setup directories
     filesystem::setWorkingDirectory(m_rootDirectory.c_str());
 
-#if STATIC_GAME_API == 0
+#if YAE_PLATFORM_WEB == 0
 	filesystem::createDirectory(m_intermediateDirectory.c_str());
     filesystem::deletePath(m_hotReloadDirectory.c_str());
 	filesystem::createDirectory(m_hotReloadDirectory.c_str());
@@ -118,41 +142,35 @@ void Program::init(char** _args, int _argCount)
 	YAE_LOGF("intermediate directory: %s",  getIntermediateDirectory());
 	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
 
-    ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
-
-	m_resourceManager = defaultAllocator().create<ResourceManager>();
-
-#if STATIC_GAME_API == 0
-	// Prepare Game API for hot reload
-	if (m_hotReloadGameAPI)
-	{
-		_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
-	}
-	else
-	{
-		_loadGameAPI(_getGameDLLPath().c_str());
-	}
-#else
-	_loadGameAPI(_getGameDLLPath().c_str());
-#endif
-
 	// Init GLFW
 	{
 		YAE_CAPTURE_SCOPE("glfwInit");
-
-    	glfwSetErrorCallback(&GLFWErrorCallback);
+	    glfwSetErrorCallback(&GLFWErrorCallback);
 
 		int result = glfwInit();
 		YAE_ASSERT(result == GLFW_TRUE);
 		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
 	}
 
-    /*
-    logger.setCategoryVerbosity("glfw", yae::LogVerbosity_Verbose);
-    logger.setCategoryVerbosity("vulkan", yae::LogVerbosity_Verbose);
-    logger.setCategoryVerbosity("vulkan_internal", yae::LogVerbosity_Log);
-    logger.setCategoryVerbosity("resource", yae::LogVerbosity_Verbose);
-    */
+	// Init ImGui
+	{
+    	ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
+	}
+
+	for (Module* module : m_modules)
+	{	
+		// Prepare Game API for hot reload
+		if (m_hotReloadEnabled)
+		{
+			_copyAndLoadModule(module);
+		}
+		else
+		{
+			_loadModule(module, _getModuleDLLPath(module->name.c_str()).c_str());
+		}
+	}
+
+	m_resourceManager = defaultAllocator().create<ResourceManager>();
 }
 
 
@@ -161,7 +179,21 @@ void Program::shutdown()
 	YAE_ASSERT(s_programInstance == this);
 
 	m_resourceManager->flushResources();
+	defaultAllocator().destroy(m_resourceManager);
+	m_resourceManager = nullptr;
 
+	for (int i = m_modules.size() - 1; i >= 0; --i)
+	{
+		// @NOTE(remi): unload modules in reverse order to preserve symetry
+		_unloadModule(m_modules[i]);
+	}
+
+	// ImGui shutdown
+	{
+		ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
+	}
+
+	// glfw shutdown
 	{
 		YAE_CAPTURE_SCOPE("glfwTerminate");
 
@@ -169,29 +201,39 @@ void Program::shutdown()
 		YAE_VERBOSE_CAT("glfw", "Terminated glfw");	
 	}
 
-	_unloadGameAPI();
-
-	defaultAllocator().destroy(m_resourceManager);
-	m_resourceManager = nullptr;
-
-	ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
-
 	defaultAllocator().destroy(m_profiler);
 	m_profiler = nullptr;
 
 #if DEBUG_STRINGHASH
 	clearStringHashRepository();
 #endif
+
+	m_isInitialized = false;
 }
 
 void Program::run()
 {
 	YAE_CAPTURE_START("init");
+	for (Module* module : m_modules)
+	{
+		if (module->initModuleFunction != nullptr)
+		{
+			module->initModuleFunction(this, module);	
+		}
+	}
 
 	for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
 		application->init(m_args, m_argCount);
+
+		for (Module* module : m_modules)
+		{
+			if (module->initApplicationFunction != nullptr)
+			{
+				module->initApplicationFunction(application);
+			}
+		}
 	}
 	m_currentApplication = nullptr;
     YAE_CAPTURE_STOP("init");
@@ -225,12 +267,30 @@ void Program::run()
     for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
-		application->renderer().waitIdle();
+
+		for (int i = m_modules.size() - 1; i >= 0; --i)
+		{
+			// @NOTE(remi): shutdown modules in reverse order to preserve symetry
+			Module* module = m_modules[i];
+			if (module->shutdownApplicationFunction != nullptr)
+			{
+				module->shutdownApplicationFunction(application);
+			}
+		}
 
 		application->shutdown();
 	}
 	m_currentApplication = nullptr;
 
+	for (int i = m_modules.size() - 1; i >= 0; --i)
+	{
+		// @NOTE(remi): shutdown modules in reverse order to preserve symetry
+		Module* module = m_modules[i];
+		if (module->shutdownModuleFunction != nullptr)
+		{
+			module->shutdownModuleFunction(this, module);	
+		}
+	}
     YAE_CAPTURE_STOP("shutdown");
 
     {
@@ -310,45 +370,24 @@ Profiler& Program::profiler()
 	return *m_profiler;
 }
 
-
-void Program::initGame()
+#if YAE_PLATFORM_WEB == 0
+void Program::initGl3w()
 {
-	YAE_CAPTURE_FUNCTION();
-
-#if STATIC_GAME_API == 1
-	::initGame();
-#else
-	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
-	m_gameAPI.gameInit();
-#endif
+	// @NOTE(remi): this needs to be done once a window is created so it has to be called from the yae module
+	if (!m_isGl3wInitialized)
+	{
+		YAE_CAPTURE_SCOPE("gl3wInit");
+		int result = gl3wInit();
+		YAE_ASSERT(result == GL3W_OK);
+		m_isGl3wInitialized = true;
+	}
 }
+#endif
 
-
-void Program::updateGame(float _dt)
+const DataArray<Module*>& Program::getModules() const
 {
-	YAE_CAPTURE_FUNCTION();
-
-#if STATIC_GAME_API == 1
-	::updateGame(_dt);
-#else
-	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr)
-	m_gameAPI.gameUpdate(_dt);
-#endif
+	return m_modules;	
 }
-
-
-void Program::shutdownGame()
-{
-	YAE_CAPTURE_FUNCTION();
-
-#if STATIC_GAME_API == 1
-	::shutdownGame();
-#else
-	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
-	m_gameAPI.gameShutdown();
-#endif
-}
-
 
 bool Program::_doFrame()
 {
@@ -368,34 +407,40 @@ bool Program::_doFrame()
 	}
 	m_currentApplication = nullptr;
 
-#if STATIC_GAME_API == 0
-	bool shouldReloadGameAPI = false;
-	for (Application* application : m_applications)
-	{
-		// Force DLL reload
-		if (application->input().isCtrlDown() && application->input().wasKeyJustPressed(GLFW_KEY_R))
-		{
-			shouldReloadGameAPI = true;
-		}
-	}
-
 	// Hot Reload Game API
-	if (m_hotReloadGameAPI)
+	if (m_hotReloadEnabled)
 	{
-		// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
-		Date lastWriteTime = filesystem::getFileLastWriteTime(_getGameDLLPath().c_str());
-		Date timeSinceLastWriteTime = date::now() - lastWriteTime;
-		bool isDLLOutDated = (lastWriteTime > m_gameDLLLastWriteTime && timeSinceLastWriteTime > 0);
-		shouldReloadGameAPI = shouldReloadGameAPI || isDLLOutDated;
-		
-		if (shouldReloadGameAPI)
+
+		DataArray<Module*> modulesToReload(&scratchAllocator());
+		for (Module* module : m_modules)
+		{
+			// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
+			String dllPath = _getModuleDLLPath(module->name.c_str());
+			Date lastWriteTime = filesystem::getFileLastWriteTime(dllPath.c_str());
+			Date timeSinceLastWriteTime = date::now() - lastWriteTime;
+			bool isDLLOutDated = (lastWriteTime > module->lastLibraryWriteTime && timeSinceLastWriteTime > 0);
+			if (isDLLOutDated)
+			{
+				modulesToReload.push_back(module);
+			}
+		}
+
+		if (modulesToReload.size() > 0)
 		{
 			YAE_CAPTURE_SCOPE("ReloadGameAPI");
-			_unloadGameAPI();
-			_copyAndLoadGameAPI(_getGameDLLPath().c_str(), _getGameDLLSymbolsPath().c_str());
-		}	
+
+			for (int i = modulesToReload.size() - 1; i >= 0; --i)
+			{
+				Module* module = modulesToReload[i];
+				_unloadModule(module);
+			}
+
+			for (Module* module : modulesToReload)
+			{
+				_copyAndLoadModule(module);
+			}
+		}
 	}
-#endif
 
 	if (!shouldContinue)
 	{
@@ -415,76 +460,89 @@ bool Program::_doFrame()
 }
 
 
-void Program::_loadGameAPI(const char* _path)
+void Program::_loadModule(Module* _module, const char* _dllPath)
 {
 	YAE_CAPTURE_FUNCTION();
-#if STATIC_GAME_API == 1
-	onLibraryLoaded();
-#else
-	m_gameAPI.libraryHandle = platform::loadDynamicLibrary(_path);
-	YAE_ASSERT(m_gameAPI.libraryHandle);
+
+	YAE_ASSERT(_module->libraryHandle == nullptr);
+
+	_module->libraryHandle = platform::loadDynamicLibrary(_dllPath);
+	YAE_ASSERT(_module->libraryHandle);
 
 	mirror::GetTypeSet().resolveTypes();
 
-	m_gameAPI.gameInit = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "initGame");
-	m_gameAPI.gameUpdate = (GameUpdateFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "updateGame");
-	m_gameAPI.gameShutdown = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "shutdownGame");
-	m_gameAPI.onLibraryLoaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryLoaded");
-	m_gameAPI.onLibraryUnloaded = (GameFunctionPtr)platform::getProcedureAddress(m_gameAPI.libraryHandle, "onLibraryUnloaded");
+	_module->onModuleLoadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleLoaded");
+	_module->onModuleUnloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleUnloaded");
+	_module->initModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "initModule");
+	_module->shutdownModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "shutdownModule");
+	_module->initApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "initApplication");
+	_module->updateApplicationFunction = (void (*)(Application*, float))platform::getProcedureAddress(_module->libraryHandle, "updateApplication");
+	_module->shutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "shutdownApplication");
 
-	YAE_ASSERT(m_gameAPI.gameInit);
-	YAE_ASSERT(m_gameAPI.gameUpdate);
-	YAE_ASSERT(m_gameAPI.gameShutdown);
+	if (_module->onModuleLoadedFunction != nullptr)
+	{
+		_module->onModuleLoadedFunction(this, _module);
+	}
 
-	m_gameAPI.onLibraryLoaded();
-#endif
-
-	YAE_LOGF_CAT("game_module", "Loaded Game API from \"%s\"", _path);
+	YAE_LOGF_CAT("program", "Loaded \"%s\" module from \"%s\"", _module->name.c_str(), _dllPath);
 }
 
 
-void Program::_unloadGameAPI()
+void Program::_unloadModule(Module* _module)
 {
 	YAE_CAPTURE_FUNCTION();
 
-#if STATIC_GAME_API == 1
-	onLibraryUnloaded();
-#else
-	YAE_ASSERT(m_gameAPI.libraryHandle != nullptr);
+	YAE_ASSERT(_module->libraryHandle != nullptr);
 	
-	m_gameAPI.onLibraryUnloaded();
+	if (_module->onModuleUnloadedFunction != nullptr)
+	{
+		_module->onModuleUnloadedFunction(this, _module);
+	}
 	
-	platform::unloadDynamicLibrary(m_gameAPI.libraryHandle);
-	m_gameAPI = {};
-#endif
+	_module->onModuleLoadedFunction = nullptr;
+	_module->onModuleUnloadedFunction = nullptr;
+	_module->initModuleFunction = nullptr;
+	_module->shutdownModuleFunction = nullptr;
+	_module->initApplicationFunction = nullptr;
+	_module->updateApplicationFunction = nullptr;
+	_module->shutdownApplicationFunction = nullptr;
 
-	YAE_LOG_CAT("game_module", "Unloaded Game API");
+	platform::unloadDynamicLibrary(_module->libraryHandle);
+	_module->libraryHandle = nullptr;
+
+	YAE_LOGF_CAT("program", "Unloaded \"%s\" module", _module->name.c_str());
 }
 
 
-void Program::_copyAndLoadGameAPI(const char* _dllPath, const char* _symbolsPath)
+void Program::_copyAndLoadModule(Module* _module)
 {
-	String dllDst = String(m_hotReloadDirectory + "game_hotreload.dll", &scratchAllocator());
-	String symbolsDst = String(m_hotReloadDirectory + "game_hotreload.pdb", &scratchAllocator());
+	String dllSrc = _getModuleDLLPath(_module->name.c_str());
+	String SymbolsSrc = _getModuleSymbolsPath(_module->name.c_str());
 
-	filesystem::copy(_dllPath, dllDst.c_str(), filesystem::CopyMode_OverwriteExisting);
-	filesystem::copy(_symbolsPath, symbolsDst.c_str(), filesystem::CopyMode_OverwriteExisting);
+	String dllDst = string::format("%s%s.%s", m_hotReloadDirectory.c_str(), _module->name.c_str(), YAE_MODULE_EXTENSION);
+	String symbolsDst = string::format("%s%s.pdb", m_hotReloadDirectory.c_str(), _module->name.c_str());
 
-	_loadGameAPI(dllDst.c_str());
+	filesystem::copy(dllSrc.c_str(), dllDst.c_str(), filesystem::CopyMode_OverwriteExisting);
+	filesystem::copy(SymbolsSrc.c_str(), symbolsDst.c_str(), filesystem::CopyMode_OverwriteExisting);
 
-	m_gameDLLLastWriteTime = filesystem::getFileLastWriteTime(_dllPath);
+	_loadModule(_module, dllDst.c_str());
+
+	//filesystem::deletePath(dllSrc.c_str());
+	//filesystem::deletePath(SymbolsSrc.c_str());
+
+	_module->lastLibraryWriteTime = filesystem::getFileLastWriteTime(dllSrc.c_str());
 }
 
 
-String Program::_getGameDLLPath() const
+String Program::_getModuleDLLPath(const char* _moduleName) const
 {
-	return m_binDirectory + "game.dll";
+	return string::format("%s%s.%s", m_binDirectory.c_str(), _moduleName, YAE_MODULE_EXTENSION);
 }
 
 
-String Program::_getGameDLLSymbolsPath() const
+String Program::_getModuleSymbolsPath(const char* _moduleName) const
 {
-	return m_binDirectory + "game.pdb";
+	return string::format("%s%s.pdb", m_binDirectory.c_str(), _moduleName);
 }
 
 } // namespace yae

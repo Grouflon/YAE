@@ -15,7 +15,7 @@ namespace yae {
 
 class FontResource;
 
-class YAELIB_API Renderer
+class YAE_API Renderer
 {
 public:
 	virtual ~Renderer() {}

@@ -30,22 +30,8 @@ typedef uint64_t	u64;
 #define YAE_PLATFORM_WEB 0
 #endif
 
-// RENDERERS
-#ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
-	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
-#endif
-
-#ifndef YAE_IMPLEMENTS_RENDERER_VULKAN
-	#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
-#endif
-
-// DLL EXPORT
-#ifndef YAELIB_API
-	#ifdef YAELIB_EXPORT
-		#define YAELIB_API __declspec(dllexport)
-	#else
-		#define YAELIB_API __declspec(dllimport)
-	#endif
+#ifndef YAE_API
+#define YAE_API
 #endif
 
 // MACROS
@@ -76,6 +62,15 @@ typedef uint64_t	u64;
 #else
 #define YAE_ASSERT_ENABLED 1
 #endif
+#endif
+
+// RENDERERS
+#ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
+	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
+#endif
+
+#ifndef YAE_IMPLEMENTS_RENDERER_VULKAN
+	#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
 #endif
 
 // ASSERTS (should not depend on any engine construct)
@@ -109,24 +104,25 @@ namespace yae {
 class Allocator;
 class Program;
 class Application;
+class Module;
 class ResourceManager;
 class Logger;
 class Profiler;
 class Renderer;
 class InputSystem;
 
-YAELIB_API Program& program();
-YAELIB_API Application& app();
-YAELIB_API Allocator& defaultAllocator();
-YAELIB_API Allocator& scratchAllocator();
-YAELIB_API Allocator& toolAllocator();
-YAELIB_API Profiler& profiler();
-YAELIB_API Logger& logger();
-YAELIB_API ResourceManager& resourceManager();
-YAELIB_API InputSystem& input();
-YAELIB_API Renderer& renderer();
+YAE_API Program& program();
+YAE_API Allocator& defaultAllocator();
+YAE_API Allocator& scratchAllocator();
+YAE_API Allocator& toolAllocator();
+YAE_API Profiler& profiler();
+YAE_API Logger& logger();
+YAE_API ResourceManager& resourceManager();
+YAE_API Application& app();
+YAE_API InputSystem& input();
+YAE_API Renderer& renderer();
 
-YAELIB_API void setAllocators(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator);
+YAE_API void setAllocators(Allocator* _defaultAllocator, Allocator* _scratchAllocator, Allocator* _toolAllocator);
 
 extern Allocator* g_defaultAllocator;
 extern Allocator* g_scratchAllocator;

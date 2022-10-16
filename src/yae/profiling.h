@@ -5,7 +5,7 @@
 namespace yae {
 namespace profiling {
 
-struct YAELIB_API CaptureScope
+struct YAE_API CaptureScope
 {
 	CaptureScope(const char* _name);
 	~CaptureScope();
@@ -13,8 +13,8 @@ struct YAELIB_API CaptureScope
 	const char* m_name;
 };
 
-YAELIB_API void startCapture(const char* _captureName);
-YAELIB_API void stopCapture(const char* _captureName);
+YAE_API void startCapture(const char* _captureName);
+YAE_API void stopCapture(const char* _captureName);
 
 } // namespace profiling
 } // namespace yae

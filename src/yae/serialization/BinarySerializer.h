@@ -1,14 +1,16 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/serialization/Serializer.h>
+
 #include <yae/hash.h>
 #include <yae/containers/Array.h>
 #include <yae/containers/HashMap.h>
 
+#include <yae/serialization/Serializer.h>
+
 namespace yae {
 
-class YAELIB_API BinarySerializer : public Serializer
+class YAE_API BinarySerializer : public Serializer
 {
 public:
 	BinarySerializer(Allocator* _allocator = nullptr);

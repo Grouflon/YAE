@@ -4,7 +4,7 @@
 
 namespace yae {
 
-struct YAELIB_API Date
+struct YAE_API Date
 {
 	i64 time;
 
@@ -23,7 +23,7 @@ struct YAELIB_API Date
 
 namespace date {
 
-YAELIB_API yae::Date now();
+YAE_API yae::Date now();
 
 } // namespace date
 

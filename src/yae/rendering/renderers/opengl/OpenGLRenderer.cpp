@@ -1,5 +1,6 @@
 #include "OpenGLRenderer.h"
 
+#include <yae/program.h>
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/FontResource.h>
 #include <yae/resources/FileResource.h>
@@ -108,14 +109,8 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	*/
 
 #if YAE_PLATFORM_WEB == 0
-	// TODO: Move gl3w init to the device part
-	int gl3wInitResult = gl3wInit();
-	if (gl3wInitResult != GL3W_OK)
-	{
-		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w. Return code: %d", gl3wInitResult);
-		return false;
-	}
-
+	program().initGl3w();
+    
 	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) == false)
 	{
 		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
@@ -232,6 +227,7 @@ FrameHandle OpenGLRenderer::beginFrame()
 	int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
+    glScissor(0, 0, width, height);
     glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 

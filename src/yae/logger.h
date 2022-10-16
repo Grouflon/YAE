@@ -7,7 +7,7 @@
 
 namespace yae {
 
-class YAELIB_API Logger
+class YAE_API Logger
 {
 public:
 	struct LogCategory

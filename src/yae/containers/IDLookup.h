@@ -5,7 +5,7 @@
 
 namespace yae {
 
-struct YAELIB_API ID
+struct YAE_API ID
 {
 	u32 index;
 	u32 innerId;

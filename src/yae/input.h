@@ -16,7 +16,7 @@ enum CursorMode
 	CURSORMODE_DISABLED
 };
 
-class YAELIB_API InputSystem
+class YAE_API InputSystem
 {
 public:
 	void init(GLFWwindow* _window);

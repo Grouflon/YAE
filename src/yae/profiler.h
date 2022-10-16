@@ -10,7 +10,7 @@ namespace yae {
 
 class Allocator;
 
-class YAELIB_API Profiler
+class YAE_API Profiler
 {
 public:
 	Profiler(Allocator* _allocator);

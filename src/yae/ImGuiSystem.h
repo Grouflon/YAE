@@ -10,7 +10,7 @@ namespace yae {
 
 class Renderer;
 
-class YAELIB_API ImGuiSystem
+class YAE_API ImGuiSystem
 {
 public:
 	void init(GLFWwindow* _window, Renderer* _renderer);

@@ -299,12 +299,23 @@ const char& String::operator[](size_t _pos) const
 bool String::operator==(const char* _str) const
 {
 	YAE_ASSERT(_str != nullptr);
-	return strcmp(_str, m_buffer) == 0;
+	size_t strLength = strlen(_str);
+	return (m_length == strLength) && (m_length == 0 || strcmp(_str, m_buffer) == 0);
 }
 
 bool String::operator==(const String& _str) const
 {
-	return strcmp(_str.m_buffer, m_buffer) == 0;
+	return (m_length == _str.m_length) && (m_length == 0 || strcmp(_str.m_buffer, m_buffer) == 0);
+}
+
+bool String::operator!=(const char* _str) const
+{
+	return !(*this == _str);
+}
+
+bool String::operator!=(const String& _str) const
+{
+	return !(*this == _str);
 }
 
 MallocString::MallocString()

@@ -4,7 +4,7 @@
 
 namespace yae {
 
-struct YAELIB_API Time
+struct YAE_API Time
 {
 	i64 time;
 
@@ -26,7 +26,7 @@ struct YAELIB_API Time
 	bool operator>=(const Time& _rhs) const;
 };
 
-struct YAELIB_API Clock
+struct YAE_API Clock
 {
 	Time startTime;
 
@@ -39,15 +39,15 @@ struct YAELIB_API Clock
 
 namespace time {
 
-YAELIB_API yae::Time now();
-YAELIB_API yae::Time max();
+YAE_API yae::Time now();
+YAE_API yae::Time max();
 
-YAELIB_API i64 timeToNanoSeconds(Time _time);
-YAELIB_API i64 timeToMicroSeconds(Time _time);
-YAELIB_API double timeToMilliSeconds64(Time _time);
-YAELIB_API float timeToMilliSeconds(Time _time);
-YAELIB_API double timeToSeconds64(Time _time);
-YAELIB_API float timeToSeconds(Time _time);
+YAE_API i64 timeToNanoSeconds(Time _time);
+YAE_API i64 timeToMicroSeconds(Time _time);
+YAE_API double timeToMilliSeconds64(Time _time);
+YAE_API float timeToMilliSeconds(Time _time);
+YAE_API double timeToSeconds64(Time _time);
+YAE_API float timeToSeconds(Time _time);
 
 void formatTime(Time _time, String& _outString);
 

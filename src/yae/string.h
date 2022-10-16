@@ -8,7 +8,7 @@ namespace yae {
 
 // @TODO: use explicit types of sizes (u32?)
 
-class YAELIB_API String
+class YAE_API String
 {
 public:
 	static const size_t INVALID_POS;
@@ -47,6 +47,8 @@ public:
 	const char& operator[](size_t _pos) const;
 	bool operator==(const char* _str) const;
 	bool operator==(const String& _str) const;
+	bool operator!=(const char* _str) const;
+	bool operator!=(const String& _str) const;
 
 private:
 	char* m_buffer = nullptr;
@@ -57,7 +59,7 @@ private:
 
 
 
-class YAELIB_API MallocString : public String
+class YAE_API MallocString : public String
 {
 public:
 	MallocString();

@@ -1,21 +1,40 @@
--include make/header.make
+-include make/common/header.make
 
-BIN = $(BINDIR)/game.dll
+SRCS += $(call rwildcard,src/game,*.cpp)
+INCLUDEDIRS +=
 
--include make/game_common.make
+CPPFLAGS += -Wno-unused-variable -Wno-unused-function
 
-LDFLAGS += -shared
+ifeq ($(PLATFORM), Win64)
+TARGETEXT := .dll
+LDFLAGS += \
+  -shared \
 
 LIBDIRS += \
-  $(BINDIR)
+  $(BINDIR) \
 
 LIBS += \
-  yae 
+  yae \
 
 DEFINES += \
-  YAEGAME_EXPORT \
   MIRROR_API=__declspec(dllimport) \
   IMGUI_API=__declspec(dllimport) \
-  _MT _DLL
+  YAE_API=__declspec(dllimport) \
+  GAME_API=__declspec(dllexport) \
+  _MT _DLL \
 
--include make/footer.make
+endif
+
+ifeq ($(PLATFORM), Web)
+TARGETEXT := .wasm
+CPPFLAGS += \
+  -fPIC \
+
+LDFLAGS += \
+  -s SIDE_MODULE=1 \
+
+endif
+
+BIN = $(BINDIR)/game$(TARGETEXT)
+
+-include make/common/footer.make

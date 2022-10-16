@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/date.h>
+#include <yae/Date.h>
 
 // interesting stuff: http://utf8everywhere.org/
 
@@ -12,22 +12,22 @@ class Allocator;
 namespace filesystem {
 
 // Path management
-YAELIB_API String normalizePath(const char* _path);
-YAELIB_API String& normalizePath(String& _path);
-YAELIB_API String getAbsolutePath(const char* _path);
-YAELIB_API String getRelativePath(const char* _path, const char* _relativeTo);
-YAELIB_API void setWorkingDirectory(const char* _path);
-YAELIB_API String getWorkingDirectory();
-YAELIB_API String getDirectory(const char* _path);
-YAELIB_API String getFileName(const char* _path);
-YAELIB_API String getFileNameWithoutExtension(const char* _path);
-YAELIB_API String getExtension(const char* _path);
+YAE_API String normalizePath(const char* _path);
+YAE_API String& normalizePath(String& _path);
+YAE_API String getAbsolutePath(const char* _path);
+YAE_API String getRelativePath(const char* _path, const char* _relativeTo);
+YAE_API void setWorkingDirectory(const char* _path);
+YAE_API String getWorkingDirectory();
+YAE_API String getDirectory(const char* _path);
+YAE_API String getFileName(const char* _path);
+YAE_API String getFileNameWithoutExtension(const char* _path);
+YAE_API String getExtension(const char* _path);
 
 // Filesystem actions
-YAELIB_API bool doesPathExists(const char* _path);
-YAELIB_API bool deletePath(const char* _path);
-YAELIB_API bool createDirectory(const char* _path);
-YAELIB_API Date getFileLastWriteTime(const char* _path);
+YAE_API bool doesPathExists(const char* _path);
+YAE_API bool deletePath(const char* _path);
+YAE_API bool createDirectory(const char* _path);
+YAE_API Date getFileLastWriteTime(const char* _path);
 
 enum CopyMode
 {
@@ -35,11 +35,11 @@ enum CopyMode
 	CopyMode_OverwriteExisting,
 	CopyMode_OverwriteExistingIfOlder,
 };
-YAELIB_API bool copy(const char* _from, const char* _to, CopyMode _mode = CopyMode_SkipExisting);
+YAE_API bool copy(const char* _from, const char* _to, CopyMode _mode = CopyMode_SkipExisting);
 
 } // namespace filesystem
 
-class YAELIB_API FileHandle
+class YAE_API FileHandle
 {
 public:
 	enum OpenMode

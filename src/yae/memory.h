@@ -9,7 +9,7 @@ namespace yae {
 
 namespace memory {
 
-inline YAELIB_API void* alignForward(void* _p, u8 _align)
+inline YAE_API void* alignForward(void* _p, u8 _align)
 {
 	uintptr_t pi = uintptr_t(_p);
 	const uint32_t mod = pi % _align;
@@ -22,7 +22,7 @@ inline YAELIB_API void* alignForward(void* _p, u8 _align)
 
 } // namespace memory
 
-class YAELIB_API Allocator
+class YAE_API Allocator
 {
 public:
 	static const u8 DEFAULT_ALIGN = 4;
@@ -54,7 +54,7 @@ public:
 };
 
 
-class YAELIB_API FixedSizeAllocator : public Allocator
+class YAE_API FixedSizeAllocator : public Allocator
 {
 public:
 	FixedSizeAllocator(size_t _size);
@@ -98,7 +98,7 @@ private:
 };
 
 
-class YAELIB_API MallocAllocator : public Allocator
+class YAE_API MallocAllocator : public Allocator
 {
 public:
 	MallocAllocator();
@@ -196,6 +196,6 @@ typedef InlineAllocator<128> InlineAllocator128;
 typedef InlineAllocator<256> InlineAllocator256;
 typedef InlineAllocator<512> InlineAllocator512;
 
-YAELIB_API MallocAllocator& mallocAllocator();
+YAE_API MallocAllocator& mallocAllocator();
 
 } // namespace yae

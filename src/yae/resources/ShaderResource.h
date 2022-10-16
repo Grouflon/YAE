@@ -7,7 +7,7 @@
 
 namespace yae {
 
-class YAELIB_API ShaderResource : public Resource
+class YAE_API ShaderResource : public Resource
 {
 	MIRROR_CLASS(ShaderResource)
 	(
@@ -31,7 +31,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<ShaderResource>
+struct YAE_API ResourceIDGetter<ShaderResource>
 {
 	static ResourceID GetId(const char* _path, ShaderType _type);
 };

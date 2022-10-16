@@ -1,8 +1,10 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/math_types.h>
 #include <yae/time.h>
+#include <yae/math_types.h>
+#include <yae/containers/HashMap.h>
+#include <yae/hash.h>
 
 struct GLFWwindow;
 
@@ -13,15 +15,17 @@ class InputSystem;
 class ImGuiSystem;
 class Im3dSystem;
 
-class YAELIB_API Application
+class YAE_API Application
 {
 public:
 	Application(const char* _name, u32 _width, u32 _height);
+	~Application();
 
 	void init(char** _args, int _argCount);
-	bool doFrame();
-	void run();
 	void shutdown();
+	bool doFrame();
+
+	void run();
 
 	void requestExit();
 
@@ -33,8 +37,8 @@ public:
 	void setCameraPosition(const Vector3& _position) { m_cameraPosition = _position; }
 	void setCameraRotation(const Quaternion& _rotation) { m_cameraRotation = _rotation; }
 
-	void* getUserData() const { return m_userData; }
-	void setUserData(void* _userData) { m_userData = _userData; }
+	void* getUserData(const char* _name) const;
+	void setUserData(const char* _name, void* _userData);
 
 private:
 
@@ -62,10 +66,8 @@ private:
 	Vector3 m_cameraPosition = Vector3::ZERO;
 	Quaternion m_cameraRotation = Quaternion::IDENTITY;
 	float m_cameraFov = 45.f;
-	void* m_userData = nullptr;
 
-	bool m_showMemoryProfiler = false;
-	bool m_showFrameRate = false;
+	HashMap<StringHash, void*> m_userData;
 };
 
 } // namespace yae

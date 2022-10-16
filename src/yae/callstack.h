@@ -14,8 +14,8 @@ struct StackFrame
 
 namespace callstack {
 
-YAELIB_API u16 capture(StackFrame* _outFrames, u16 _maxFrameCount);
-YAELIB_API void print(StackFrame* _frames, u16 _frameCount);
+YAE_API u16 capture(StackFrame* _outFrames, u16 _maxFrameCount);
+YAE_API void print(StackFrame* _frames, u16 _frameCount);
 
 } // namespace callstack
 

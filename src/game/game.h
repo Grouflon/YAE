@@ -1,22 +1,25 @@
 #pragma once
 
-#include "export.h"
-
-#include <mirror/mirror.h>
+#ifndef GAME_API
+#define GAME_API
+#endif
 
 #include <yae/types.h>
 #include <yae/resource.h>
+
+#include <mirror/mirror.h>
 
 #ifdef __cplusplus    // If used by C++ code, 
 extern "C" {          // we need to export the C interface
 #endif
 
-YAEGAME_API void onLibraryLoaded();
-YAEGAME_API void onLibraryUnloaded();
-
-YAEGAME_API void initGame();
-YAEGAME_API void shutdownGame();
-YAEGAME_API void updateGame(float _dt);
+GAME_API void onModuleLoaded(yae::Program* _program, yae::Module* _module);
+GAME_API void onModuleUnloaded(yae::Program* _program, yae::Module* _module);
+GAME_API void initModule(yae::Program* _program, yae::Module* _module);
+GAME_API void shutdownModule(yae::Program* _program, yae::Module* _module);
+GAME_API void initApplication(yae::Application* _application);
+GAME_API void updateApplication(yae::Application* _application, float _dt);
+GAME_API void shutdownApplication(yae::Application* _application);
 
 #ifdef __cplusplus
 }
@@ -63,7 +66,7 @@ public:
 };
 
 template <>
-struct YAELIB_API ResourceIDGetter<SuperResource>
+struct YAE_API ResourceIDGetter<SuperResource>
 {
 	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };

@@ -18,7 +18,7 @@
 
 namespace yae {
 
-class YAELIB_API StringHash
+class YAE_API StringHash
 {
 public:
 	StringHash();
@@ -71,8 +71,8 @@ void clearStringHashRepository();
 
 namespace hash {
 
-YAELIB_API u32 hash32(const void* _data, size_t _size);
-YAELIB_API u32 hashString(const char* _str);
+YAE_API u32 hash32(const void* _data, size_t _size);
+YAE_API u32 hashString(const char* _str);
 
 } // namespace hash
 
