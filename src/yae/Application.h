@@ -14,6 +14,7 @@ class Renderer;
 class InputSystem;
 class ImGuiSystem;
 class Im3dSystem;
+class Serializer;
 
 class YAE_API Application
 {
@@ -29,6 +30,8 @@ public:
 
 	void requestExit();
 
+	const char* getName() const;
+
 	InputSystem& input() const;
 	Renderer& renderer() const;
 
@@ -40,8 +43,12 @@ public:
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
 
+	void loadSettings();
+	void saveSettings();
+
 private:
 
+	static void _glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y);
 	static void _glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height);
 	static void _glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods);
 	static void _glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods);
@@ -51,8 +58,8 @@ private:
 	Matrix4 _computeCameraProj() const;
 
 	String m_name;
-	u32 m_width = 0;
-	u32 m_height = 0;
+	u32 m_baseWidth = 0;
+	u32 m_baseHeight = 0;
 
 	InputSystem* m_inputSystem = nullptr;
 	ImGuiSystem* m_imGuiSystem = nullptr;

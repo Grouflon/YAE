@@ -239,7 +239,7 @@ public:
 	FontResource* font = nullptr;
 };
 
-void initApplication(Application* _app)
+void afterInitApplication(Application* _app)
 {
 	GameInstance* gameInstance = defaultAllocator().create<GameInstance>();
 	YAE_ASSERT(gameInstance != nullptr);
@@ -267,7 +267,7 @@ void initApplication(Application* _app)
 	YAE_ASSERT(gameInstance->font->isLoaded());
 }
 
-void shutdownApplication(Application* _app)
+void beforeShutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 

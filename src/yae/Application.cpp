@@ -9,6 +9,10 @@
 #include <yae/math.h>
 #include <yae/ImGuiSystem.h>
 #include <yae/Im3dSystem.h>
+#include <yae/resources/FileResource.h>
+#include <yae/filesystem.h>
+#include <yae/serialization/serialization.h>
+#include <yae/serialization/JsonSerializer.h>
 
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
@@ -21,10 +25,28 @@
 
 namespace yae {
 
+struct ApplicationSettings
+{
+	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
+	(
+		MIRROR_MEMBER(windowWidth)();
+		MIRROR_MEMBER(windowHeight)();
+		MIRROR_MEMBER(windowX)();
+		MIRROR_MEMBER(windowY)();
+	);
+
+	i32 windowWidth = -1;
+	i32 windowHeight = -1;
+	i32 windowX = -1;
+	i32 windowY = -1;
+};
+
+MIRROR_CLASS_DEFINITION(ApplicationSettings);
+
 Application::Application(const char* _name, u32 _width, u32 _height)
 	: m_name(_name)
-	, m_width(_width)
-	, m_height(_height)
+	, m_baseWidth(_width)
+	, m_baseHeight(_height)
 {
 
 }
@@ -51,8 +73,9 @@ void Application::init(char** _args, int _argCount)
 	m_renderer->hintWindow();
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-	m_window = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
+	m_window = glfwCreateWindow(m_baseWidth, m_baseHeight, m_name.c_str(), nullptr, nullptr);
 	glfwSetWindowUserPointer(m_window, this);
+	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
 	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
 	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
 	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
@@ -77,6 +100,8 @@ void Application::init(char** _args, int _argCount)
 	m_im3dSystem->init();
 
 	m_clock.reset();
+
+	loadSettings();
 }
 
 void Application::shutdown()
@@ -171,6 +196,11 @@ void Application::requestExit()
 	glfwSetWindowShouldClose(m_window, true);
 }
 
+const char* Application::getName() const
+{
+	return m_name.c_str();
+}
+
 InputSystem& Application::input() const
 {
 	YAE_ASSERT(m_inputSystem != nullptr);
@@ -196,10 +226,107 @@ void Application::setUserData(const char* _name, void* _userData)
 	m_userData.set(hash, _userData);
 }
 
+static String getSettingsFilePath(const Application* _app)
+{
+	String path = string::format("%s/settings/%s_settings.json", program().getIntermediateDirectory(), _app->getName());
+	// @TODO(remi): Let's find a better way to sanitize a string for paths at some point
+	path.replace(" ", "");
+	path.replace("|", "");
+	return path;
+}
+
+static bool serializeSettings(Serializer* _serializer, ApplicationSettings* _settings)
+{
+	YAE_VERIFY(_serializer->beginSerializeObject());
+
+	serialization::serializeMirrorType(_serializer, *_settings, "application");
+	for (Module* module : program().getModules())
+	{
+		if (module->onSerializeApplicationSettingsFunction != nullptr)
+		{
+			YAE_VERIFY(module->onSerializeApplicationSettingsFunction(&app(), _serializer));
+		}
+	}
+
+	YAE_VERIFY(_serializer->endSerializeObject());
+	return true;
+}
+
+void Application::loadSettings()
+{
+	String filePath = getSettingsFilePath(this);
+	FileResource* settingsFile = findOrCreateResource<FileResource>(filePath.c_str());
+	if (!settingsFile->useLoad())
+	{
+		YAE_ERRORF("Failed to load settings file \"%s\"", filePath.c_str());
+		settingsFile->releaseUnuse();
+		return;
+	}
+
+	JsonSerializer serializer(&scratchAllocator());
+	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
+	{
+		YAE_ERRORF("Failed to parse json settings file \"%s\"", filePath.c_str());
+		settingsFile->releaseUnuse();
+		return;	
+	}
+	settingsFile->releaseUnuse();
+
+	ApplicationSettings settings;
+	serializer.beginRead();
+	serializeSettings(&serializer, &settings);
+	serializer.endRead();
+
+	if (settings.windowWidth > 0 && settings.windowHeight > 0)
+	{
+		glfwSetWindowSize(m_window, settings.windowWidth, settings.windowHeight);
+	}
+	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
+	if (settings.windowX != -1 && settings.windowY != -1)
+	{
+		glfwSetWindowPos(m_window, settings.windowX, settings.windowY);
+	}
+}
+
+void Application::saveSettings()
+{
+	ApplicationSettings settings;
+	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
+	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
+
+	JsonSerializer serializer(&scratchAllocator());
+	serializer.beginWrite();
+	serializeSettings(&serializer, &settings);
+	serializer.endWrite();
+
+	String filePath = getSettingsFilePath(this);
+	FileHandle file(filePath.c_str());
+	if (!file.open(FileHandle::OPENMODE_WRITE))
+	{
+		YAE_ERRORF("Failed to open \"%s\" for write", filePath.c_str());
+		return;
+	}
+	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
+	{
+		YAE_ERRORF("Failed to write into \"%s\"", filePath.c_str());
+		return;
+	}
+	file.close();
+}
+
+void Application::_glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y)
+{
+	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+
+	application->saveSettings();	
+}
+
 void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
 {
-	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-	Application->m_renderer->notifyFrameBufferResized(_width, _height);
+	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
+	application->m_renderer->notifyFrameBufferResized(_width, _height);
+
+	application->saveSettings();
 }
 
 void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)

@@ -245,18 +245,21 @@ void JsonSerializer::endWrite()
 	YAE_ASSERT(m_valueStack.size() == 0);
 	YAE_ASSERT(m_writeData == nullptr);
 
-	json_value_s* root = m_writeRootValue;
-	m_writeRootValue = nullptr;
+	if (m_writeRootValue != nullptr)
+	{
+		json_value_s* root = m_writeRootValue;
+		m_writeRootValue = nullptr;
 
-	size_t writeDataSize;
-	void* data = json_write_pretty(root, "\t", "\n", &writeDataSize);
-	m_writeDataSize = (u32)writeDataSize - 1; // we dont want the trailing 0
-	YAE_ASSERT(data != nullptr);
-	m_writeData = m_allocator->allocate(m_writeDataSize);
-	memcpy(m_writeData, data, m_writeDataSize);
-	free(data); // We do not keep the data returned so the malloced memory do not stay around
+		size_t writeDataSize;
+		void* data = json_write_pretty(root, "\t", "\n", &writeDataSize);
+		m_writeDataSize = (u32)writeDataSize - 1; // we dont want the trailing 0
+		YAE_ASSERT(data != nullptr);
+		m_writeData = m_allocator->allocate(m_writeDataSize);
+		memcpy(m_writeData, data, m_writeDataSize);
+		free(data); // We do not keep the data returned so the malloced memory do not stay around
 
-	jsonHelpers::deallocateValue(m_allocator, root);
+		jsonHelpers::deallocateValue(m_allocator, root);
+	}
 
 	Serializer::endWrite();
 }

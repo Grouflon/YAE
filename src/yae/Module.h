@@ -6,6 +6,8 @@
 
 namespace yae {
 
+class Serializer;
+
 class Module
 {
 public:
@@ -19,9 +21,12 @@ public:
 	void (*initModuleFunction)(Program* _program, Module* _module) = nullptr;
 	void (*shutdownModuleFunction)(Program* _program, Module* _module) = nullptr;
 
-	void (*initApplicationFunction)(Application* _app) = nullptr;
+	void (*beforeInitApplicationFunction)(Application* _app) = nullptr;
+	void (*afterInitApplicationFunction)(Application* _app) = nullptr;
 	void (*updateApplicationFunction)(Application* _app, float _dt) = nullptr;
-	void (*shutdownApplicationFunction)(Application* _app) = nullptr;
+	bool (*onSerializeApplicationSettingsFunction)(Application* _app, Serializer* _serializer) = nullptr;
+	void (*beforeShutdownApplicationFunction)(Application* _app) = nullptr;
+	void (*afterShutdownApplicationFunction)(Application* _app) = nullptr;
 };
 
 } // namespace yae

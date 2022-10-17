@@ -26,7 +26,6 @@ public:
 
 	void run();
 
-
 	void registerApplication(Application* _application);
 	void unregisterApplication(Application* _application);
 

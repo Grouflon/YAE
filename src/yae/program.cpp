@@ -134,6 +134,8 @@ void Program::init(char** _args, int _argCount)
 	filesystem::createDirectory(m_intermediateDirectory.c_str());
     filesystem::deletePath(m_hotReloadDirectory.c_str());
 	filesystem::createDirectory(m_hotReloadDirectory.c_str());
+	String settingsPath = filesystem::getAbsolutePath((m_intermediateDirectory + "/settings").c_str());
+	filesystem::createDirectory(settingsPath.c_str());
 #endif
 
 	YAE_LOGF("exe path: %s",  getExePath());
@@ -225,13 +227,22 @@ void Program::run()
 	for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
+
+		for (Module* module : m_modules)
+		{
+			if (module->beforeInitApplicationFunction != nullptr)
+			{
+				module->beforeInitApplicationFunction(application);
+			}
+		}
+
 		application->init(m_args, m_argCount);
 
 		for (Module* module : m_modules)
 		{
-			if (module->initApplicationFunction != nullptr)
+			if (module->afterInitApplicationFunction != nullptr)
 			{
-				module->initApplicationFunction(application);
+				module->afterInitApplicationFunction(application);
 			}
 		}
 	}
@@ -272,13 +283,23 @@ void Program::run()
 		{
 			// @NOTE(remi): shutdown modules in reverse order to preserve symetry
 			Module* module = m_modules[i];
-			if (module->shutdownApplicationFunction != nullptr)
+			if (module->beforeShutdownApplicationFunction != nullptr)
 			{
-				module->shutdownApplicationFunction(application);
+				module->beforeShutdownApplicationFunction(application);
 			}
 		}
 
 		application->shutdown();
+
+		for (int i = m_modules.size() - 1; i >= 0; --i)
+		{
+			// @NOTE(remi): shutdown modules in reverse order to preserve symetry
+			Module* module = m_modules[i];
+			if (module->afterShutdownApplicationFunction != nullptr)
+			{
+				module->afterShutdownApplicationFunction(application);
+			}
+		}
 	}
 	m_currentApplication = nullptr;
 
@@ -475,9 +496,12 @@ void Program::_loadModule(Module* _module, const char* _dllPath)
 	_module->onModuleUnloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleUnloaded");
 	_module->initModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "initModule");
 	_module->shutdownModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "shutdownModule");
-	_module->initApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "initApplication");
+	_module->beforeInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeInitApplication");
+	_module->afterInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterInitApplication");
 	_module->updateApplicationFunction = (void (*)(Application*, float))platform::getProcedureAddress(_module->libraryHandle, "updateApplication");
-	_module->shutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "shutdownApplication");
+	_module->beforeShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeShutdownApplication");
+	_module->afterShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterShutdownApplication");
+	_module->onSerializeApplicationSettingsFunction = (bool (*)(Application*, Serializer*))platform::getProcedureAddress(_module->libraryHandle, "onSerializeApplicationSettings");
 
 	if (_module->onModuleLoadedFunction != nullptr)
 	{
@@ -503,9 +527,12 @@ void Program::_unloadModule(Module* _module)
 	_module->onModuleUnloadedFunction = nullptr;
 	_module->initModuleFunction = nullptr;
 	_module->shutdownModuleFunction = nullptr;
-	_module->initApplicationFunction = nullptr;
+	_module->beforeInitApplicationFunction = nullptr;
+	_module->afterInitApplicationFunction = nullptr;
 	_module->updateApplicationFunction = nullptr;
-	_module->shutdownApplicationFunction = nullptr;
+	_module->beforeShutdownApplicationFunction = nullptr;
+	_module->afterShutdownApplicationFunction = nullptr;
+	_module->onSerializeApplicationSettingsFunction = nullptr;
 
 	platform::unloadDynamicLibrary(_module->libraryHandle);
 	_module->libraryHandle = nullptr;

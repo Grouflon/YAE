@@ -1,6 +1,7 @@
 -include make/common/header.make
 
 # SOURCES
+SRCS += src/yae/MirrorImplementation.cpp
 SRCS += $(call rwildcard,src/yae,*.cpp)
 SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/platforms,*.cpp), $(SRCS)))
 SRCS += $(wildcard extern/imgui/*.cpp)
