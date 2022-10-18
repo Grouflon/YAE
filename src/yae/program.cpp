@@ -8,6 +8,9 @@
 #include <yae/logger.h>
 #include <yae/hash.h>
 #include <yae/Module.h>
+#include <yae/serialization/serialization.h>
+#include <yae/serialization/JsonSerializer.h>
+#include <yae/resources/FileResource.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
@@ -49,6 +52,23 @@ void DoProgramFrame()
 
 
 namespace yae {
+
+struct ProgramSettings
+{
+	i32 consoleWindowWidth = -1;
+	i32 consoleWindowHeight = -1;
+	i32 consoleWindowX = -1;
+	i32 consoleWindowY = -1;
+
+	MIRROR_CLASS_NOVIRTUAL(ProgramSettings)
+	(
+		MIRROR_MEMBER(consoleWindowWidth)();
+		MIRROR_MEMBER(consoleWindowHeight)();
+		MIRROR_MEMBER(consoleWindowX)();
+		MIRROR_MEMBER(consoleWindowY)();
+	);
+};
+MIRROR_CLASS_DEFINITION(ProgramSettings);
 
 Program* Program::s_programInstance = nullptr;
 
@@ -126,6 +146,7 @@ void Program::init(char** _args, int _argCount)
     m_rootDirectory = filesystem::getAbsolutePath((m_binDirectory + "/../../").c_str());
     m_intermediateDirectory = filesystem::getAbsolutePath((m_rootDirectory + "/intermediate/").c_str());
 	m_hotReloadDirectory = m_intermediateDirectory + "dll/";
+	m_settingsDirectory = m_intermediateDirectory + "settings/";
 
     // Setup directories
     filesystem::setWorkingDirectory(m_rootDirectory.c_str());
@@ -134,14 +155,14 @@ void Program::init(char** _args, int _argCount)
 	filesystem::createDirectory(m_intermediateDirectory.c_str());
     filesystem::deletePath(m_hotReloadDirectory.c_str());
 	filesystem::createDirectory(m_hotReloadDirectory.c_str());
-	String settingsPath = filesystem::getAbsolutePath((m_intermediateDirectory + "/settings").c_str());
-	filesystem::createDirectory(settingsPath.c_str());
+	filesystem::createDirectory(m_settingsDirectory.c_str());
 #endif
 
 	YAE_LOGF("exe path: %s",  getExePath());
 	YAE_LOGF("bin directory: %s",  getBinDirectory());
 	YAE_LOGF("root directory: %s",  getRootDirectory());
 	YAE_LOGF("intermediate directory: %s",  getIntermediateDirectory());
+	YAE_LOGF("settings directory: %s",  getSettingsDirectory());
 	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
 
 	// Init GLFW
@@ -173,6 +194,13 @@ void Program::init(char** _args, int _argCount)
 	}
 
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
+
+	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
+	{
+		platform::getWindowSize(consoleWindowHandle, &m_previousConsoleWindowWidth, &m_previousConsoleWindowHeight);
+		platform::getWindowPosition(consoleWindowHandle, &m_previousConsoleWindowX, &m_previousConsoleWindowY);
+	}
+	loadSettings();
 }
 
 
@@ -322,14 +350,12 @@ void Program::run()
     }
 }
 
-
 void Program::registerApplication(Application* _application)
 {
 	YAE_ASSERT(_application != nullptr);
 	YAE_ASSERT(m_applications.find(_application) == nullptr);
 	m_applications.push_back(_application);
 }
-
 
 void Program::unregisterApplication(Application* _application)
 {
@@ -339,18 +365,15 @@ void Program::unregisterApplication(Application* _application)
 	m_applications.erase(match);
 }
 
-
 const char* Program::getExePath() const
 {
 	return m_exePath.c_str();
 }
 
-
 const char* Program::getBinDirectory() const
 {
 	return m_binDirectory.c_str();
 }
-
 
 const char* Program::getRootDirectory() const
 {
@@ -363,6 +386,10 @@ const char* Program::getIntermediateDirectory() const
 	return m_intermediateDirectory.c_str();
 }
 
+const char* Program::getSettingsDirectory() const
+{
+	return m_settingsDirectory.c_str();
+}
 
 Application& Program::currentApplication()
 {
@@ -370,13 +397,11 @@ Application& Program::currentApplication()
 	return *m_currentApplication;
 }
 
-
 ResourceManager& Program::resourceManager()
 {
 	YAE_ASSERT(m_resourceManager != nullptr);
 	return *m_resourceManager;
 }
-
 
 Logger& Program::logger()
 {
@@ -384,11 +409,94 @@ Logger& Program::logger()
 	return *m_logger;
 }
 
-
 Profiler& Program::profiler()
 {
 	YAE_ASSERT(m_profiler != nullptr);
 	return *m_profiler;
+}
+
+static String getSettingsFilePath()
+{
+	return filesystem::normalizePath(string::format("%s/program_settings.json", program().getSettingsDirectory()).c_str());
+}
+
+static bool serializeSettings(Serializer* _serializer, ProgramSettings* _settings)
+{
+	return serialization::serializeMirrorType(_serializer, *_settings);
+}
+
+void Program::loadSettings()
+{
+	String filePath = getSettingsFilePath();
+	FileResource* settingsFile = findOrCreateResource<FileResource>(filePath.c_str());
+	if (!settingsFile->useLoad())
+	{
+		YAE_ERRORF_CAT("program", "Failed to load settings file \"%s\"", filePath.c_str());
+		settingsFile->releaseUnuse();
+		return;
+	}
+
+	JsonSerializer serializer(&scratchAllocator());
+	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
+	{
+		YAE_ERRORF_CAT("program", "Failed to parse json settings file \"%s\"", filePath.c_str());
+		settingsFile->releaseUnuse();
+		return;	
+	}
+	settingsFile->releaseUnuse();
+
+	ProgramSettings settings;
+	serializer.beginRead();
+	serializeSettings(&serializer, &settings);
+	serializer.endRead();
+
+	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
+	{
+		if (settings.consoleWindowWidth > 0 && settings.consoleWindowHeight > 0)
+		{
+			platform::setWindowSize(consoleWindowHandle, settings.consoleWindowWidth, settings.consoleWindowHeight);
+		}
+		if (settings.consoleWindowX != -1 && settings.consoleWindowY != -1)
+		{
+			platform::setWindowPosition(consoleWindowHandle, settings.consoleWindowX, settings.consoleWindowY);
+		}
+		m_previousConsoleWindowX = settings.consoleWindowX;
+		m_previousConsoleWindowY = settings.consoleWindowY;
+		m_previousConsoleWindowWidth = settings.consoleWindowWidth;
+		m_previousConsoleWindowHeight = settings.consoleWindowHeight;
+	}
+	YAE_LOGF_CAT("program", "Loaded program settings from \"%s\"", filePath.c_str());
+}
+
+void Program::saveSettings()
+{
+	ProgramSettings settings;
+	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
+	{
+		platform::getWindowSize(consoleWindowHandle, &settings.consoleWindowWidth, &settings.consoleWindowHeight);
+		platform::getWindowPosition(consoleWindowHandle, &settings.consoleWindowX, &settings.consoleWindowY);
+	}
+
+	JsonSerializer serializer(&scratchAllocator());
+	serializer.beginWrite();
+	serializeSettings(&serializer, &settings);
+	serializer.endWrite();
+
+	String filePath = getSettingsFilePath();
+	FileHandle file(filePath.c_str());
+	if (!file.open(FileHandle::OPENMODE_WRITE))
+	{
+		YAE_ERRORF_CAT("program", "Failed to open \"%s\" for write", filePath.c_str());
+		return;
+	}
+	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
+	{
+		YAE_ERRORF_CAT("program", "Failed to write into \"%s\"", filePath.c_str());
+		return;
+	}
+	file.close();
+
+	YAE_LOGF_CAT("program", "Saved program settings to \"%s\"", filePath.c_str());
 }
 
 #if YAE_PLATFORM_WEB == 0
@@ -461,6 +569,25 @@ bool Program::_doFrame()
 				_copyAndLoadModule(module);
 			}
 		}
+	}
+
+	// Settings save check
+	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
+	{
+		i32 x, y, w, h;
+		platform::getWindowSize(consoleWindowHandle, &w, &h);
+		platform::getWindowPosition(consoleWindowHandle, &x, &y);
+		if (
+			m_previousConsoleWindowX != x || m_previousConsoleWindowY != y ||
+			m_previousConsoleWindowWidth != w || m_previousConsoleWindowHeight != h
+		)
+		{
+			saveSettings();
+		}
+		m_previousConsoleWindowX = x;
+		m_previousConsoleWindowY = y;
+		m_previousConsoleWindowWidth = w;
+		m_previousConsoleWindowHeight = h;
 	}
 
 	if (!shouldContinue)

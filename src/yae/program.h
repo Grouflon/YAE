@@ -34,12 +34,17 @@ public:
 	const char* getBinDirectory() const;
 	const char* getRootDirectory() const;
 	const char* getIntermediateDirectory() const;
+	const char* getSettingsDirectory() const;
 
 	// Services getters
 	Application& currentApplication();
 	ResourceManager& resourceManager();
 	Logger& logger();
 	Profiler& profiler();
+
+	// Settings
+	void loadSettings();
+	void saveSettings();
 
 #if YAE_PLATFORM_WEB == 0
 	// Rendering
@@ -74,11 +79,17 @@ public:
 	String m_binDirectory;
 	String m_rootDirectory;
 	String m_intermediateDirectory;
+	String m_settingsDirectory;
 	String m_hotReloadDirectory;
 	bool m_isInitialized = false;
 	bool m_isGl3wInitialized = false;
 	bool m_hotReloadEnabled = false;
 	DataArray<Module*> m_modules;
+
+	i32 m_previousConsoleWindowX = 0;
+	i32 m_previousConsoleWindowY = 0;
+	i32 m_previousConsoleWindowWidth = 0;
+	i32 m_previousConsoleWindowHeight = 0;
 
 	static Program* s_programInstance;
 };

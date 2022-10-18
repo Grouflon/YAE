@@ -60,9 +60,9 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 
 	switch(_severity)
 	{
-		case GL_DEBUG_SEVERITY_HIGH: YAE_ERRORF_CAT("OpenGL", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
-		case GL_DEBUG_SEVERITY_MEDIUM: YAE_WARNINGF_CAT("OpenGL", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
-		default: YAE_VERBOSEF_CAT("OpenGL", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
+		case GL_DEBUG_SEVERITY_HIGH: YAE_ERRORF_CAT("renderer", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
+		case GL_DEBUG_SEVERITY_MEDIUM: YAE_WARNINGF_CAT("renderer", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
+		default: YAE_VERBOSEF_CAT("renderer", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
 	}
 }
 
@@ -113,7 +113,7 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
     
 	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) == false)
 	{
-		YAE_ERRORF_CAT("opengl", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
+		YAE_ERRORF_CAT("renderer", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
 		return false;
 	}
 
@@ -121,13 +121,13 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	glGetIntegerv(GL_CONTEXT_FLAGS, &v);
 	if (v & GL_CONTEXT_FLAG_DEBUG_BIT)
 	{
-		YAE_VERBOSE_CAT("OpenGL", "OpenGL debug context present");
+		YAE_VERBOSE_CAT("renderer", "OpenGL debug context present");
 		glDebugMessageCallback(&glDebugCallback, nullptr);
 	}
 #endif
 
 	const char* glVersion = (const char*)glGetString(GL_VERSION);
-	YAE_LOGF("OpenGL Version: \"%s\"", glVersion);
+	YAE_LOGF_CAT("renderer", "OpenGL Version: \"%s\"", glVersion);
 
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_vao));
 	YAE_GL_VERIFY(glBindVertexArray(m_vao));

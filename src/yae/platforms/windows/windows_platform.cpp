@@ -151,6 +151,47 @@ u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount)
     return frameCount;
 }
 
+void* findConsoleWindowHandle()
+{
+	char titleBuffer[1024];
+	GetConsoleTitle(titleBuffer, countof(titleBuffer));
+
+	HWND hwndFound = FindWindow(nullptr, titleBuffer);
+	return hwndFound;
+}
+
+void getWindowSize(void* _windowHandle, i32* _outWidth, i32* _outHeight)
+{
+	YAE_ASSERT(_windowHandle != nullptr);
+	WINDOWINFO windowInfo;
+	YAE_VERIFY(GetWindowInfo((HWND)_windowHandle, &windowInfo));
+	if (_outWidth) *_outWidth = windowInfo.rcWindow.right - windowInfo.rcWindow.left;
+	if (_outHeight) *_outHeight = windowInfo.rcWindow.bottom - windowInfo.rcWindow.top;
+}
+
+void getWindowPosition(void* _windowHandle, i32* _outX, i32* _outY)
+{
+	YAE_ASSERT(_windowHandle != nullptr);
+	WINDOWINFO windowInfo;
+	YAE_VERIFY(GetWindowInfo((HWND)_windowHandle, &windowInfo));
+	if (_outX) *_outX = windowInfo.rcWindow.left;
+	if (_outY) *_outY = windowInfo.rcWindow.top;
+}
+
+void setWindowSize(void* _windowHandle, i32 _width, i32 _height)
+{
+	YAE_ASSERT(_windowHandle != nullptr);
+	u32 flags = SWP_NOREPOSITION | SWP_NOZORDER | SWP_NOACTIVATE;
+	YAE_VERIFY(SetWindowPos((HWND)_windowHandle, 0, 0, 0, _width, _height, flags));
+}
+
+void setWindowPosition(void* _windowHandle, i32 _x, i32 _y)
+{
+	YAE_ASSERT(_windowHandle != nullptr);
+	u32 flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
+	YAE_VERIFY(SetWindowPos((HWND)_windowHandle, 0, _x, _y, 0, 0, flags));
+}
+
 } // namespace platform
 
 } // namespace yae

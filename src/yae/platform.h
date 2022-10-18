@@ -22,9 +22,6 @@ YAE_API void setOutputColor(OutputColor _color);
 // Time
 YAE_API i64 getCurrentTime();
 YAE_API i64 timeToNanoSeconds(i64 _platformTime);
-//YAE_API i64 getCycles();
-//YAE_API i64 getFrequency();
-//YAE_API u64 getSystemTime();
 
 // File system
 YAE_API void setWorkingDirectory(const char* _path);
@@ -38,6 +35,13 @@ YAE_API void* getProcedureAddress(void* _libraryHandle, const char* _procedureNa
 
 // Callstack
 YAE_API u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount);
+
+// Window
+YAE_API void* findConsoleWindowHandle();
+YAE_API void getWindowSize(void* _windowHandle, i32* _outWidth, i32* _outHeight);
+YAE_API void getWindowPosition(void* _windowHandle, i32* _outX, i32* _outY);
+YAE_API void setWindowSize(void* _windowHandle, i32 _width, i32 _height);
+YAE_API void setWindowPosition(void* _windowHandle, i32 _x, i32 _y);
 
 } // namespace platform
 

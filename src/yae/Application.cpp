@@ -27,6 +27,11 @@ namespace yae {
 
 struct ApplicationSettings
 {
+	i32 windowWidth = -1;
+	i32 windowHeight = -1;
+	i32 windowX = -1;
+	i32 windowY = -1;
+
 	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
 	(
 		MIRROR_MEMBER(windowWidth)();
@@ -34,11 +39,6 @@ struct ApplicationSettings
 		MIRROR_MEMBER(windowX)();
 		MIRROR_MEMBER(windowY)();
 	);
-
-	i32 windowWidth = -1;
-	i32 windowHeight = -1;
-	i32 windowX = -1;
-	i32 windowY = -1;
 };
 
 MIRROR_CLASS_DEFINITION(ApplicationSettings);
@@ -75,11 +75,6 @@ void Application::init(char** _args, int _argCount)
 
 	m_window = glfwCreateWindow(m_baseWidth, m_baseHeight, m_name.c_str(), nullptr, nullptr);
 	glfwSetWindowUserPointer(m_window, this);
-	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
-	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
-	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
-	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
-	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
 
 	YAE_ASSERT(m_window);
 	YAE_VERBOSE_CAT("glfw", "Created glfw window");
@@ -102,6 +97,13 @@ void Application::init(char** _args, int _argCount)
 	m_clock.reset();
 
 	loadSettings();
+
+	// Setup callbacks
+	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
+	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
+	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
+	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
+	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
 }
 
 void Application::shutdown()
@@ -228,7 +230,7 @@ void Application::setUserData(const char* _name, void* _userData)
 
 static String getSettingsFilePath(const Application* _app)
 {
-	String path = string::format("%s/settings/%s_settings.json", program().getIntermediateDirectory(), _app->getName());
+	String path = filesystem::normalizePath(string::format("%s/%s_settings.json", program().getSettingsDirectory(), _app->getName()).c_str());
 	// @TODO(remi): Let's find a better way to sanitize a string for paths at some point
 	path.replace(" ", "");
 	path.replace("|", "");
@@ -258,7 +260,7 @@ void Application::loadSettings()
 	FileResource* settingsFile = findOrCreateResource<FileResource>(filePath.c_str());
 	if (!settingsFile->useLoad())
 	{
-		YAE_ERRORF("Failed to load settings file \"%s\"", filePath.c_str());
+		YAE_ERRORF_CAT("application", "Failed to load settings file \"%s\"", filePath.c_str());
 		settingsFile->releaseUnuse();
 		return;
 	}
@@ -266,7 +268,7 @@ void Application::loadSettings()
 	JsonSerializer serializer(&scratchAllocator());
 	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
 	{
-		YAE_ERRORF("Failed to parse json settings file \"%s\"", filePath.c_str());
+		YAE_ERRORF_CAT("application", "Failed to parse json settings file \"%s\"", filePath.c_str());
 		settingsFile->releaseUnuse();
 		return;	
 	}
@@ -286,6 +288,7 @@ void Application::loadSettings()
 	{
 		glfwSetWindowPos(m_window, settings.windowX, settings.windowY);
 	}
+	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
 }
 
 void Application::saveSettings()
@@ -303,15 +306,17 @@ void Application::saveSettings()
 	FileHandle file(filePath.c_str());
 	if (!file.open(FileHandle::OPENMODE_WRITE))
 	{
-		YAE_ERRORF("Failed to open \"%s\" for write", filePath.c_str());
+		YAE_ERRORF_CAT("application", "Failed to open \"%s\" for write", filePath.c_str());
 		return;
 	}
 	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
 	{
-		YAE_ERRORF("Failed to write into \"%s\"", filePath.c_str());
+		YAE_ERRORF_CAT("application", "Failed to write into \"%s\"", filePath.c_str());
 		return;
 	}
 	file.close();
+
+	YAE_LOGF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
 }
 
 void Application::_glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y)
