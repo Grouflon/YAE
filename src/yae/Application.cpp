@@ -86,14 +86,6 @@ void Application::init(char** _args, int _argCount)
 	// Init renderer
 	YAE_VERIFY(m_renderer->init(m_window) == true);
 
-	// Setup Dear ImGui context
-	m_imGuiSystem = defaultAllocator().create<ImGuiSystem>();
-	m_imGuiSystem->init(m_window, m_renderer);
-
-	// Setup Im3d
-	m_im3dSystem = defaultAllocator().create<Im3dSystem>();
-	m_im3dSystem->init();
-
 	m_clock.reset();
 
 	loadSettings();
@@ -104,6 +96,14 @@ void Application::init(char** _args, int _argCount)
 	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
 	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
 	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
+
+	// Setup Dear ImGui context (depends on glfw callbacks being already bound, therefore is after)
+	m_imGuiSystem = defaultAllocator().create<ImGuiSystem>();
+	m_imGuiSystem->init(m_window, m_renderer);
+
+	// Setup Im3d
+	m_im3dSystem = defaultAllocator().create<Im3dSystem>();
+	m_im3dSystem->init();
 }
 
 void Application::shutdown()
