@@ -42,18 +42,6 @@ const char* glErrorToString(GLint _errorCode)
 	}
 }
 
-
-#define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error %s(0x%04x) -> " #_instruction, glErrorToString(___error), ___error); }
-
-namespace yae {
-
-struct GLMeshHandle
-{
-	GLuint vertexBufferId;
-	GLuint indexBufferId;
-	GLuint indicesCount;
-};
-
 void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity, GLsizei _length, const GLchar* _msg, const void* _data)
 {
 	if (_id == 0x20071) return; // Message about buffer usage hints when calling glBufferData
@@ -65,6 +53,10 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 		default: YAE_VERBOSEF_CAT("renderer", "gldebug 0x%04x:0x%04x:0x%04x: %s", _source, _type, _id, _msg); break;
 	}
 }
+
+#define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error %s(0x%04x) -> " #_instruction, glErrorToString(___error), ___error); }
+
+namespace yae {
 
 void OpenGLRenderer::hintWindow()
 {
