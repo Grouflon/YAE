@@ -118,6 +118,28 @@ const T* BaseArray<T>::end() const
 
 
 template <typename T>
+bool BaseArray<T>::operator==(const BaseArray<T>& _rhs) const
+{
+	if (m_size != _rhs.m_size)
+		return false;
+
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		if ((*this)[i] != _rhs[i])
+			return false;
+	}
+	return true;
+}
+
+
+template <typename T>
+bool BaseArray<T>::operator!=(const BaseArray<T>& _rhs) const
+{
+	return !(*this == _rhs);
+}
+
+
+template <typename T>
 Allocator* BaseArray<T>::allocator() const
 {
 	return m_allocator;

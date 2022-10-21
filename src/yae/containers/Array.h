@@ -36,6 +36,10 @@ public:
 	T* end();
 	const T* end() const;
 
+	// Operators
+	bool operator==(const BaseArray<T>& _rhs) const;
+	bool operator!=(const BaseArray<T>& _rhs) const;
+
 	// Misc
 	Allocator* allocator() const;
 
