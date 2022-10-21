@@ -107,6 +107,8 @@ struct YAE_API Quaternion : public glm::quat
 	Vector3 up() const;
 	Vector3 right() const;
 
+	Matrix4 toMatrix4() const;
+
 	static const Quaternion IDENTITY;
 };
 

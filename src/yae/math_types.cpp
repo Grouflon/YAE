@@ -1,6 +1,7 @@
 #include "math_types.h"
 
 #include <glm/ext/scalar_constants.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace yae {
 
@@ -44,6 +45,11 @@ Vector3 Quaternion::up() const
 Vector3 Quaternion::right() const
 {
 	return *this * Vector3::RIGHT;
+}
+
+Matrix4 Quaternion::toMatrix4() const
+{
+	return glm::toMat4(*this);
 }
 
 const Quaternion Quaternion::IDENTITY = Quaternion(0.f, 0.f, 0.f, 1.f);
