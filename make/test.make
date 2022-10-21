@@ -1,8 +1,7 @@
 -include make/common/header.make
 
-SRCS += $(call rwildcard,src/editor,*.cpp)
+SRCS += $(call rwildcard,src/test,*.cpp)
 INCLUDEDIRS +=
-CPPFLAGS +=
 
 ifeq ($(PLATFORM), Win64)
 TARGETEXT := .dll
@@ -16,7 +15,7 @@ DEFINES += \
   MIRROR_API=__declspec(dllimport) \
   IMGUI_API=__declspec(dllimport) \
   YAE_API=__declspec(dllimport) \
-  EDITOR_API=__declspec(dllexport) \
+  TEST_API=__declspec(dllexport) \
   _MT _DLL \
 
 endif
@@ -31,6 +30,6 @@ LDFLAGS += \
 
 endif
 
-BIN = $(BINDIR)/editor$(TARGETEXT)
+BIN = $(BINDIR)/test$(TARGETEXT)
 
 -include make/common/footer.make

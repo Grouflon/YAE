@@ -24,6 +24,7 @@ int main(int _argc, char** _argv)
         program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
 
+        program.registerModule("test");
         program.registerModule("editor");
         program.registerModule("game");
 

@@ -10,7 +10,7 @@ PLATFORM := Win64
 CONFIG := Release
 # ======================
 
-PROJECTS := yae editor game main
+PROJECTS := yae test editor game main
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -25,6 +25,10 @@ yae:
 	@echo ==== Building yae ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/yae.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
+test: yae
+	@echo ==== Building test ($(PLATFORM):$(CONFIG)) ====
+	@${MAKE} --no-print-directory -C . -f make/test.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+
 editor: yae
 	@echo ==== Building editor ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/editor.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
@@ -33,12 +37,13 @@ game: yae
 	@echo ==== Building game ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/game.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
-main: yae editor game
+main: yae test editor game
 	@echo ==== Building main ($(PLATFORM):$(CONFIG)) ====
 	@${MAKE} --no-print-directory -C . -f make/main.make PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 
 clean:
 	@${MAKE} --no-print-directory -C . -f make/yae.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
+	@${MAKE} --no-print-directory -C . -f make/test.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 	@${MAKE} --no-print-directory -C . -f make/editor.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 	@${MAKE} --no-print-directory -C . -f make/game.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
 	@${MAKE} --no-print-directory -C . -f make/main.make clean PLATFORM=$(PLATFORM) CONFIG=$(CONFIG)
@@ -59,6 +64,7 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   yae"
+	@echo "   test"
 	@echo "   editor"
 	@echo "   game"
 	@echo "   main"

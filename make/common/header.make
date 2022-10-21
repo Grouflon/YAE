@@ -60,6 +60,9 @@ DEFINES := \
 
 LIBS :=
 
+LIBDIRS := \
+  $(BINDIR) \
+
 # ======================
 # CUSTOM RULES
 # ======================

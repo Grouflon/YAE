@@ -4,8 +4,6 @@ SRCS += src/main.cpp
 
 ifeq ($(PLATFORM), Win64)
 TARGETEXT := .exe
-LIBDIRS += \
-	$(BINDIR) \
 
 LIBS += \
 	yae \

@@ -27,7 +27,6 @@ ifeq ($(PLATFORM), Win64)
 		$(call rwildcard,src/yae/platforms/windows,*.cpp) \
 
 	LIBDIRS += \
-		$(BINDIR) \
 		extern/GLFW/lib/$(PLATFORM) \
 		extern/dbghelp/lib/x64/ \
 

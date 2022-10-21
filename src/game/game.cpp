@@ -19,210 +19,13 @@
 
 #include <im3d.h>
 #include <imgui.h>
+#include <mirror/mirror.h>
 
 #include <stdio.h>
 #include <vector>
 #include <glm/gtx/quaternion.hpp>
-MIRROR_CLASS_DEFINITION(ConfigData);
 
 using namespace yae;
-
-MIRROR_CLASS_DEFINITION(SuperResource);
-
-void onModuleLoaded(yae::Program* _program, yae::Module* _module)
-{
-		/*printf("\x1b[31mBA.\r\n");
-	YAE_LOG("Bonjour");
-	{
-		FileResource* configFile = findOrCreateResource<FileResource>("./config.json");
-		configFile->useLoad();
-
-		//for (int i = 0; i < 10000; ++i)
-		ConfigData config;
-		JsonSerializer serializer;
-		serializer.beginRead(configFile->getContent(), configFile->getContentSize());
-		serializer.serialize(&config, ConfigData::GetClass());
-		serializer.endRead();
-
-		const void* buffer;
-		size_t bufferSize;
-		serializer.beginWrite();
-		serializer.serialize(&config, ConfigData::GetClass());
-		serializer.endWrite(&buffer, &bufferSize);
-
-		printf("hello: %s", (const char*)buffer);
-
-		configFile->releaseUnuse();
-	}*/
-
-	// Reflection
-#if false
-	mirror::Pointer* pointerType = (mirror::Pointer*)(mirror::GetTypeDesc<ConfigData**>());
-	mirror::TypeDesc* type = pointerType->getSubType();
-
-	mirror::TypeSet& typeSet = mirror::GetTypeSet();
-	std::vector<mirror::TypeDesc*> types;
-	for (auto& type : typeSet.getTypes())
-	{
-		mirror::Class* clss = type->asClass();
-		YAE_LOG(type->getName());
-		if (clss)
-		{
-			YAE_LOGF("%d", clss->getChildren().size());
-		}
-		types.push_back(type);
-	}
-#endif
-
-	// Serializer
-#if true
-	struct Nest
-    {
-    	bool a;
-    	bool b;
-    	float c;
-    };
-    struct Sfouf
-    {
-        u32 a;
-        float b;
-        yae::Array<yae::Array<u8>> array;
-        bool c;
-        Nest nest;
-    };
-    
-    auto doSerialize = [](yae::Serializer& _serializer, Sfouf& _sfouf)
-    {
-        YAE_VERIFY(_serializer.beginSerializeObject());
-        {
-        	if (_serializer.getMode() == SerializationMode::WRITE)
-        	{
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
-		        YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
-        	}
-
-	        u32 arraySize = _sfouf.array.size();
-	        YAE_VERIFY(_serializer.beginSerializeArray(arraySize, "array"));
-	        {
-		        _sfouf.array.resize(arraySize);
-		        for (auto& array : _sfouf.array)
-		        {
-		            u32 arraySize2 = array.size();
-		            YAE_VERIFY(_serializer.beginSerializeArray(arraySize2));
-		            {
-		            	array.resize(arraySize2);
-			            for (auto& element : array)
-			            {
-			                YAE_VERIFY(_serializer.serialize(element));
-			            }
-		            }
-		            YAE_VERIFY(_serializer.endSerializeArray());
-		        }
-	        }
-	        YAE_VERIFY(_serializer.endSerializeArray());
-
-        	YAE_VERIFY(_serializer.beginSerializeObject("nest"));
-        	{
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.a, "a"));
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.b, "b"));
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.nest.c, "c"));
-        	}
-        	YAE_VERIFY(_serializer.endSerializeObject());
-
-
-	        if (_serializer.getMode() == SerializationMode::READ)
-        	{
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.c, "c"));
-	        	YAE_VERIFY(_serializer.serialize(_sfouf.a, "a"));
-		        YAE_VERIFY(_serializer.serialize(_sfouf.b, "b"));
-        	}
-	    }
-        YAE_VERIFY(_serializer.endSerializeObject());
-    };
-
-    Allocator& allocator = defaultAllocator();
-
-    Sfouf sfoufWrite;
-    sfoufWrite.a = 2;
-    sfoufWrite.b = 2.f;
-    sfoufWrite.array.resize(3);
-    sfoufWrite.array[0].resize(3);
-    sfoufWrite.array[1].resize(4);
-    sfoufWrite.array[2].resize(5);
-    sfoufWrite.array[2][0] = 5;
-    sfoufWrite.array[2][1] = 4;
-    sfoufWrite.array[2][2] = 3;
-    sfoufWrite.array[2][3] = 2;
-    sfoufWrite.array[2][4] = 1;
-    sfoufWrite.c = true;
-    sfoufWrite.nest.a = true;
-    sfoufWrite.nest.b = false;
-    sfoufWrite.nest.c = 7.2f;
-
-    Sfouf sfoufRead;
-
-    {
-    	yae::BinarySerializer serializer(&allocator);
-
-	    serializer.beginWrite();
-	    doSerialize(serializer, sfoufWrite);
-	    serializer.endWrite();
-
-	    size_t dataSize = serializer.getWriteDataSize();
-	    void* data = allocator.allocate(dataSize);
-	    memcpy(data, serializer.getWriteData(), dataSize);
-
-	    serializer.setReadData(data, dataSize);
-	    serializer.beginRead();
-	    doSerialize(serializer, sfoufRead);
-	    serializer.endRead();
-
-	    allocator.deallocate(data);	
-    }
-
-    {
-    	JsonSerializer serializer(&allocator);
-    	serializer.beginWrite();
-	    doSerialize(serializer, sfoufWrite);
-	    serializer.endWrite();
-
-	    String path = string::format("%s/sfouf.json", program().getIntermediateDirectory());
-	    filesystem::normalizePath(path);
-	    FileHandle file(path.c_str());
-	    file.open(FileHandle::OPENMODE_WRITE);
-	    file.write(serializer.getWriteData(), serializer.getWriteDataSize());
-	    file.close();
-
-	    file.open(FileHandle::OPENMODE_READ);
-	    size_t dataSize = file.getSize();
-	    void* data = allocator.allocate(dataSize);
-	    file.read(data, dataSize);
-	    file.close();
-
-	    sfoufRead = {};
-	    YAE_VERIFY(serializer.parseSourceData(data, dataSize));
-	    serializer.beginRead();
-	    doSerialize(serializer, sfoufRead);
-	    serializer.endRead();
-
-	    allocator.deallocate(data);
-    }
-#endif
-    int a = 0;
-}
-
-void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
-{
-}
-
-void initModule(yae::Program* _program, yae::Module* _module)
-{
-}
-
-void shutdownModule(yae::Program* _program, yae::Module* _module)
-{
-}
 
 class GameInstance
 {
@@ -238,6 +41,39 @@ public:
 	TextureResource* texture = nullptr;
 	FontResource* font = nullptr;
 };
+
+void onModuleLoaded(yae::Program* _program, yae::Module* _module)
+{
+	// Reflection
+#if false
+	mirror::TypeDesc* type = pointerType->getSubType();
+
+	mirror::TypeSet& typeSet = mirror::GetTypeSet();
+	std::vector<mirror::TypeDesc*> types;
+	for (auto& type : typeSet.getTypes())
+	{
+		mirror::Class* clss = type->asClass();
+		YAE_LOG(type->getName());
+		if (clss)
+		{
+			YAE_LOGF("%d", clss->getChildren().size());
+		}
+		types.push_back(type);
+	}
+#endif
+}
+
+void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
+{
+}
+
+void initModule(yae::Program* _program, yae::Module* _module)
+{
+}
+
+void shutdownModule(yae::Program* _program, yae::Module* _module)
+{
+}
 
 void afterInitApplication(Application* _app)
 {

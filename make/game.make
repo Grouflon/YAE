@@ -10,9 +10,6 @@ TARGETEXT := .dll
 LDFLAGS += \
   -shared \
 
-LIBDIRS += \
-  $(BINDIR) \
-
 LIBS += \
   yae \
 
