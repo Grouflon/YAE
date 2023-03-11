@@ -1,8 +1,10 @@
 #pragma once
 
-// BASE TYPES
-#include <stdint.h>
+// INCLUDEs
+#include <stdint.h> // for int types
+#include <cstdio> // for printf
 
+// BASE TYPES
 typedef int8_t		i8;
 typedef int16_t		i16;
 typedef int32_t		i32;
@@ -75,12 +77,12 @@ typedef uint64_t	u64;
 
 // ASSERTS (should not depend on any engine construct)
 #if YAE_ASSERT_ENABLED
-#define YAE_ASSERT(_cond)					if (!(_cond)) { printf("Assert failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSG(_cond, _msg)			if (!(_cond)) { printf("Assert failed: %s\n", _msg);         YAE_DEBUG_BREAK; }
-#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	if (!(_cond)) { printf("Assert failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }
-#define YAE_VERIFY(_cond) 					if (!(_cond)) { printf("Verify failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSG(_cond)				if (!(_cond)) { printf("Verify failed: %s\n", _msg);         YAE_DEBUG_BREAK; }
-#define YAE_VERIFY_MSGF(_cond)				if (!(_cond)) { printf("Verify failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }
+#define YAE_ASSERT(_cond)					do {if (!(_cond)) { printf("Assert failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }} while(0)
+#define YAE_ASSERT_MSG(_cond, _msg)			do {if (!(_cond)) { printf("Assert failed: %s\n", _msg);         YAE_DEBUG_BREAK; }} while(0)
+#define YAE_ASSERT_MSGF(_cond, _fmt, ...)	do {if (!(_cond)) { printf("Assert failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }} while(0)
+#define YAE_VERIFY(_cond) 					do {if (!(_cond)) { printf("Verify failed: %s\n", #_cond);       YAE_DEBUG_BREAK; }} while(0)
+#define YAE_VERIFY_MSG(_cond)				do {if (!(_cond)) { printf("Verify failed: %s\n", _msg);         YAE_DEBUG_BREAK; }} while(0)
+#define YAE_VERIFY_MSGF(_cond)				do {if (!(_cond)) { printf("Verify failed: %s\n", #_cond); printf(_fmt, __VA_ARGS__); printf("\n"); YAE_DEBUG_BREAK; }} while(0)
 #else
 #define YAE_ASSERT(cond)
 #define YAE_ASSERT_MSG(_cond, _msg)
@@ -135,3 +137,4 @@ extern Allocator* g_toolAllocator;
 #include <yae/string.h>
 #include <yae/logging.h>
 #include <yae/profiling.h>
+#include <yae/math_types.h>

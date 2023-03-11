@@ -1,4 +1,5 @@
 - global functions vs member functions: this is purely an esthetic decision and does not change anything about anything. Should not be subject to a big debate.
+	- UPDATE(02/11/2022): in fact it is not. Member functions couple the api to the memory layout, which seems invalid and counter productive in terms of compile times. I am working on math functions on basic math types at the moment. The api changes a lot, but the memory never does. I think this is the case most of the time, which would be in favor of a memory/api declaration separation.
 - I should try to go away from global scopes, especially global ctors/dtors as much as possible. Not having control over init/deinit order is a big issue.
 - maybe compilation can be sped up with pch
 https://stackoverflow.com/questions/28868049/decrease-clang-compile-time-with-precompiled-headers

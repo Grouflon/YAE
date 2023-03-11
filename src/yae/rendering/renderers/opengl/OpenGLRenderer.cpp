@@ -282,11 +282,11 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
     YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
     YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
     YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
-    YAE_GL_VERIFY(glCullFace(GL_FRONT));
+    YAE_GL_VERIFY(glCullFace(GL_BACK));
     YAE_GL_VERIFY(glEnable(GL_BLEND));
 	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-    Matrix4 viewProj = m_projMatrix * m_viewMatrix;
+    Matrix4 viewProj = getViewProjectionMatrix();
 
 	for (auto& pair : m_drawCommands)
 	{
@@ -723,9 +723,11 @@ void OpenGLRenderer::drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCou
 	YAE_CAPTURE_FUNCTION();
 
 	const Vector2 viewportSize = getFrameBufferSize();
-	const Matrix4 viewProj = m_projMatrix * m_viewMatrix;
+	const Matrix4 viewProj = getViewProjectionMatrix();
 
 	YAE_GL_VERIFY(glViewport(0, 0, (GLsizei)viewportSize.x, (GLsizei)viewportSize.y));
+    YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
+    YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
 	YAE_GL_VERIFY(glEnable(GL_BLEND));
 	YAE_GL_VERIFY(glBlendEquation(GL_FUNC_ADD));
 	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -773,10 +775,6 @@ void OpenGLRenderer::drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCou
 		YAE_GL_VERIFY(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)&viewProj));
 		YAE_GL_VERIFY(glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
 	}
-
-	// Text rendering.
- 	// This is common to all examples since we're using ImGui to draw the text lists, see im3d_example.cpp.
-	//g_Example->drawTextDrawListsImGui(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
 }
 
 } // namespace yae

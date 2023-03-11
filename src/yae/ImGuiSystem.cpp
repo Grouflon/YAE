@@ -159,4 +159,95 @@ void ImGuiSystem::render(FrameHandle _frameHandle)
 	}
 }
 
+void ImGuiSystem::drawIm3dTextDrawLists(const Im3d::TextDrawList _textDrawLists[], u32 _count)
+{
+	Vector2 windowSize = renderer().getFrameBufferSize();
+	Matrix4 viewProj = renderer().getViewProjectionMatrix();
+	// Using ImGui here as a simple means of rendering text draw lists, however as with primitives the application is free to draw text in any conceivable  manner.
+
+	// Invisible ImGui window which covers the screen.
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32_BLACK_TRANS);
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+	ImGui::SetNextWindowSize(ImVec2((float)windowSize.x, (float)windowSize.y));
+	ImGui::Begin("Invisible", nullptr, 0
+		| ImGuiWindowFlags_NoTitleBar
+		| ImGuiWindowFlags_NoResize
+		| ImGuiWindowFlags_NoScrollbar
+		| ImGuiWindowFlags_NoInputs
+		| ImGuiWindowFlags_NoSavedSettings
+		| ImGuiWindowFlags_NoFocusOnAppearing
+		| ImGuiWindowFlags_NoBringToFrontOnFocus
+		);
+
+	ImDrawList* imDrawList = ImGui::GetWindowDrawList();
+	for (u32 i = 0; i < _count; ++i) 
+	{
+		const Im3d::TextDrawList& textDrawList = Im3d::GetTextDrawLists()[i];
+		
+		if (textDrawList.m_layerId == Im3d::MakeId("NamedLayer")) 
+		{
+			// The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
+		}
+
+		for (u32 j = 0; j < textDrawList.m_textDataCount; ++j)
+		{
+			const Im3d::TextData& textData = textDrawList.m_textData[j];
+			if (textData.m_positionSize.w == 0.0f || textData.m_color.getA() == 0.0f)
+			{
+				continue;
+			}
+
+			// Project world -> screen space.
+			Vector4 clip = viewProj * Vector4(textData.m_positionSize.x, textData.m_positionSize.y, textData.m_positionSize.z, 1.0f);
+			Vector2 screen = Vector2(clip.x / clip.w, clip.y / clip.w);
+	
+			// Cull text which falls offscreen. Note that this doesn't take into account text size but works well enough in practice.
+			if (clip.w < 0.0f || screen.x >= 1.0f || screen.y >= 1.0f)
+			{
+				continue;
+			}
+
+			// Pixel coordinates for the ImGuiWindow ImGui.
+			screen = screen * Vector2(0.5f) + Vector2(0.5f);
+			screen.y = 1.0f - screen.y; // screen space origin is reversed by the projection.
+			screen = screen * Vector2(ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
+
+			// All text data is stored in a single buffer; each textData instance has an offset into this buffer.
+			const char* text = textDrawList.m_textBuffer + textData.m_textBufferOffset;
+
+			// Calculate the final text size in pixels to apply alignment flags correctly.
+			ImGui::SetWindowFontScale(textData.m_positionSize.w); // NB no CalcTextSize API which takes a font/size directly...
+			Vector2 textSize = ImGui::CalcTextSize(text, text + textData.m_textLength);
+			ImGui::SetWindowFontScale(1.0f);
+
+			// Generate a pixel offset based on text flags.
+			Vector2 textOffset = Vector2(-textSize.x * 0.5f, -textSize.y * 0.5f); // default to center
+			if ((textData.m_flags & Im3d::TextFlags_AlignLeft) != 0)
+			{
+				textOffset.x = -textSize.x;
+			}
+			else if ((textData.m_flags & Im3d::TextFlags_AlignRight) != 0)
+			{
+				textOffset.x = 0.0f;
+			}
+
+			if ((textData.m_flags & Im3d::TextFlags_AlignTop) != 0)
+			{
+				textOffset.y = -textSize.y;
+			}
+			else if ((textData.m_flags & Im3d::TextFlags_AlignBottom) != 0)
+			{
+				textOffset.y = 0.0f;
+			}
+
+			// Add text to the window draw list.
+			screen = screen + textOffset;
+			imDrawList->AddText(nullptr, textData.m_positionSize.w * ImGui::GetFontSize(), screen, textData.m_color.getABGR(), text, text + textData.m_textLength);
+		}
+	}
+
+	ImGui::End();
+	ImGui::PopStyleColor(1);
+}
+
 } // namespace yae

@@ -12,7 +12,7 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 {
 	Logger::LogCategory& category = _logger.findOrAddCategory(_categoryName);
 
-	OutputColor outputColor = OutputColor_Default;
+	OutputColor outputColor = _logger.getDefaultOutputColor();
 	switch(_verbosity)
 	{
 		case LogVerbosity_Error: outputColor = OutputColor_Red; break;

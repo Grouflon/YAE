@@ -12,6 +12,7 @@ enum OutputColor
 	OutputColor_Grey,
 	OutputColor_Yellow,
 	OutputColor_Red,
+	OutputColor_Green,
 };
 
 namespace platform {

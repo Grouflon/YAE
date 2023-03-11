@@ -6,6 +6,10 @@
 struct GLFWwindow;
 struct ImGuiContext;
 
+namespace Im3d {
+struct TextDrawList;
+} // namespace Im3d
+
 namespace yae {
 
 class Renderer;
@@ -18,6 +22,8 @@ public:
 
 	void newFrame();
 	void render(FrameHandle _frameHandle);
+
+	void drawIm3dTextDrawLists(const Im3d::TextDrawList _textDrawLists[], u32 _count);
 
 //private:
 	ImGuiContext* m_imguiContext = nullptr;

@@ -5,22 +5,19 @@
 
 namespace yae {
 
-struct YAE_API ID
-{
-	u32 index;
-	u32 innerId;
-};
+const u64 INVALID_POOL_INDEX = ~u64(0);
 
+typedef u64 PoolID;
 
-template <typename T, template <typename> class ArrayType>
-class IDLookupBase
+template <typename T>
+class IndexedPool
 {
 public:
-	IDLookupBase(Allocator* _allocator = nullptr);
+	IndexedPool(Allocator* _allocator = nullptr);
 
-	T* get(ID _id);
-	ID add(const T& _item);
-	void remove(ID _id);
+	T* get(PoolID _id) const;
+	PoolID add(const T& _item);
+	bool remove(PoolID _id);
 	void clear();
 
 	// Iterators
@@ -34,32 +31,23 @@ public:
 
 	struct Index
 	{
-		ID id;
+		u32 generation;
+		// @OPTIM(remi): I think that dataIndex is only used when the Index is alive and next only used when the Index is dead.
+		// If that's the case we could gain a bit of memory by merging the two, but I don't know yet if that's worth it.
 		u32 dataIndex;
 		u32 next;
 	};
+	struct Data
+	{
+		u32 index;
+		T data;
+	};
 
 	DataArray<Index> m_indices;
-	ArrayType<T> m_data;
+	Array<Data> m_data;
 
 	u32 m_freeListBegin;
 	u32 m_freeListEnd;
-};
-
-
-template <typename T>
-class IDLookup : public IDLookupBase<T, Array>
-{
-public:
-	IDLookup(Allocator* _allocator = nullptr) : IDLookupBase(_allocator) {}
-};
-
-
-template <typename T>
-class IDDataLookup : public IDLookupBase<T, DataArray>
-{
-public:
-	IDDataLookup(Allocator* _allocator = nullptr) : IDLookupBase(_allocator) {}
 };
 
 } // namespace yae

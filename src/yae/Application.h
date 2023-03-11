@@ -34,11 +34,12 @@ public:
 
 	InputSystem& input() const;
 	Renderer& renderer() const;
+	ImGuiSystem& imguiSystem() const;
 
-	Vector3 getCameraPosition() const { return m_cameraPosition; }
-	Quaternion getCameraRotation() const { return m_cameraRotation; }
-	void setCameraPosition(const Vector3& _position) { m_cameraPosition = _position; }
-	void setCameraRotation(const Quaternion& _rotation) { m_cameraRotation = _rotation; }
+	Vector3 getCameraPosition() const;
+	Quaternion getCameraRotation() const;
+	void setCameraPosition(const Vector3& _position);
+	void setCameraRotation(const Quaternion& _rotation);
 
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
@@ -57,6 +58,8 @@ private:
 	Matrix4 _computeCameraView() const;
 	Matrix4 _computeCameraProj() const;
 
+	void _requestSaveSettings();
+
 	String m_name;
 	u32 m_baseWidth = 0;
 	u32 m_baseHeight = 0;
@@ -70,11 +73,13 @@ private:
 
 	Clock m_clock;
 
-	Vector3 m_cameraPosition = Vector3::ZERO;
-	Quaternion m_cameraRotation = Quaternion::IDENTITY;
+	Vector3 m_cameraPosition = vector3::ZERO;
+	Quaternion m_cameraRotation = quaternion::IDENTITY;
 	float m_cameraFov = 45.f;
 
 	HashMap<StringHash, void*> m_userData;
+
+	bool m_saveSettingsRequested = false;
 };
 
 } // namespace yae

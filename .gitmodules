@@ -1,12 +1,6 @@
 [submodule "extern/glm"]
 	path = extern/glm
 	url = https://github.com/g-truc/glm
-[submodule "extern/imgui"]
-	path = extern/imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "extern/mirror"]
 	path = extern/mirror
 	url = https://github.com/Grouflon/mirror.git
-[submodule "extern/im3d"]
-	path = extern/im3d
-	url = https://github.com/Grouflon/im3d.git

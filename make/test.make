@@ -3,6 +3,8 @@
 SRCS += $(call rwildcard,src/test,*.cpp)
 INCLUDEDIRS +=
 
+CPPFLAGS += -Wno-unused-variable -Wno-unused-function
+
 ifeq ($(PLATFORM), Win64)
 TARGETEXT := .dll
 LDFLAGS += \

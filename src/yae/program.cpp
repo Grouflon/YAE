@@ -78,6 +78,7 @@ Program::Program()
 	, m_binDirectory(&defaultAllocator())
 	, m_rootDirectory(&defaultAllocator())
 	, m_intermediateDirectory(&defaultAllocator())
+	, m_settingsDirectory(&defaultAllocator())
 	, m_hotReloadDirectory(&defaultAllocator())
 	, m_modules(&defaultAllocator())
 {

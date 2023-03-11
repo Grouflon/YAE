@@ -22,6 +22,7 @@ void setOutputColor(OutputColor _color)
 		case OutputColor_Grey: colorAttribute = 8; break;
 		case OutputColor_Yellow: colorAttribute = 6; break;
 		case OutputColor_Red: colorAttribute = 4; break;
+		case OutputColor_Green: colorAttribute = 2; break;
 
 		case OutputColor_Default:
 		default: colorAttribute = 7; break;

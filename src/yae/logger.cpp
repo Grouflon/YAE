@@ -44,5 +44,14 @@ Logger::LogCategory& Logger::findOrAddCategory(const char* _categoryName)
 	return *categoryPtr;
 }
 
+void Logger::setDefaultOutputColor(OutputColor _color)
+{
+	m_defaultOutputColor = _color;
+}
+
+OutputColor Logger::getDefaultOutputColor() const
+{
+	return m_defaultOutputColor;
+}
 
 } // namespace yae

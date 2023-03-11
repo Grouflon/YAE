@@ -31,13 +31,6 @@ StringHash::StringHash(u32 _hash)
 #endif
 }
 
-
-StringHash::~StringHash()
-{
-}
-
-
-
 bool StringHash::operator==(const StringHash& _rhs) const
 {
 	return m_hash == _rhs.m_hash;

@@ -1,7 +1,10 @@
 #include "Im3dSystem.h"
 
+#include <yae/Application.h>
 #include <yae/input.h>
+#include <yae/ImGuiSystem.h>
 #include <yae/rendering/Renderer.h>
+#include <yae/math_3d.h>
 
 #include <im3d/im3d.h>
 
@@ -44,7 +47,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	ad.m_viewportSize  = viewportSize;
 	ad.m_viewOrigin    = _camera.position; // for VR use the head position
 	ad.m_viewDirection = _camera.direction;
-	ad.m_worldUp       = Vector3::UP; // used internally for generating orthonormal bases
+	ad.m_worldUp       = vector3::UP; // used internally for generating orthonormal bases
 	ad.m_projOrtho     = _camera.orthographic; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
@@ -58,7 +61,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vector4 rayOrigin, rayDirection;
-	Matrix4 worldMatrix = inverse(_camera.view);
+	Matrix4 worldMatrix = matrix4::inverse(_camera.view);
 	if (_camera.orthographic)
 	{
 		rayOrigin.x  = cursorPos.x / _camera.projection[0][0];
@@ -67,7 +70,6 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 		rayOrigin.w = 1.0f;
 		rayOrigin    = worldMatrix * rayOrigin;
 		rayDirection = worldMatrix * Vector4(0.0f, 0.0f, -1.0f, 0.0f);
-		 
 	}
 	else
 	{
@@ -76,7 +78,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 		rayDirection.y  = cursorPos.y / _camera.projection[1][1];
 		rayDirection.z  = -1.0f;
 		rayDirection.w  = 0.0f;
-		rayDirection    = worldMatrix * normalize(rayDirection);
+		rayDirection    = worldMatrix * vector4::normalize(rayDirection);
 	}
 	ad.m_cursorRayOrigin = rayOrigin.xyz();
 	ad.m_cursorRayDirection = rayDirection.xyz();
@@ -98,6 +100,11 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	//ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
 	//ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
 	//ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+
+	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = input().isKeyDown(GLFW_KEY_1);
+	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = input().isKeyDown(GLFW_KEY_2);
+	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = input().isKeyDown(GLFW_KEY_3);
+
 
  // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
 	//ad.m_snapTranslation = ctrlDown ? 0.5f : 0.0f;
@@ -122,6 +129,7 @@ void Im3dSystem::render(FrameHandle _frameHandle)
 
 #if YAE_IM3D_ENABLED
 	renderer().drawIm3d(Im3d::GetDrawLists(), Im3d::GetDrawListCount());
+	app().imguiSystem().drawIm3dTextDrawLists(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
 #endif
 }
 

@@ -6,7 +6,7 @@
 #include <yae/time.h>
 #include <yae/memory.h>
 #include <yae/input.h>
-#include <yae/math.h>
+#include <yae/math_3d.h>
 #include <yae/ImGuiSystem.h>
 #include <yae/Im3dSystem.h>
 #include <yae/resources/FileResource.h>
@@ -32,12 +32,17 @@ struct ApplicationSettings
 	i32 windowX = -1;
 	i32 windowY = -1;
 
+	float cameraPosition[3];
+	float cameraRotation[4];
+
 	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
 	(
 		MIRROR_MEMBER(windowWidth)();
 		MIRROR_MEMBER(windowHeight)();
 		MIRROR_MEMBER(windowX)();
 		MIRROR_MEMBER(windowY)();
+		MIRROR_MEMBER(cameraPosition)();
+		MIRROR_MEMBER(cameraRotation)();
 	);
 };
 
@@ -159,7 +164,7 @@ bool Application::doFrame()
 
 		Im3dCamera im3dCamera = {};
 		im3dCamera.position = m_cameraPosition;
-		im3dCamera.direction = m_cameraRotation * Vector3::FORWARD;
+		im3dCamera.direction = quaternion::rotate(m_cameraRotation, vector3::FORWARD);
 		im3dCamera.view = view;
 		im3dCamera.projection = proj;
 		im3dCamera.fov = m_cameraFov * D2R;
@@ -190,6 +195,13 @@ bool Application::doFrame()
 	// End Frame
 	m_renderer->endFrame();
 
+	// Settings
+	if (m_saveSettingsRequested)
+	{
+		saveSettings();
+		m_saveSettingsRequested = false;
+	}
+
 	return true;
 }
 
@@ -213,6 +225,40 @@ Renderer& Application::renderer() const
 {
 	YAE_ASSERT(m_renderer != nullptr);
 	return *m_renderer;
+}
+
+ImGuiSystem& Application::imguiSystem() const
+{
+	YAE_ASSERT(m_imGuiSystem != nullptr);
+	return *m_imGuiSystem;
+}
+
+Vector3 Application::getCameraPosition() const
+{
+	return m_cameraPosition;
+}
+
+Quaternion Application::getCameraRotation() const
+{
+	return m_cameraRotation;
+}
+
+void Application::setCameraPosition(const Vector3& _position)
+{
+	if (_position == m_cameraPosition)
+		return;
+
+	m_cameraPosition = _position;
+	_requestSaveSettings();
+}
+
+void Application::setCameraRotation(const Quaternion& _rotation)
+{
+	if (_rotation == m_cameraRotation)
+		return;
+
+	m_cameraRotation = _rotation;
+	_requestSaveSettings();
 }
 
 void* Application::getUserData(const char* _name) const
@@ -288,6 +334,13 @@ void Application::loadSettings()
 	{
 		glfwSetWindowPos(m_window, settings.windowX, settings.windowY);
 	}
+
+	Vector3 cameraPosition;
+	Quaternion cameraRotation;
+	memcpy(cameraPosition.data(), settings.cameraPosition, sizeof(settings.cameraPosition));
+	memcpy(cameraRotation.data(), settings.cameraRotation, sizeof(settings.cameraRotation));
+	setCameraPosition(cameraPosition);
+	setCameraRotation(cameraRotation);
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
 }
 
@@ -296,6 +349,8 @@ void Application::saveSettings()
 	ApplicationSettings settings;
 	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
 	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
+	memcpy(settings.cameraPosition, getCameraPosition().data(), sizeof(settings.cameraPosition));
+	memcpy(settings.cameraRotation, getCameraRotation().data(), sizeof(settings.cameraRotation));
 
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
@@ -316,14 +371,14 @@ void Application::saveSettings()
 	}
 	file.close();
 
-	YAE_LOGF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
+	YAE_VERBOSEF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
 }
 
 void Application::_glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y)
 {
 	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
 
-	application->saveSettings();	
+	application->_requestSaveSettings();
 }
 
 void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
@@ -331,7 +386,7 @@ void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width,
 	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
 	application->m_renderer->notifyFrameBufferResized(_width, _height);
 
-	application->saveSettings();
+	application->_requestSaveSettings();
 }
 
 void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
@@ -354,8 +409,8 @@ void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, dou
 
 Matrix4 Application::_computeCameraView() const
 {
-	Matrix4 cameraTransform = makeTransformMatrix(m_cameraPosition, m_cameraRotation, Vector3::ONE);
-	Matrix4 view = inverse(cameraTransform);
+	Matrix4 cameraTransform = matrix4::makeTransform(m_cameraPosition, m_cameraRotation, vector3::ONE);
+	Matrix4 view = matrix4::inverse(cameraTransform);
 	return view;
 }
 
@@ -365,9 +420,13 @@ Matrix4 Application::_computeCameraProj() const
 	YAE_ASSERT(!isZero(viewportSize));
 	float fov = m_cameraFov * D2R;
 	float aspectRatio = viewportSize.x / viewportSize.y;
-	Matrix4 proj = glm::perspective(fov, aspectRatio, .1f, 100.f);
-	proj[1][1] *= -1.f;
+	Matrix4 proj = matrix4::makePerspective(fov, aspectRatio, .1f, 100.f);
 	return proj;
+}
+
+void Application::_requestSaveSettings()
+{
+	m_saveSettingsRequested = true;
 }
 
 } // namespace yae

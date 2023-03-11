@@ -31,7 +31,7 @@ public:
 	virtual FrameHandle beginFrame() = 0;
   	virtual void endFrame() = 0;
 
-	virtual Vector2 getFrameBufferSize() const { return Vector2::ZERO; }
+	virtual Vector2 getFrameBufferSize() const { return vector2::ZERO; }
 	virtual void notifyFrameBufferResized(int _width, int _height) {}
 
 	virtual void drawCommands(FrameHandle _frameHandle) = 0;
@@ -53,10 +53,11 @@ public:
 	virtual void drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount) = 0;
 
 	void setViewProjectionMatrix(const Matrix4& _view, const Matrix4& _proj);
+	Matrix4 getViewProjectionMatrix() const;
 
 //private:
-	Matrix4 m_viewMatrix = Matrix4::IDENTITY;
-	Matrix4 m_projMatrix = Matrix4::IDENTITY;
+	Matrix4 m_viewMatrix = matrix4::IDENTITY;
+	Matrix4 m_projMatrix = matrix4::IDENTITY;
 
 };
 

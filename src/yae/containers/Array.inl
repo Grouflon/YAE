@@ -118,6 +118,30 @@ const T* BaseArray<T>::end() const
 
 
 template <typename T>
+const T* BaseArray<T>::find(const T& _item) const
+{
+	for (const T* it = begin(); it != end(); ++it)
+	{
+		if (*it == _item)
+			return it;
+	}
+	return nullptr;
+}
+
+
+template <typename T>
+T* BaseArray<T>::find(const T& _item)
+{
+	for (T* it = begin(); it != end(); ++it)
+	{
+		if (*it == _item)
+			return it;
+	}
+	return nullptr;
+}
+
+
+template <typename T>
 bool BaseArray<T>::operator==(const BaseArray<T>& _rhs) const
 {
 	if (m_size != _rhs.m_size)
@@ -136,6 +160,15 @@ template <typename T>
 bool BaseArray<T>::operator!=(const BaseArray<T>& _rhs) const
 {
 	return !(*this == _rhs);
+	if (m_size != _rhs.m_size)
+		return false;
+
+	for (u32 i = 0; i < m_size; ++i)
+	{
+		if ((*this)[i] != _rhs[i])
+			return false;
+	}
+	return true;
 }
 
 
@@ -270,6 +303,14 @@ void DataArray<T>::erase(u32 _index, u32 _count)
 	// @OPTIM: May use memcpy here since we are always moving memory backwards, but I'm not sure. This is still undefined behavior according to the c++ doc
 	std::memmove(this->m_data + _index, this->m_data + _index + _count, (this->m_size - (_index + _count)) * sizeof(T));
 	resize(this->m_size - _count);
+}
+
+template <typename T>
+void DataArray<T>::erase(T* _item)
+{
+	YAE_ASSERT(_item != nullptr);
+	YAE_ASSERT(_item >= this->m_data && _item < (this->m_data + this->m_size));
+	erase(u32(_item - this->m_data), 1);
 }
 
 template <typename T>
@@ -457,30 +498,6 @@ void Array<T>::erase(T* _item)
 	YAE_ASSERT(_item != nullptr);
 	YAE_ASSERT(_item >= this->m_data && _item < (this->m_data + this->m_size));
 	erase(u32(_item - this->m_data), 1);
-}
-
-
-template <typename T>
-const T* Array<T>::find(const T& _item) const
-{
-	for (u32 i = 0; i < this->m_size; ++i)
-	{
-		if (this->m_data[i] == _item)
-			return this->m_data + i;
-	}
-	return nullptr;
-}
-
-
-template <typename T>
-T* Array<T>::find(const T& _item)
-{
-	for (u32 i = 0; i < this->m_size; ++i)
-	{
-		if (this->m_data[i] == _item)
-			return this->m_data + i;
-	}
-	return nullptr;
 }
 
 

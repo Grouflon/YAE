@@ -36,6 +36,10 @@ public:
 	T* end();
 	const T* end() const;
 
+	// Find
+	const T* find(const T& _item) const;
+	T* find(const T& _item);
+
 	// Operators
 	bool operator==(const BaseArray<T>& _rhs) const;
 	bool operator!=(const BaseArray<T>& _rhs) const;
@@ -71,6 +75,7 @@ public:
 	void push_back(const T* _items, u32 _itemCount);
 	void pop_back();
 	void erase(u32 _index, u32 _count);
+	void erase(T* _item);
 	void reserve(u32 _newCapacity);
 
 protected:
@@ -98,9 +103,6 @@ public:
 	void erase(u32 _index, u32 _count);
 	void erase(T* _item);
 	void reserve(u32 _newCapacity);
-
-	const T* find(const T& _item) const;
-	T* find(const T& _item);
 
 protected:
 	void _setCapacity(u32 _newCapacity);

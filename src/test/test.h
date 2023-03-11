@@ -18,10 +18,3 @@ TEST_API void shutdownModule(yae::Program* _program, yae::Module* _module);
 #ifdef __cplusplus
 }
 #endif
-
-namespace serialization {
-
-void testJsonSerializer();
-void testBinarySerializer();
-
-} // namespace yae

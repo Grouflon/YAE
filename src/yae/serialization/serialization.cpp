@@ -33,6 +33,27 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			YAE_ASSERT(clss);
 			return serializeClassInstance(_serializer, _value, clss, _key, _flags);
 		}
+
+		case mirror::Type_FixedSizeArray:
+		{
+			const mirror::FixedSizeArray* fixedSizeArrayType = _type->asFixedSizeArray();
+			YAE_ASSERT(fixedSizeArrayType != nullptr);
+			u32 arraySize = fixedSizeArrayType->getElementCount();
+			if (!_serializer->beginSerializeArray(arraySize, _key))
+				return _flags & SF_IGNORE_MISSING_KEYS;
+
+			const mirror::TypeDesc* subType = fixedSizeArrayType->getSubType();
+			for (u32 i = 0; i < arraySize; ++i)
+			{
+				void* valuePointer = (void*)(size_t(_value) + (i * subType->getSize()));
+				bool success = serializeMirrorType(_serializer, valuePointer, subType, nullptr, _flags);
+				if (!success)
+					return false;
+			}
+
+			if (!_serializer->endSerializeArray())
+				return false;
+		}
 		break;
 
 		default: YAE_ASSERT_MSG(false, "type not implemented"); break;

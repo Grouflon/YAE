@@ -4,8 +4,23 @@ namespace yae {
 
 const u32 INVALID_INDEX = ~u32(0);
 
-template <typename T, template <typename> class ArrayType>
-IDLookupBase<T, ArrayType>::IDLookupBase(Allocator* _allocator)
+constexpr u32 extractIndexFromId(PoolID _id)
+{
+	return _id & ((u64(1) << 32) - 1);
+}
+
+constexpr u32 extractGenerationFromId(PoolID _id)
+{
+	return u32(_id >> 32);
+}
+
+constexpr PoolID makeId(u32 _index, u32 _generation)
+{
+	return u64(_index) | u64(_generation) << 32;
+}
+
+template <typename T>
+IndexedPool<T>::IndexedPool(Allocator* _allocator)
 	: m_indices(_allocator)
 	, m_data(_allocator)
 	, m_freeListBegin(INVALID_INDEX)
@@ -14,135 +29,149 @@ IDLookupBase<T, ArrayType>::IDLookupBase(Allocator* _allocator)
 
 }
 
-template <typename T, template <typename> class ArrayType>
-T* IDLookupBase<T, ArrayType>::get(ID _id)
+template <typename T>
+T* IndexedPool<T>::get(PoolID _id) const
 {
-	YAE_ASSERT(_id.index < m_indices.size());
-	Index& i = m_indices[_id.index];
-	return (T*)(size_t(i.id.innerId == _id.innerId) * size_t(m_data.begin() + i.dataIndex)); // branchless get
+	const u32 index = extractIndexFromId(_id);
+	const u32 generation = extractGenerationFromId(_id);
+	if (index >= m_indices.size())
+		return nullptr;
+
+	const Index& i = m_indices[index];
+	Data* data = (Data*)(size_t(i.generation == generation) * size_t(m_data.begin() + i.dataIndex)); // branchless get
+	return data != nullptr ? &data->data : nullptr;
 }
 
 
-template <typename T, template <typename> class ArrayType>
-ID IDLookupBase<T, ArrayType>::add(const T& _item)
+template <typename T>
+PoolID IndexedPool<T>::add(const T& _item)
 {
+	u32 index;
+	Index* indexPtr;
+
 	if (m_freeListBegin == INVALID_INDEX)
 	{
 		YAE_ASSERT(m_freeListEnd == INVALID_INDEX);
 
-		Index i;
-		i.id.index = m_indices.size();
-		i.id.innerId = 0;
-		i.dataIndex = i.id.index;
-		i.next = INVALID_INDEX;
-
-		m_indices.push_back(i);
-		T& addedItem = m_data.push_back(_item);
-		addedItem.m_id = i.id;
-		return i.id;
+		Index newIndex;
+		newIndex.generation = 0;
+		index = m_indices.size();
+		indexPtr = &m_indices.push_back(newIndex);
 	}
 	else
 	{
-		Index& freeIndex = m_indices[m_freeListBegin];
-		m_freeListBegin = freeIndex.next;
+		index = m_freeListBegin;
+		indexPtr = &m_indices[index];
+
+		m_freeListBegin = indexPtr->next;
 		if (m_freeListBegin == INVALID_INDEX)
 			m_freeListEnd = INVALID_INDEX;
 
-		freeIndex.dataIndex = m_data.size();
-		T& addedItem = m_data.push_back(_item);
-		addedItem.m_id = freeIndex.id;
-		return freeIndex.id;
 	}
+
+	indexPtr->dataIndex = m_data.size();
+	indexPtr->next = INVALID_INDEX; // The linked list is only used for free indices
+	Data data;
+	data.index = index;
+	data.data = _item;
+	m_data.push_back(data);
+	return makeId(index, indexPtr->generation);
 }
 
 
-template <typename T, template <typename> class ArrayType>
-void IDLookupBase<T, ArrayType>::remove(ID _id)
+template <typename T>
+bool IndexedPool<T>::remove(PoolID _id)
 {
-	YAE_ASSERT(get(_id) != nullptr);
+	if (get(_id) == nullptr)
+		return false;
 
-	Index& i = m_indices[_id.index];
-	T& data = m_data[i.dataIndex];
+	const u32 index = extractIndexFromId(_id);
+
+	Index& i = m_indices[index];
+	Data& data = m_data[i.dataIndex];
 
 	// swap data with the last data of the array, and then remove the last element
 	data = m_data.back();
-	m_indices[data.m_id.index].dataIndex = i.dataIndex;
+	m_indices[data.index].dataIndex = i.dataIndex;
 	m_data.pop_back();
 
 	i.dataIndex = INVALID_INDEX;
 	i.next = INVALID_INDEX;
-	++i.id.innerId;
+	++i.generation;
 
-	if (m_freeListEnd != INVALID_INDEX)
+	// we put the index back at the end of the free list
+	if (m_freeListEnd == INVALID_INDEX)
 	{
-		m_indices[m_freeListEnd].next = i.id.index;
+		YAE_ASSERT(m_freeListBegin == INVALID_INDEX);
+		m_freeListBegin = index;
 	}
 	else
 	{
-		YAE_ASSERT(m_freeListBegin == INVALID_INDEX);
-		m_freeListBegin = i.id.index;
+		m_indices[m_freeListEnd].next = index;
 	}
-	m_freeListEnd = i.id.index;
+	m_freeListEnd = index;
+	return true;
 }
 
 
-template <typename T, template <typename> class ArrayType>
-void IDLookupBase<T, ArrayType>::clear()
+template <typename T>
+void IndexedPool<T>::clear()
 {
 	m_data.clear();
-	for (Index& i : m_indices)
+	for (u32 index = 0; index < m_indices.size(); ++index)
 	{
+		Index& i : m_indices[index];
 		if (i.dataIndex != INVALID_INDEX)
 		{
 			i.dataIndex = INVALID_INDEX;
 			i.next = INVALID_INDEX;
-			++i.id.innerId;
+			++i.generation;
 			
-			if (m_freeListEnd != INVALID_INDEX)
+			if (m_freeListEnd == INVALID_INDEX)
 			{
-				m_indices[m_freeListEnd].next = i.id.index;
+				YAE_ASSERT(m_freeListBegin == INVALID_INDEX);
+				m_freeListBegin = index;
 			}
 			else
 			{
-				YAE_ASSERT(m_freeListBegin == INVALID_INDEX);
-				m_freeListBegin = i.id.index;
+				m_indices[m_freeListEnd].next = index;
 			}
-			m_freeListEnd = i.id.index;
+			m_freeListEnd = index;
 		}
 	}
 }
 
 
-template <typename T, template <typename> class ArrayType>
-T* IDLookupBase<T, ArrayType>::begin()
+template <typename T>
+T* IndexedPool<T>::begin()
 {
 	return m_data.begin();
 }
 
 
-template <typename T, template <typename> class ArrayType>
-const T* IDLookupBase<T, ArrayType>::begin() const
+template <typename T>
+const T* IndexedPool<T>::begin() const
 {
 	return m_data.begin();
 }
 
 
-template <typename T, template <typename> class ArrayType>
-T* IDLookupBase<T, ArrayType>::end()
+template <typename T>
+T* IndexedPool<T>::end()
 {
 	return m_data.end();
 }
 
 
-template <typename T, template <typename> class ArrayType>
-const T* IDLookupBase<T, ArrayType>::end() const
+template <typename T>
+const T* IndexedPool<T>::end() const
 {
 	return m_data.end();
 }
 
 
-template <typename T, template <typename> class ArrayType>
-Allocator* IDLookupBase<T, ArrayType>::allocator() const
+template <typename T>
+Allocator* IndexedPool<T>::allocator() const
 {
 	return m_data.allocator();
 }

@@ -24,7 +24,6 @@ public:
 	StringHash();
 	StringHash(const char* _str);
 	StringHash(u32 _hash);
-	~StringHash();
 
 	u32 getHash() const { return m_hash; }
 

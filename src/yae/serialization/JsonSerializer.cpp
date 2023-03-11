@@ -224,7 +224,7 @@ JsonSerializer::JsonSerializer(Allocator* _allocator)
 
 JsonSerializer::~JsonSerializer()
 {
-	YAE_ASSERT_MSG(m_valueStack.size() == 0, "Serializer destroyed during a serialization process")
+	YAE_ASSERT_MSG(m_valueStack.size() == 0, "Serializer destroyed during a serialization process");
 	m_allocator->deallocate(m_writeData);
 }
 
