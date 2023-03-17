@@ -491,7 +491,7 @@ void BinarySerializer::_setBufferCursor(Buffer& _buffer, u32 _cursor)
 	YAE_ASSERT(m_mode != SerializationMode::NONE);
 
 	_buffer.cursor = _cursor;
-	_buffer.maxCursor = max(_cursor, _buffer.maxCursor);
+	_buffer.maxCursor = math::max(_cursor, _buffer.maxCursor);
 }
 
 BinarySerializer::Buffer& BinarySerializer::_getTopBuffer()

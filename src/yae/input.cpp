@@ -16,7 +16,7 @@ void InputSystem::init(GLFWwindow* _window)
 	memset(m_mouseButtonStates, 0, sizeof(m_mouseButtonStates));
 	m_mouseXAxis = {};
 	m_mouseYAxis = {};
-	m_mouseScrollDelta = vector2::ZERO;
+	m_mouseScrollDelta = Vector2::ZERO;
 
 	for (size_t i = 0; i < countof(m_glfwGamepadToGamepad); ++i)
 	{
@@ -39,7 +39,7 @@ void InputSystem::update()
 	{
 		m_mouseButtonStates[i].changesCount = 0;
 	}
-	m_mouseScrollDelta = vector2::ZERO;
+	m_mouseScrollDelta = Vector2::ZERO;
 
 	glfwPollEvents();
 

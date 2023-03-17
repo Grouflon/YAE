@@ -32,8 +32,8 @@ struct ApplicationSettings
 	i32 windowX = -1;
 	i32 windowY = -1;
 
-	float cameraPosition[3];
-	float cameraRotation[4];
+	float cameraPosition[3] = {};
+	float cameraRotation[4] = {0.f, 0.f, 0.f, 1.f};
 
 	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
 	(
@@ -151,20 +151,20 @@ bool Application::doFrame()
 	{
 		YAE_CAPTURE_SCOPE("beginFrame");
 
+		//glfwPollEvents();
+		m_inputSystem->update();
+
+		m_imGuiSystem->newFrame();
+
 		// This is weird that this is here, it should be just before rendering
 		// But im3d seems to need them when its newframe call is done...
 		Matrix4 view = _computeCameraView();
 		Matrix4 proj = _computeCameraProj();
 		renderer().setViewProjectionMatrix(view, proj);
 
-		//glfwPollEvents();
-		m_inputSystem->update();
-
-		m_imGuiSystem->newFrame();
-
 		Im3dCamera im3dCamera = {};
 		im3dCamera.position = m_cameraPosition;
-		im3dCamera.direction = quaternion::rotate(m_cameraRotation, vector3::FORWARD);
+		im3dCamera.direction = math::rotate(m_cameraRotation, Vector3::FORWARD);
 		im3dCamera.view = view;
 		im3dCamera.projection = proj;
 		im3dCamera.fov = m_cameraFov * D2R;
@@ -337,8 +337,8 @@ void Application::loadSettings()
 
 	Vector3 cameraPosition;
 	Quaternion cameraRotation;
-	memcpy(cameraPosition.data(), settings.cameraPosition, sizeof(settings.cameraPosition));
-	memcpy(cameraRotation.data(), settings.cameraRotation, sizeof(settings.cameraRotation));
+	memcpy(math::data(cameraPosition), settings.cameraPosition, sizeof(settings.cameraPosition));
+	memcpy(math::data(cameraRotation), settings.cameraRotation, sizeof(settings.cameraRotation));
 	setCameraPosition(cameraPosition);
 	setCameraRotation(cameraRotation);
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
@@ -349,8 +349,8 @@ void Application::saveSettings()
 	ApplicationSettings settings;
 	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
 	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
-	memcpy(settings.cameraPosition, getCameraPosition().data(), sizeof(settings.cameraPosition));
-	memcpy(settings.cameraRotation, getCameraRotation().data(), sizeof(settings.cameraRotation));
+	memcpy(settings.cameraPosition, math::data(getCameraPosition()), sizeof(settings.cameraPosition));
+	memcpy(settings.cameraRotation, math::data(getCameraRotation()), sizeof(settings.cameraRotation));
 
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
@@ -409,18 +409,18 @@ void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, dou
 
 Matrix4 Application::_computeCameraView() const
 {
-	Matrix4 cameraTransform = matrix4::makeTransform(m_cameraPosition, m_cameraRotation, vector3::ONE);
-	Matrix4 view = matrix4::inverse(cameraTransform);
+	Matrix4 cameraTransform = Matrix4::FromTransform(m_cameraPosition, m_cameraRotation, Vector3::ONE);
+	Matrix4 view = math::inverse(cameraTransform);
 	return view;
 }
 
 Matrix4 Application::_computeCameraProj() const
 {
 	Vector2 viewportSize = renderer().getFrameBufferSize();
-	YAE_ASSERT(!isZero(viewportSize));
+	YAE_ASSERT(!math::isZero(viewportSize));
 	float fov = m_cameraFov * D2R;
 	float aspectRatio = viewportSize.x / viewportSize.y;
-	Matrix4 proj = matrix4::makePerspective(fov, aspectRatio, .1f, 100.f);
+	Matrix4 proj = Matrix4::FromPerspective(fov, aspectRatio, .1f, 100.f);
 	return proj;
 }
 

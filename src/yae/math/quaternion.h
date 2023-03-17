@@ -1,19 +1,20 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/math.h>
 
 namespace yae {
+
+inline String toString(const Quaternion& _q);
+
+namespace math {
 
 template <>
 inline bool isEqual(const Quaternion& _a, const Quaternion& _b, float _threshold);
 inline bool isIdentical(const Quaternion& _a, const Quaternion& _b, float _threshold = SMALL_NUMBER);
 
-namespace quaternion {
-
-inline Quaternion makeFromEuler(float _pitch, float _yaw, float _roll);
-inline Quaternion makeFromEuler(const Vector3& _radianAngles);
-inline Quaternion makeFromAngleAxis(float _radianAngle, const Vector3& _axis);
-inline Quaternion makeFromMatrix3(const Matrix3& _m);
+inline const float* data(const Quaternion& _q);
+inline float* data(Quaternion& _q);
 
 inline float lengthSquared(const Quaternion& _q);
 inline float length(const Quaternion& _q);
@@ -37,10 +38,9 @@ inline float yaw(const Quaternion& _q);
 inline Vector3 euler(const Quaternion& _q);
 
 inline Vector3 rotate(const Quaternion& _q, const Vector3& _v);
-// Rotation required to turn _a into _b
-inline Quaternion rotationBetween(const Vector3& _start, const Vector3& _dest);
+inline Quaternion rotationBetween(const Vector3& _start, const Vector3& _dest); // Rotation required to turn _start into _dest
 
-} // namespace quaternion
+} // namespace math
 } // namespace yae
 
 #include "quaternion.inl"

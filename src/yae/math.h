@@ -4,6 +4,7 @@
 #include <yae/math_types.h>
 
 namespace yae {
+namespace math {
 
 inline i8     abs(i8 _value);
 inline i16    abs(i16 _value);
@@ -48,6 +49,7 @@ inline bool isEqual(const T& _a, const T& _b, float _threshold = SMALL_NUMBER)
 	return isZero(_a - _b, _threshold);
 }
 
+} // namespace math
 } // namespace yae
 
 #include "math.inl"

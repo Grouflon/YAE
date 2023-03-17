@@ -47,8 +47,7 @@ public:
 	void loadSettings();
 	void saveSettings();
 
-private:
-
+//private:
 	static void _glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y);
 	static void _glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height);
 	static void _glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods);
@@ -73,8 +72,8 @@ private:
 
 	Clock m_clock;
 
-	Vector3 m_cameraPosition = vector3::ZERO;
-	Quaternion m_cameraRotation = quaternion::IDENTITY;
+	Vector3 m_cameraPosition = Vector3::ZERO;
+	Quaternion m_cameraRotation = Quaternion::IDENTITY;
 	float m_cameraFov = 45.f;
 
 	HashMap<StringHash, void*> m_userData;

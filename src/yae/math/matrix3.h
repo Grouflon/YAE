@@ -3,13 +3,14 @@
 #include <yae/types.h>
 
 namespace yae {
-namespace matrix3 {
+namespace math {
 
-inline Matrix3 makeRotation(const Quaternion& _rotation);
+inline const float* data(const Matrix3& _m) { return (const float*)&_m; }
+inline float* data(Matrix3& _m) { return (float*)&_m; }
 
 inline Matrix3 inverse(const Matrix3& _m);
 	
-} // namespace matrix3
+} // namespace math
 } // namespace yae
 
 #include "matrix3.inl"

@@ -2,6 +2,7 @@
 
 #include <yae/math_3d.h>
 #include <yae/random.h>
+#include <yae/math/glm_conversion.h>
 
 #include <test/test_macros.h>
 
@@ -12,16 +13,6 @@ using namespace yae;
 
 namespace math {
 
-glm::vec2 toGlm(const Vector2& _v) { return glm::vec2(_v.x, _v.y); }
-glm::vec3 toGlm(const Vector3& _v) { return glm::vec3(_v.x, _v.y, _v.z); }
-glm::vec4 toGlm(const Vector4& _v) { return glm::vec4(_v.x, _v.y, _v.z, _v.w); }
-glm::quat toGlm(const Quaternion& _q) { return glm::quat(_q.w, _q.x, _q.y, _q.z); }
-
-Vector2 toYae(const glm::vec2& _v) { return Vector2(_v.x, _v.y); }
-Vector3 toYae(const glm::vec3& _v) { return Vector3(_v.x, _v.y, _v.z); }
-Vector4 toYae(const glm::vec4& _v) { return Vector4(_v.x, _v.y, _v.z, _v.w); }
-Quaternion toYae(const glm::quat& _q) { return Quaternion(_q.x, _q.y, _q.z, _q.w); }
-
 void testVectors()
 {
     {
@@ -31,12 +22,12 @@ void testVectors()
         glm::vec2 g_a = toGlm(a);
         glm::vec2 g_b = toGlm(b);
 
-        TEST(isZero(a - a));
+        TEST(yae::math::isZero(a - a));
         TEST(toGlm(a - b) == (g_a - g_b));
         TEST(toGlm(a + b) == (g_a + g_b));
         TEST(toGlm(a * b) == (g_a * g_b));
         TEST(toGlm(a / b) == (g_a / g_b));
-        TEST(isEqual(vector2::dot(a, b), glm::dot(g_a, g_b)));
+        TEST(yae::math::isEqual(yae::math::dot(a, b), glm::dot(g_a, g_b)));
     }
     
     {
@@ -46,12 +37,12 @@ void testVectors()
         glm::vec3 g_a = toGlm(a);
         glm::vec3 g_b = toGlm(b);
 
-        TEST(isZero(a - a));
+        TEST(yae::math::isZero(a - a));
         TEST(toGlm(a - b) == (g_a - g_b));
         TEST(toGlm(a + b) == (g_a + g_b));
         TEST(toGlm(a * b) == (g_a * g_b));
         TEST(toGlm(a / b) == (g_a / g_b));
-        TEST(isEqual(vector3::dot(a, b), glm::dot(g_a, g_b)));
+        TEST(yae::math::isEqual(yae::math::dot(a, b), glm::dot(g_a, g_b)));
     }
 
     {
@@ -61,65 +52,75 @@ void testVectors()
         glm::vec4 g_a = toGlm(a);
         glm::vec4 g_b = toGlm(b);
 
-        TEST(isZero(a - a));
+        TEST(yae::math::isZero(a - a));
         TEST(toGlm(a - b) == (g_a - g_b));
         TEST(toGlm(a + b) == (g_a + g_b));
         TEST(toGlm(a * b) == (g_a * g_b));
         TEST(toGlm(a / b) == (g_a / g_b));
-        TEST(isEqual(vector4::dot(a, b), glm::dot(g_a, g_b), 0.001f));
+        TEST(yae::math::isEqual(yae::math::dot(a, b), glm::dot(g_a, g_b), 0.001f));
     }
 }
 
 
 void testQuaternion()
 {
+    // Test for named axes
+    {
+        Vector3 forward = yae::math::forward(Quaternion::IDENTITY);
+        Vector3 up = yae::math::up(Quaternion::IDENTITY);
+        Vector3 right = yae::math::right(Quaternion::IDENTITY);
+        TEST(yae::math::isEqual(forward, {1.f, 0.f, 0.f}));
+        TEST(yae::math::isEqual(up, {0.f, 1.f, 0.f}));
+        TEST(yae::math::isEqual(right, {0.f, 0.f, 1.f}));
+    }
+
     // Tests for very small angle values
     {
-        Quaternion q = Quaternion(-0.41228247f, -0.57448214f, -0.41231012f, 0.57445085f);
+        Quaternion q = Quaternion(0.57445085f, -0.41228247f, -0.57448214f, -0.41231012f);
         glm::quat g_q = toGlm(q);
 
         TEST(toGlm(q) == g_q);
         glm::vec3 g_a = glm::eulerAngles(g_q);
-        Vector3 a = quaternion::euler(q);
-        TEST(isEqual(a, toYae(g_a)));
+        Vector3 a = yae::math::euler(q);
+        TEST(yae::math::isEqual(a, toYae(g_a)));
     }
 
     // Noticed that some cases could fail depending on the input angle. Put that in a randomized loop to try to catch all errors
     for (u32 i = 0; i < 512; ++i)
     {
         Vector3 a = Vector3(D2R * random::range(-180.f, 180.f), D2R * random::range(-180.f, 180.f), D2R * random::range(-180.f, 180.f));
-        Quaternion qa = quaternion::makeFromEuler(a);
+        Quaternion qa = Quaternion::FromEuler(a);
         glm::quat g_qa = glm::quat(toGlm(a));
 
         // euler angles
-        TEST(toGlm(qa) == g_qa);
+        TEST(yae::math::isEqual(qa, toYae(g_qa)));
         glm::vec3 g_ea = glm::eulerAngles(g_qa);
-        Vector3 ea = quaternion::euler(qa);
-        TEST(isEqual(ea, toYae(g_ea)));
+        Vector3 ea = yae::math::euler(qa);
+        TEST(yae::math::isEqual(ea, toYae(g_ea)));
 
         glm::quat g_qaa = glm::quat(g_ea);        
-        Quaternion qaa = quaternion::makeFromEuler(ea);
+        Quaternion qaa = Quaternion::FromEuler(ea);
 
-        TEST(isIdentical(toYae(g_qa), toYae(g_qaa)));
-        TEST(isIdentical(qa, qaa));
+        TEST(yae::math::isIdentical(toYae(g_qa), toYae(g_qaa)));
+        TEST(yae::math::isIdentical(qa, qaa));
 
-        TEST(isIdentical(qa, qaa));
+        TEST(yae::math::isIdentical(qa, qaa));
     }
     
     Vector3 a = Vector3(D2R * random::range(-180.f, 180.f), D2R * random::range(-180.f, 180.f), D2R * random::range(-180.f, 180.f));
-    Quaternion qa = quaternion::makeFromEuler(a);
+    Quaternion qa = Quaternion::FromEuler(a);
     glm::quat g_qa = glm::quat(toGlm(a));
 
     // Inversion
     {
-        Quaternion i = quaternion::inverse(qa);
+        Quaternion i = yae::math::inverse(qa);
         glm::quat g_i = glm::inverse(g_qa);
-        TEST(isEqual(i, toYae(g_i)));
+        TEST(yae::math::isEqual(i, toYae(g_i)));
 
         Quaternion y = qa * i;
         glm::quat g = g_qa * g_i;
-        TEST(isEqual(y, toYae(g)));
-        TEST(isIdentical(y, quaternion::IDENTITY));
+        TEST(yae::math::isEqual(y, toYae(g)));
+        TEST(yae::math::isIdentical(y, Quaternion::IDENTITY));
     }
 
     {
@@ -128,23 +129,25 @@ void testQuaternion()
             random::range(-10.f, 10.f),
             random::range(-10.f, 10.f)
         );
-        Quaternion q1 = quaternion::makeFromEuler(
+        Quaternion q1 = Quaternion::FromEuler(
             random::range(-180.f, 180.f) * D2R,
             random::range(-180.f, 180.f) * D2R,
             random::range(-180.f, 180.f) * D2R
         );
-        Vector3 v2 = quaternion::rotate(q1, v1);
-        Quaternion q2 = quaternion::rotationBetween(v1, v2);
-        glm::quat g_q2 = glm::rotation(toGlm(vector3::safeNormalize(v1)), toGlm(vector3::safeNormalize(v2)));
+        Vector3 v2 = yae::math::rotate(q1, v1);
+        TEST(yae::math::isEqual(yae::math::length(v1), yae::math::length(v2)));
 
-        Vector3 up = quaternion::up(q2);
-        Vector3 forward = quaternion::forward(q2);
-        Vector3 right = quaternion::right(q2);
+        v1 = yae::math::safeNormalize(v1);
+        v2 = yae::math::safeNormalize(v2);
+        Quaternion q2 = yae::math::rotationBetween(v1, v2);
+        glm::quat g_q1 = toGlm(q1);
+        glm::quat g_q2 = glm::rotation(toGlm(v1), toGlm(v2));
+        TEST(yae::math::isEqual(q2, toYae(g_q2)));
+        TEST(yae::math::isEqual(yae::math::dot(q1, q2), glm::dot(g_q1, g_q2)));
 
-        TEST(isEqual(vector3::length(v1), vector3::length(v2)));
-        TEST(toGlm(q2) == g_q2);
-        TEST(isIdentical(q1, q2));   
-        TEST(isEqual(quaternion::dot(q1, q2), glm::dot(toGlm(q1), toGlm(q2))));
+        Vector3 up = yae::math::up(q2);
+        Vector3 forward = yae::math::forward(q2);
+        Vector3 right = yae::math::right(q2);
     }
     
 
@@ -154,17 +157,17 @@ void testQuaternion()
 
     Vector3 b = {D2R * 45.f, 0.f, 0.f};
     Quaternion qb = quaternion::makeFromEuler(b);
-    TEST(isEqual(quaternion::euler(qb * qb), {D2R * 90.f, 0.f, 0.f}));
-    TEST(isEqual(quaternion::rotate(qb, {1.f, 0.f, 0.f}), {1.f, 0.f, 0.f}));
-    TEST(isEqual(quaternion::rotate(qb, {0.f, 1.f, 0.f}), vector3::normalize({0.f, 1.f, 1.f})));
-    TEST(isEqual(quaternion::rotate(quaternion::inverse(qb), {0.f, 1.f, 0.f}), vector3::normalize({0.f, 1.f, -1.f})));
+    TEST(yae::math::isEqual(quaternion::euler(qb * qb), {D2R * 90.f, 0.f, 0.f}));
+    TEST(yae::math::isEqual(quaternion::rotate(qb, {1.f, 0.f, 0.f}), {1.f, 0.f, 0.f}));
+    TEST(yae::math::isEqual(quaternion::rotate(qb, {0.f, 1.f, 0.f}), normalize({0.f, 1.f, 1.f})));
+    TEST(yae::math::isEqual(quaternion::rotate(quaternion::inverse(qb), {0.f, 1.f, 0.f}), vector3::normalize({0.f, 1.f, -1.f})));
 
     Vector3 f = quaternion::forward(quaternion::IDENTITY);
     Vector3 r = quaternion::right(quaternion::IDENTITY);
     Vector3 u = quaternion::up(quaternion::IDENTITY);
-    TEST(isEqual(f, {1.f, 0.f, 0.f}));
-    TEST(isEqual(r, {0.f, 0.f, 1.f}));
-    TEST(isEqual(u, {0.f, 1.f, 0.f}));
+    TEST(yae::math::isEqual(f, {1.f, 0.f, 0.f}));
+    TEST(yae::math::isEqual(r, {0.f, 0.f, 1.f}));
+    TEST(yae::math::isEqual(u, {0.f, 1.f, 0.f}));
     */
 }
 

@@ -4,12 +4,32 @@
 
 namespace yae {
 
+String toString(const Vector4& _v)
+{
+	return string::format("{%.2f, %.2f, %.2f, %.2f}", _v.x, _v.y, _v.z, _v.w);
+}
+
+namespace math {
+
 bool isZero(const Vector4& _v, float _threshold)
 {
 	return isZero(_v.x, _threshold) && isZero(_v.y, _threshold) && isZero(_v.z, _threshold) && isZero(_v.w, _threshold);
 }
 
-namespace vector4 {
+const float* data(const Vector4& _v)
+{
+	return (const float*)&_v;
+}
+
+float* data(Vector4& _v)
+{
+	return (float*)&_v;
+}
+
+Vector3 xyz(const Vector4& _v)
+{
+	return Vector3(_v.x, _v.y, _v.z);
+}
 
 float lengthSquared(const Vector4& _v)
 {
@@ -41,6 +61,5 @@ float dot(const Vector4& _a, const Vector4& _b)
 	return _a.x*_b.x + _a.y*_b.y + _a.z*_b.z + _a.w*_b.w;
 }
 
-
-} // namespace vector4
+} // namespace math
 } // namespace yae

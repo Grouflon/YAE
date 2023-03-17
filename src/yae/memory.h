@@ -170,7 +170,7 @@ public:
 				{
 					u8* previousStart = (u8*)_memory;
 					u8* previousEnd = m_buffer + m_cursor;
-					memcpy(m_buffer + m_cursor, m_buffer + i, yae::min((i64)_size, (i64)(previousEnd - previousStart)));
+					memcpy(m_buffer + m_cursor, m_buffer + i, yae::math::min((i64)_size, (i64)(previousEnd - previousStart)));
 				}
 				m_cursor = (start + _size) - m_buffer;
 				return start;

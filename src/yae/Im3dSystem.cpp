@@ -47,7 +47,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	ad.m_viewportSize  = viewportSize;
 	ad.m_viewOrigin    = _camera.position; // for VR use the head position
 	ad.m_viewDirection = _camera.direction;
-	ad.m_worldUp       = vector3::UP; // used internally for generating orthonormal bases
+	ad.m_worldUp       = Vector3::UP; // used internally for generating orthonormal bases
 	ad.m_projOrtho     = _camera.orthographic; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
@@ -61,7 +61,7 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vector4 rayOrigin, rayDirection;
-	Matrix4 worldMatrix = matrix4::inverse(_camera.view);
+	Matrix4 worldMatrix = math::inverse(_camera.view);
 	if (_camera.orthographic)
 	{
 		rayOrigin.x  = cursorPos.x / _camera.projection[0][0];
@@ -78,10 +78,10 @@ void Im3dSystem::newFrame(float _dt, const Im3dCamera& _camera)
 		rayDirection.y  = cursorPos.y / _camera.projection[1][1];
 		rayDirection.z  = -1.0f;
 		rayDirection.w  = 0.0f;
-		rayDirection    = worldMatrix * vector4::normalize(rayDirection);
+		rayDirection    = worldMatrix * math::normalize(rayDirection);
 	}
-	ad.m_cursorRayOrigin = rayOrigin.xyz();
-	ad.m_cursorRayDirection = rayDirection.xyz();
+	ad.m_cursorRayOrigin = math::xyz(rayOrigin);
+	ad.m_cursorRayDirection = math::xyz(rayDirection);
 
  // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
  // im3d_config.h, or if any of the IsVisible() functions are called.

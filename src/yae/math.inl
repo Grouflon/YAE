@@ -3,6 +3,7 @@
 #include <algorithm>
 
 namespace yae {
+namespace math {
 
 i8     abs(i8 _value)     { return std::abs(_value); }
 i16    abs(i16 _value)    { return std::abs(_value); }
@@ -59,4 +60,5 @@ bool isZero(double _value, double _threshold)
 	return abs(_value) <= _threshold;
 }
 
+} // namespace math
 } // namespace yae

@@ -21,8 +21,8 @@ void onModuleLoaded(yae::Program* _program, yae::Module* _module)
     testSystem->popCategory();
 
     testSystem->pushCategory("math");
-        testSystem->addTest("vectors", &math::testVectors);
-        testSystem->addTest("quaternion", &math::testQuaternion);
+        testSystem->addTest("vectors", &::math::testVectors);
+        testSystem->addTest("quaternion", &::math::testQuaternion);
     testSystem->popCategory();
 
     testSystem->addTest("random", &random::testRandom);

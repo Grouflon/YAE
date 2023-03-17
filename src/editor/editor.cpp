@@ -4,6 +4,8 @@
 #include <yae/Application.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/Serializer.h>
+#include <yae/imgui_extension.h>
+#include <yae/rendering/Renderer.h>
 
 #include <imgui/imgui.h>
 #include <mirror/mirror.h>
@@ -14,7 +16,8 @@ struct EditorInstance
 {
 	bool showMemoryProfiler = false;
 	bool showFrameRate = false;
-	bool showMirrorWindow = false;
+	bool showMirrorDebugWindow = false;
+	bool showRendererDebugWindow = false;
 	bool showDemoWindow = false;
 
 	// mirror window
@@ -24,7 +27,8 @@ struct EditorInstance
 	(
 		MIRROR_MEMBER(showMemoryProfiler)();
 		MIRROR_MEMBER(showFrameRate)();
-		MIRROR_MEMBER(showMirrorWindow)();
+		MIRROR_MEMBER(showRendererDebugWindow)();
+		MIRROR_MEMBER(showMirrorDebugWindow)();
 		MIRROR_MEMBER(showDemoWindow)();
 	);
 };
@@ -138,9 +142,15 @@ void updateApplication(yae::Application* _application, float _dt)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Debug"))
+        {
+        	changedSettings = ImGui::MenuItem("Mirror", NULL, &editorInstance->showMirrorDebugWindow) || changedSettings;
+        	changedSettings = ImGui::MenuItem("Renderer", NULL, &editorInstance->showRendererDebugWindow) || changedSettings;
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Misc"))
         {
-        	changedSettings = ImGui::MenuItem("Mirror", NULL, &editorInstance->showMirrorWindow) || changedSettings;
         	changedSettings = ImGui::MenuItem("ImGui Demo Window", NULL, &editorInstance->showDemoWindow) || changedSettings;
             ImGui::EndMenu();
         }
@@ -219,10 +229,25 @@ void updateApplication(yae::Application* _application, float _dt)
 		changedSettings = changedSettings || (previousOpen != editorInstance->showFrameRate);
     }
 
-    if (editorInstance->showMirrorWindow)
+    if (editorInstance->showRendererDebugWindow)
     {
-    	bool previousOpen = editorInstance->showMirrorWindow;
-		if (ImGui::Begin("Mirror", &editorInstance->showMirrorWindow))
+    	bool previousOpen = editorInstance->showRendererDebugWindow;
+		if (ImGui::Begin("Renderer", &editorInstance->showRendererDebugWindow))
+    	{
+    		ImGui::Text("view matrix:");
+			imgui_matrix4(renderer().m_viewMatrix);
+    		ImGui::Text("projection matrix:");
+			imgui_matrix4(renderer().m_projMatrix);
+    	}
+    	ImGui::End();
+
+		changedSettings = changedSettings || (previousOpen != editorInstance->showRendererDebugWindow);
+    }
+
+    if (editorInstance->showMirrorDebugWindow)
+    {
+    	bool previousOpen = editorInstance->showMirrorDebugWindow;
+		if (ImGui::Begin("Mirror", &editorInstance->showMirrorDebugWindow))
     	{
     		ImVec2 regionSize = ImVec2(ImGui::GetWindowContentRegionWidth(), 0);
     		ImGui::BeginChild("MirrorChildL", ImVec2(regionSize.x * 0.5f, regionSize.y), false);
@@ -270,7 +295,7 @@ void updateApplication(yae::Application* _application, float _dt)
     	}
     	ImGui::End();
 
-		changedSettings = changedSettings || (previousOpen != editorInstance->showMirrorWindow);
+		changedSettings = changedSettings || (previousOpen != editorInstance->showMirrorDebugWindow);
     }
 
     if (editorInstance->showDemoWindow)

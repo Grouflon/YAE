@@ -80,7 +80,7 @@ private:
 	KeyState m_mouseButtonStates[GLFW_MOUSE_BUTTON_LAST + 1];
 	AxisState m_mouseXAxis;
 	AxisState m_mouseYAxis;
-	Vector2 m_mouseScrollDelta = vector2::ZERO;
+	Vector2 m_mouseScrollDelta = Vector2::ZERO;
 };
 
 } // namespace yae

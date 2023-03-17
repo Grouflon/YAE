@@ -16,6 +16,7 @@
 #include <yae/serialization/BinarySerializer.h>
 #include <yae/serialization/JsonSerializer.h>
 #include <yae/Application.h>
+#include <yae/imgui_extension.h>
 
 #include <game/transform.h>
 
@@ -28,14 +29,29 @@
 
 using namespace yae;
 
-static void imgui_matrix4(float _matrix[16])
-{
-	ImGui::Text("%.4f %.4f %.4f %.4f\n%.4f %.4f %.4f %.4f\n%.4f %.4f %.4f %.4f\n%.4f %.4f %.4f %.4f",
-	_matrix[0], _matrix[1], _matrix[2], _matrix[3],
-	_matrix[4], _matrix[5], _matrix[6], _matrix[7],
-	_matrix[8], _matrix[9], _matrix[10], _matrix[11],
-	_matrix[12], _matrix[13], _matrix[14], _matrix[15]
-	);
+namespace Im3d {
+	void DrawRotation(const Quaternion& _q, float _radius = 1.f)
+	{
+		Vector3 forward = math::forward(_q) * _radius;
+		Vector3 up = math::up(_q) * _radius;
+		Vector3 right = math::right(_q) * _radius;
+
+	    Im3d::BeginLines();
+	    	Im3d::SetColor(Im3d::Color_Red);
+	    	Im3d::Vertex(0.f, 0.f, 0.f);
+	    	Im3d::Vertex(forward.x, forward.y, forward.z);
+	    Im3d::End();
+	    Im3d::BeginLines();
+	    	Im3d::SetColor(Im3d::Color_Green);
+	    	Im3d::Vertex(0.f, 0.f, 0.f);
+	    	Im3d::Vertex(up.x, up.y, up.z);
+	    Im3d::End();
+	    Im3d::BeginLines();
+	    	Im3d::SetColor(Im3d::Color_Blue);
+	    	Im3d::Vertex(0.f, 0.f, 0.f);
+	    	Im3d::Vertex(right.x, right.y, right.z);
+	    Im3d::End();
+	}
 }
 
 static void drawNode(NodeID _nodeID)
@@ -43,11 +59,11 @@ static void drawNode(NodeID _nodeID)
 	SpatialNode* node = _nodeID.get();
 	Vector3 p = node->getWorldPosition();
 
-	Matrix3 r = matrix3::makeRotation(node->getWorldRotation());
+	Matrix3 r = Matrix3::FromRotation(node->getWorldRotation());
 	Vector3 s = node->getWorldScale();
-	if (Im3d::Gizmo(Im3d::MakeId((void*)(uintptr_t)_nodeID.id), p.data(), r.data(), s.data()))
+	if (Im3d::Gizmo(Im3d::MakeId((void*)(uintptr_t)_nodeID.id), math::data(p), math::data(r), math::data(s)))
 	{
-		Transform t(p, quaternion::makeFromMatrix3(r), s);
+		Transform t(p, Quaternion::FromMatrix3(r), s);
 		node->setWorldTransform(t);
 	}
 	Im3d::Text(p, 0, "Node %lld", _nodeID.id);
@@ -76,9 +92,9 @@ public:
 	float pitch = 0.f;
 	float yaw = 0.f;
 	bool fpsModeEnabled = false;
-	Matrix4 mesh1Transform = matrix4::IDENTITY;
-	Matrix4 mesh2Transform = matrix4::IDENTITY;
-	Matrix4 fontTransform = matrix4::IDENTITY;
+	Matrix4 mesh1Transform = Matrix4::IDENTITY;
+	Matrix4 mesh2Transform = Matrix4::IDENTITY;
+	Matrix4 fontTransform = Matrix4::IDENTITY;
 
 	MeshResource* mesh = nullptr;
 	TextureResource* texture = nullptr;
@@ -112,13 +128,13 @@ void afterInitApplication(Application* _app)
 	YAE_ASSERT(gameInstance != nullptr);
 	app().setUserData("game", gameInstance);
 
-	Vector3 cameraAngles = R2D * quaternion::euler(app().getCameraRotation());
+	Vector3 cameraAngles = R2D * math::euler(app().getCameraRotation());
 	gameInstance->pitch = cameraAngles.x;
 	gameInstance->yaw = cameraAngles.y;
 
 	//app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
-	gameInstance->mesh1Transform = matrix4::makeRotation(quaternion::makeFromEuler(PI*.5f, PI*-.25f, 0.f));
+	gameInstance->mesh1Transform = Matrix4::FromRotation(Quaternion::FromEuler(PI*.5f, PI*-.25f, 0.f));
 	gameInstance->mesh1Transform[3][0] = 0.f;
 	gameInstance->mesh1Transform[3][1] = .5f;
 
@@ -204,17 +220,16 @@ void updateApplication(Application* _app, float _dt)
 		// ROTATION
 		float rotationSpeed = .2f;
 		Vector2 rotationInputRate = -input().getMouseDelta();
-		gameInstance->yaw += mod(rotationInputRate.x * rotationSpeed, 360.f);
-		gameInstance->pitch += clamp(rotationInputRate.y * rotationSpeed, -90.f, 90.f);
-		Quaternion cameraRotation = quaternion::makeFromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
-		app().setCameraRotation(cameraRotation);
-
+		gameInstance->yaw = math::mod(gameInstance->yaw + rotationInputRate.x * rotationSpeed, 360.f);
+		gameInstance->pitch = math::clamp(gameInstance->pitch + rotationInputRate.y * rotationSpeed, -90.f, 90.f);
+		Quaternion cameraRotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
+		app().setCameraRotation(cameraRotation);		
 
 		// TRANSLATION
-		Vector3 forward = -quaternion::forward(app().getCameraRotation()); // @NOTE: forward is reversed, we need to figure out why at some point
-		Vector3 right = quaternion::right(app().getCameraRotation());
+		Vector3 forward = math::forward(app().getCameraRotation()); // @NOTE: forward is reversed, we need to figure out why at some point
+		Vector3 right = math::right(app().getCameraRotation());
 		//Vector3 up = app().getCameraRotation().up();
-		Vector3 inputRate = vector3::ZERO;
+		Vector3 inputRate = Vector3::ZERO;
 
 		if (input().isKeyDown(GLFW_KEY_D))
 		{
@@ -234,11 +249,22 @@ void updateApplication(Application* _app, float _dt)
 		}
 
 		float linearSpeed = 2.f;
-		inputRate = vector3::safeNormalize(inputRate);
+		inputRate = math::safeNormalize(inputRate);
 		Vector3 cameraPosition = app().getCameraPosition();
 		cameraPosition += inputRate * linearSpeed * _dt;
 		app().setCameraPosition(cameraPosition);
+
+		
 	}
+
+	ImGui::Text("camera:");
+	ImGui::DragVector3("position", app().m_cameraPosition, .05f);
+	ImGui::DragRotation("rotation", app().m_cameraRotation);
+
+	Quaternion id = Quaternion::IDENTITY;
+	ImGui::Text("forward: %s", toString(math::forward(id)).c_str());
+	ImGui::Text("up: %s", toString(math::up(id)).c_str());
+	ImGui::Text("right: %s", toString(math::right(id)).c_str());
 
 	/*
     ImGui::SetNextWindowSize(ImVec2(600, 512));
@@ -250,22 +276,11 @@ void updateApplication(Application* _app, float _dt)
 	Im3d::EnableSorting(true);
 
 	// Axis
-    Im3d::SetSize(5.f);
-    Im3d::BeginLines();
-    	Im3d::SetColor(Im3d::Color_Red);
-    	Im3d::Vertex(0.f, 0.f, 0.f);
-    	Im3d::Vertex(1.f, 0.f, 0.f);
-    Im3d::End();
-    Im3d::BeginLines();
-    	Im3d::SetColor(Im3d::Color_Green);
-    	Im3d::Vertex(0.f, 0.f, 0.f);
-    	Im3d::Vertex(0.f, 1.f, 0.f);
-    Im3d::End();
-    Im3d::BeginLines();
-    	Im3d::SetColor(Im3d::Color_Blue);
-    	Im3d::Vertex(0.f, 0.f, 0.f);
-    	Im3d::Vertex(0.f, 0.f, 1.f);
-    Im3d::End();
+	Im3d::SetSize(5.f);
+	Im3d::DrawRotation(Quaternion::IDENTITY, 1.f);
+
+	Im3d::SetSize(8.f);
+	Im3d::DrawRotation(app().getCameraRotation(), .5f);
 
     /*
     Im3d::SetColor(Im3d::Color(1.f, 0.f, 0.f));
@@ -343,6 +358,7 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
+	/*
 	ImGui::Text("mesh1:");
 	imgui_matrix4((float*)&gameInstance->mesh1Transform);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
@@ -352,6 +368,7 @@ void updateApplication(Application* _app, float _dt)
 		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
 		gameInstance->texture->getTextureHandle()
 	);
+	*/
 
 	/*
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
@@ -363,6 +380,7 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
+	/*
 	float fontScale = 0.005f;
 	gameInstance->fontTransform = matrix4::IDENTITY;
 	gameInstance->fontTransform = matrix4::scale(gameInstance->fontTransform, vector3::ONE * fontScale);
@@ -384,4 +402,5 @@ void updateApplication(Application* _app, float _dt)
 	{
 		drawNode(node);
 	}
+	*/
 }

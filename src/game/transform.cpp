@@ -8,7 +8,7 @@ namespace yae {
 
 Matrix4 Transform::toMatrix4() const
 {
-	return matrix4::makeTransform(position, rotation, scale);
+	return Matrix4::FromTransform(position, rotation, scale);
 }
 
 Transform Transform::operator*(const Transform& _rhs) const
@@ -67,7 +67,7 @@ void SpatialNode::setWorldPosition(const Vector3& _position)
 	SpatialNode* parent = m_parent.get();
 	if (parent != nullptr)
 	{
-		Matrix4 inverseParentMatrix = matrix4::inverse(parent->getWorldMatrix());
+		Matrix4 inverseParentMatrix = math::inverse(parent->getWorldMatrix());
 		setLocalPosition(inverseParentMatrix * _position);
 	}
 	else
@@ -81,7 +81,7 @@ void SpatialNode::setWorldRotation(const Quaternion& _rotation)
 	SpatialNode* parent = m_parent.get();
 	if (parent != nullptr)
 	{
-		Quaternion inverseParentRotation = quaternion::inverse(parent->getWorldRotation());
+		Quaternion inverseParentRotation = math::inverse(parent->getWorldRotation());
 		setLocalRotation(inverseParentRotation * _rotation);
 	}
 	else

@@ -1,11 +1,56 @@
 namespace yae {
 
+String toString(const Vector3& _v)
+{
+	return string::format("{%.2f, %.2f, %.2f}", _v.x, _v.y, _v.z);
+}
+
+namespace math {
+
 bool isZero(const Vector3& _v, float _threshold)
 {
 	return isZero(_v.x, _threshold) && isZero(_v.y, _threshold) && isZero(_v.z, _threshold);
 }
 
-namespace vector3 {
+const float* data(const Vector3& _v)
+{
+	return (const float*)&_v;
+}
+
+float* data(Vector3& _v)
+{
+	return (float*)&_v;
+}
+
+Vector2 xy(const Vector3& _v)
+{
+	return Vector2(_v.x, _v.y);
+}
+
+Vector2 xz(const Vector3& _v)
+{
+	return Vector2(_v.x, _v.z);
+}
+
+Vector2 yx(const Vector3& _v)
+{
+	return Vector2(_v.y, _v.x);
+}
+
+Vector2 yz(const Vector3& _v)
+{
+	return Vector2(_v.y, _v.z);
+}
+
+Vector2 zx(const Vector3& _v)
+{
+	return Vector2(_v.z, _v.x);
+}
+
+Vector2 zy(const Vector3& _v)
+{
+	return Vector2(_v.z, _v.y);
+}
 
 float lengthSquared(const Vector3& _v)
 {
@@ -46,5 +91,5 @@ Vector3 cross(const Vector3& _a, const Vector3& _b)
 	);
 }
 
-} // namespace vector3
+} // namespace math
 } // namespace yae
