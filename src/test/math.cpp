@@ -69,9 +69,9 @@ void testQuaternion()
         Vector3 forward = yae::math::forward(Quaternion::IDENTITY);
         Vector3 up = yae::math::up(Quaternion::IDENTITY);
         Vector3 right = yae::math::right(Quaternion::IDENTITY);
-        TEST(yae::math::isEqual(forward, {1.f, 0.f, 0.f}));
+        TEST(yae::math::isEqual(forward, {0.f, 0.f, 1.f}));
         TEST(yae::math::isEqual(up, {0.f, 1.f, 0.f}));
-        TEST(yae::math::isEqual(right, {0.f, 0.f, 1.f}));
+        TEST(yae::math::isEqual(right, {1.f, 0.f, 0.f}));
     }
 
     // Tests for very small angle values

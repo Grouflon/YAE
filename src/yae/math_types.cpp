@@ -18,14 +18,14 @@ const float VERY_SMALL_NUMBER = FLT_EPSILON;
 
 const Vector2 Vector2::ZERO = Vector2(0.f);
 const Vector2 Vector2::ONE = Vector2(1.f);
-const Vector2 Vector2::FORWARD = Vector2(1.f, 0.f);
+const Vector2 Vector2::RIGHT = Vector2(1.f, 0.f);
 const Vector2 Vector2::UP = Vector2(0.f, 1.f);
 
 const Vector3 Vector3::ZERO = Vector3(0.f);
 const Vector3 Vector3::ONE = Vector3(1.f);
-const Vector3 Vector3::FORWARD = Vector3(1.f, 0.f, 0.f);
+const Vector3 Vector3::RIGHT = Vector3(1.f, 0.f, 0.f);
 const Vector3 Vector3::UP = Vector3(0.f, 1.f, 0.f);
-const Vector3 Vector3::RIGHT = Vector3(0.f, 0.f, 1.f);
+const Vector3 Vector3::FORWARD = Vector3(0.f, 0.f, 1.f);
 
 const Vector4 Vector4::ZERO = Vector4(0.f);
 const Vector4 Vector4::ONE = Vector4(1.f);
@@ -115,7 +115,12 @@ Matrix4 Matrix4::FromTransform(const Vector3& _position, const Quaternion& _rota
 
 Matrix4 Matrix4::FromPerspective(float _fov, float _aspectRatio, float _nearPlane, float _farPlane)
 {
-	return toYae(glm::perspective(_fov, _aspectRatio, _nearPlane, _farPlane));
+	return toYae(glm::perspectiveLH(_fov, _aspectRatio, _nearPlane, _farPlane));
+}
+
+Matrix4 Matrix4::FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up)
+{
+	return toYae(glm::lookAtLH(toGlm(_center), toGlm(_target), toGlm(_up)));
 }
 
 Matrix4 Matrix4::FromMatrix3(const Matrix3& _m)

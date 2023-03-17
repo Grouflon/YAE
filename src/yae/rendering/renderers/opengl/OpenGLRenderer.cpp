@@ -282,7 +282,7 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
     YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
     YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
     YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
-    YAE_GL_VERIFY(glCullFace(GL_BACK));
+    YAE_GL_VERIFY(glCullFace(GL_FRONT));
     YAE_GL_VERIFY(glEnable(GL_BLEND));
 	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 

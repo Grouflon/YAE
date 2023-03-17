@@ -220,8 +220,8 @@ void updateApplication(Application* _app, float _dt)
 		// ROTATION
 		float rotationSpeed = .2f;
 		Vector2 rotationInputRate = -input().getMouseDelta();
-		gameInstance->yaw = math::mod(gameInstance->yaw + rotationInputRate.x * rotationSpeed, 360.f);
-		gameInstance->pitch = math::clamp(gameInstance->pitch + rotationInputRate.y * rotationSpeed, -90.f, 90.f);
+		gameInstance->yaw = math::mod(gameInstance->yaw + rotationInputRate.x * rotationSpeed * -1.f, 360.f);
+		gameInstance->pitch = math::clamp(gameInstance->pitch + rotationInputRate.y * rotationSpeed * -1.f, -90.f, 90.f);
 		Quaternion cameraRotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
 		app().setCameraRotation(cameraRotation);		
 
@@ -258,13 +258,16 @@ void updateApplication(Application* _app, float _dt)
 	}
 
 	ImGui::Text("camera:");
-	ImGui::DragVector3("position", app().m_cameraPosition, .05f);
-	ImGui::DragRotation("rotation", app().m_cameraRotation);
-
-	Quaternion id = Quaternion::IDENTITY;
-	ImGui::Text("forward: %s", toString(math::forward(id)).c_str());
-	ImGui::Text("up: %s", toString(math::up(id)).c_str());
-	ImGui::Text("right: %s", toString(math::right(id)).c_str());
+	Vector3 p = app().getCameraPosition();
+	if (ImGui::DragVector3("position", p, .05f))
+	{
+		app().setCameraPosition(p);
+	}
+	Quaternion r = app().getCameraRotation();
+	if (ImGui::DragRotation("rotation", r))
+	{
+		app().setCameraRotation(r);
+	}
 
 	/*
     ImGui::SetNextWindowSize(ImVec2(600, 512));
@@ -278,9 +281,6 @@ void updateApplication(Application* _app, float _dt)
 	// Axis
 	Im3d::SetSize(5.f);
 	Im3d::DrawRotation(Quaternion::IDENTITY, 1.f);
-
-	Im3d::SetSize(8.f);
-	Im3d::DrawRotation(app().getCameraRotation(), .5f);
 
     /*
     Im3d::SetColor(Im3d::Color(1.f, 0.f, 0.f));
@@ -358,7 +358,6 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
-	/*
 	ImGui::Text("mesh1:");
 	imgui_matrix4((float*)&gameInstance->mesh1Transform);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
@@ -368,9 +367,7 @@ void updateApplication(Application* _app, float _dt)
 		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
 		gameInstance->texture->getTextureHandle()
 	);
-	*/
 
-	/*
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh2Transform,
@@ -378,18 +375,16 @@ void updateApplication(Application* _app, float _dt)
 		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
 		gameInstance->texture->getTextureHandle()
 	);
-	*/
 
-	/*
 	float fontScale = 0.005f;
-	gameInstance->fontTransform = matrix4::IDENTITY;
-	gameInstance->fontTransform = matrix4::scale(gameInstance->fontTransform, vector3::ONE * fontScale);
-	gameInstance->fontTransform = matrix4::translate(gameInstance->fontTransform, Vector3(210.f, 20.f, 0.f));
+	gameInstance->fontTransform = Matrix4::IDENTITY;
+	gameInstance->fontTransform = math::scale(gameInstance->fontTransform, Vector3::ONE * fontScale);
+	gameInstance->fontTransform = math::translate(gameInstance->fontTransform, Vector3(210.f, 20.f, 0.f));
 	renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
 	ImGui::Text("node %lld:", gameInstance->node2.id);
-	imgui_matrix4(gameInstance->node2->getWorldMatrix().data());
+	imgui_matrix4(math::data(gameInstance->node2->getWorldMatrix()));
 
 	renderer().drawMesh(
 		gameInstance->node2->getWorldMatrix(),
@@ -402,5 +397,4 @@ void updateApplication(Application* _app, float _dt)
 	{
 		drawNode(node);
 	}
-	*/
 }

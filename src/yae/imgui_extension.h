@@ -14,6 +14,8 @@ namespace yae {
 
 YAE_API void imgui_matrix4(const Matrix4& _matrix);
 YAE_API void imgui_matrix4(const float _matrix[16]);
+YAE_API void imgui_matrix3(const Matrix3& _matrix);
+YAE_API void imgui_matrix3(const float _matrix[9]);
 YAE_API void imgui_quaternion(const Quaternion& _q);
 
 } // namespace yae

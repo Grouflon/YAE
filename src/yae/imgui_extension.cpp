@@ -39,6 +39,20 @@ void imgui_matrix4(const float _matrix[16])
 	);
 }
 
+void imgui_matrix3(const Matrix3& _matrix)
+{
+	imgui_matrix3(math::data(_matrix));
+}
+
+void imgui_matrix3(const float _matrix[9])
+{
+	ImGui::Text("%.4f %.4f %.4f\n%.4f %.4f %.4f\n%.4f %.4f %.4f",
+	_matrix[0], _matrix[1], _matrix[2],
+	_matrix[3], _matrix[4], _matrix[5],
+	_matrix[6], _matrix[7], _matrix[8]
+	);
+}
+
 void imgui_quaternion(const Quaternion& _q)
 {
 	ImGui::Text("%.4f %.4f %.4f %.4f",
