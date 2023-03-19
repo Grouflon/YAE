@@ -7,6 +7,11 @@ namespace yae {
 
 MIRROR_CLASS_DEFINITION(FileResource);
 
+FileResource::FileResource()
+{
+	
+}
+
 FileResource::FileResource(const char* _path)
 	: Resource(filesystem::normalizePath(_path).c_str())
 {

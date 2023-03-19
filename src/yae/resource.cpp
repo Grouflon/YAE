@@ -8,6 +8,10 @@ MIRROR_CLASS_DEFINITION(Resource);
 
 const ResourceID UNDEFINED_RESOURCEID = ResourceID("");
 
+Resource::Resource()
+{
+	
+}
 
 Resource::Resource(ResourceID _id)
 	: m_id(_id)

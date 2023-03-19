@@ -33,7 +33,7 @@ class YAE_API Resource
 	);
 
 public:
-
+	Resource();
 	Resource(ResourceID _id);
 	Resource(const char* _name);
 	virtual ~Resource();
@@ -64,14 +64,13 @@ public:
 
 	Array<ResourceLog> m_logs;
 	String m_name;
-	ResourceID m_id;
+	ResourceID m_id = UNDEFINED_RESOURCEID;
 	u32 m_useCount = 0;
 	u32 m_loadCount = 0;
 	u32 m_errorCount = 0;
 	u32 m_warningCount = 0;
 	bool m_isLoading = false;
 };
-
 
 
 class YAE_API ResourceManager

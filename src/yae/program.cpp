@@ -11,6 +11,7 @@
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/JsonSerializer.h>
 #include <yae/resources/FileResource.h>
+#include <yae/ResourceManager.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
@@ -195,6 +196,9 @@ void Program::init(char** _args, int _argCount)
 	}
 
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
+	m_resourceManager2 = defaultAllocator().create<ResourceManager2>();
+
+	REGISTER_RESOURCE_TYPE(FileResource);
 
 	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
 	{
@@ -212,6 +216,9 @@ void Program::shutdown()
 	m_resourceManager->flushResources();
 	defaultAllocator().destroy(m_resourceManager);
 	m_resourceManager = nullptr;
+
+	defaultAllocator().destroy(m_resourceManager2);
+	m_resourceManager2 = nullptr;
 
 	for (int i = m_modules.size() - 1; i >= 0; --i)
 	{
@@ -402,6 +409,12 @@ ResourceManager& Program::resourceManager()
 {
 	YAE_ASSERT(m_resourceManager != nullptr);
 	return *m_resourceManager;
+}
+
+ResourceManager2& Program::resourceManager2()
+{
+	YAE_ASSERT(m_resourceManager2 != nullptr);
+	return *m_resourceManager2;
 }
 
 Logger& Program::logger()

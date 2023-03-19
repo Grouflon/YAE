@@ -15,6 +15,7 @@ class YAE_API FileResource : public Resource
 	);
 
 public:
+	FileResource();
 	FileResource(const char* _path);
 	virtual~ FileResource();
 
