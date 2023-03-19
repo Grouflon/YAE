@@ -112,4 +112,15 @@ enum class ShaderType : u8
 	FRAGMENT,
 };
 
+typedef void* FrameBufferHandle;
+
+struct RenderTarget
+{
+	u32 width;
+	u32 height;
+	FrameBufferHandle frameBuffer;
+	TextureHandle renderTexture;
+	TextureHandle depthTexture;
+};
+
 } // namespace yae

@@ -173,9 +173,20 @@ float yaw(const Quaternion& _q)
 	*/
 }
 
-Vector3 euler(const Quaternion& _q)
+Vector3 euler(const Quaternion& _q, bool _preventFlip)
 {
-	return Vector3(pitch(_q), yaw(_q), roll(_q));
+	float x = pitch(_q);
+	float y = yaw(_q);
+	float z = roll(_q);
+
+	// Prevents flipped values from occuring
+	if (_preventFlip && std::fabs(z) >= PI * 0.5f)
+	{
+	    x += PI;
+	    y = PI - y;
+	    z += PI;
+	}
+	return Vector3(x, y, z);
 }
 
 Vector3 rotate(const Quaternion& _q, const Vector3& _v)

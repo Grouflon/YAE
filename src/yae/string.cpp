@@ -318,6 +318,14 @@ bool String::operator!=(const String& _str) const
 	return !(*this == _str);
 }
 
+String operator+(const char* _lhs, const String& _rhs)
+{
+	String result(_rhs.allocator());
+	result += _lhs;
+	result += _rhs;
+	return result;
+}
+
 MallocString::MallocString()
 	: String(&mallocAllocator())
 {

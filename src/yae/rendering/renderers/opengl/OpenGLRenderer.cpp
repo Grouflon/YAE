@@ -73,7 +73,7 @@ void OpenGLRenderer::hintWindow()
 }
 
 bool OpenGLRenderer::init(GLFWwindow* _window)
-{
+{	
 	glfwMakeContextCurrent(_window);
     glfwSwapInterval(1); // Enable vsync
 
@@ -121,6 +121,8 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	const char* glVersion = (const char*)glGetString(GL_VERSION);
 	YAE_LOGF_CAT("renderer", "OpenGL Version: \"%s\"", glVersion);
 
+	m_window = _window;
+
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_vao));
 	YAE_GL_VERIFY(glBindVertexArray(m_vao));
 
@@ -142,6 +144,8 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0));
 	YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
 	YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));
+
+	YAE_GL_VERIFY(glBindVertexArray(0));
 
 	// Mesh shader
 	{
@@ -193,12 +197,76 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 		vertexShader->releaseUnuse();
 	}
 
-	m_window = _window;
+	// RenderTarget Shader
+	{
+		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/pass_through.vert", ShaderType::VERTEX);
+		vertexShader->useLoad();
+		YAE_ASSERT(vertexShader->isLoaded());
+
+		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/simple_texture.frag", ShaderType::FRAGMENT);
+		fragmentShader->useLoad();
+		YAE_ASSERT(fragmentShader->isLoaded());
+
+		ShaderHandle shaders[] =
+		{
+			vertexShader->getShaderHandle(),
+			fragmentShader->getShaderHandle()
+		};
+		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_renderTargetShader));
+
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_renderTargetShader, 0, "inPosition"));
+		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_renderTargetShader, 1, "inTexCoord"));
+
+		fragmentShader->releaseUnuse();
+		vertexShader->releaseUnuse();
+	}
+
+	// Quad
+	{
+		YAE_GL_VERIFY(glGenVertexArrays(1, &m_quadVertexArray));
+		YAE_GL_VERIFY(glBindVertexArray(m_quadVertexArray));
+		static const GLfloat g_quad_vertex_buffer_data[] = {
+			// vertex 				// uv
+			-1.0f, -1.0f, 0.0f,		0.0f, 0.0f,
+			1.0f, -1.0f, 0.0f,		1.0f, 0.0f,
+			-1.0f,  1.0f, 0.0f,		0.0f, 1.0f,
+			-1.0f,  1.0f, 0.0f,		0.0f, 1.0f,
+			1.0f, -1.0f, 0.0f,		1.0f, 0.0f,
+			1.0f,  1.0f, 0.0f,		1.0f, 1.0f,
+		};
+
+		YAE_GL_VERIFY(glGenBuffers(1, &m_quadVertexBuffer));
+		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_quadVertexBuffer));
+		YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW));
+
+		YAE_GL_VERIFY(glEnableVertexAttribArray(0));
+		YAE_GL_VERIFY(glEnableVertexAttribArray(1));
+		YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)0));
+		YAE_GL_VERIFY(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)(sizeof(float)*3)));
+
+		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
+	}
+
+	int width, height;
+    glfwGetFramebufferSize(m_window, &width, &height);
+	YAE_VERIFY(createRenderTarget(width, height, m_renderTarget));
+
 	return true;
 }
 
 void OpenGLRenderer::shutdown()
 {
+	destroyRenderTarget(m_renderTarget);
+	m_renderTarget = {};
+
+	glDeleteBuffers(1, &m_quadVertexBuffer);
+	m_quadVertexBuffer = 0;
+	glDeleteVertexArrays(1, &m_quadVertexArray);
+	m_quadVertexArray = 0;
+
+	destroyShaderProgram(m_renderTargetShader);
+	m_renderTargetShader = nullptr;
+
 	destroyShaderProgram(m_fontShader);
 	m_fontShader = nullptr;
 
@@ -216,11 +284,13 @@ void OpenGLRenderer::shutdown()
 
 FrameHandle OpenGLRenderer::beginFrame()
 {
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
+
 	int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
     glScissor(0, 0, width, height);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+    glClearColor(0.5f, 0.0f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	return nullptr;
@@ -229,6 +299,54 @@ FrameHandle OpenGLRenderer::beginFrame()
 void OpenGLRenderer::endFrame()
 {
 	glfwSwapBuffers(m_window);
+}
+
+void OpenGLRenderer::beginRenderTarget()
+{
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)m_renderTarget.frameBuffer)); 
+	glViewport(0, 0, m_renderTarget.width, m_renderTarget.height);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+}
+
+void OpenGLRenderer::endRenderTarget()
+{
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)0));
+}
+
+void OpenGLRenderer::drawRenderTarget()
+{
+	YAE_GL_VERIFY(glUseProgram((GLuint)m_renderTargetShader));
+
+	
+	YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+	GLint textureLocation = glGetUniformLocation((GLuint)m_renderTargetShader, "texture");
+	YAE_GL_VERIFY();
+	if (textureLocation >= 0)
+	{
+		YAE_GL_VERIFY(glUniform1i(textureLocation, 0));
+	}
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)m_renderTarget.renderTexture));
+
+	YAE_GL_VERIFY(glBindVertexArray(m_quadVertexArray));
+	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_quadVertexBuffer));
+
+	/*
+	YAE_GL_VERIFY(glEnableVertexAttribArray(0));
+	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
+	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)0));
+	YAE_GL_VERIFY(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)(sizeof(float)*3)));
+	*/
+
+	YAE_GL_VERIFY(glDrawArrays(GL_TRIANGLES, 0, 6));
+
+	/*
+	YAE_GL_VERIFY(glDisableVertexAttribArray(1));
+	YAE_GL_VERIFY(glDisableVertexAttribArray(0));
+	*/
+
+	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
+	YAE_GL_VERIFY(glBindVertexArray(0));
 }
 
 void OpenGLRenderer::waitIdle()
@@ -246,7 +364,7 @@ Vector2 OpenGLRenderer::getFrameBufferSize() const
 
 void OpenGLRenderer::notifyFrameBufferResized(int _width, int _height)
 {
-
+	resizeRenderTarget(m_renderTarget, _width, _height);
 }
 
 
@@ -334,6 +452,13 @@ void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
 		pair.value.clear();
 	}
 
+	YAE_GL_VERIFY(glDisableVertexAttribArray(0));
+	YAE_GL_VERIFY(glDisableVertexAttribArray(1));
+	YAE_GL_VERIFY(glDisableVertexAttribArray(2));
+
+	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
 	m_vertices.clear();
 	m_indices.clear();
 }
@@ -406,6 +531,80 @@ void OpenGLRenderer::destroyTexture(TextureHandle& _inTextureHandle)
 
 	GLuint textureId = reinterpret_cast<GLuint>(_inTextureHandle);
     YAE_GL_VERIFY(glDeleteTextures(1, &textureId));
+}
+
+bool OpenGLRenderer::createRenderTarget(int _width, int _height, RenderTarget& _outRenderTarget)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	_outRenderTarget.width = _width;
+	_outRenderTarget.height = _height;
+
+	GLuint textures[2];
+	YAE_GL_VERIFY(glGenTextures(2, textures));
+	_outRenderTarget.renderTexture = (TextureHandle)textures[0];
+	_outRenderTarget.depthTexture = (TextureHandle)textures[1];
+
+	// Render Texture
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_outRenderTarget.renderTexture));
+
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+
+	// Depth Texture
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_outRenderTarget.depthTexture));
+
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+
+	// Frame Buffer
+	YAE_GL_VERIFY(glGenFramebuffers(1, (GLuint*)&_outRenderTarget.frameBuffer));
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)_outRenderTarget.frameBuffer));
+
+	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (GLuint)_outRenderTarget.renderTexture, 0));
+	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)_outRenderTarget.depthTexture, 0));
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// What should we do if it fails ? let's think about this when it happens
+		return false;
+	}
+
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+	return true;
+}
+
+void OpenGLRenderer::resizeRenderTarget(RenderTarget& _renderTarget, int _width, int _height)
+{
+	_renderTarget.width = _width;
+	_renderTarget.height = _height;
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.renderTexture));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.depthTexture));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+}
+
+void OpenGLRenderer::destroyRenderTarget(RenderTarget& _outRenderTarget)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	GLuint textures[2] = {(GLuint)_outRenderTarget.renderTexture, (GLuint)_outRenderTarget.depthTexture };
+    YAE_GL_VERIFY(glDeleteTextures(2, textures));
+    YAE_GL_VERIFY(glDeleteFramebuffers(1, (GLuint*)&_outRenderTarget.frameBuffer));
 }
 
 bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _codeSize, ShaderHandle& _outShaderHandle)

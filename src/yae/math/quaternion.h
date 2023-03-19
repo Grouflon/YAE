@@ -35,7 +35,7 @@ inline Vector3 axis(const Quaternion& _q);
 inline float roll(const Quaternion& _q);
 inline float pitch(const Quaternion& _q);
 inline float yaw(const Quaternion& _q);
-inline Vector3 euler(const Quaternion& _q);
+inline Vector3 euler(const Quaternion& _q, bool _preventFlip = true);
 
 inline Vector3 rotate(const Quaternion& _q, const Vector3& _v);
 inline Quaternion rotationBetween(const Vector3& _start, const Vector3& _dest); // Rotation required to turn _start into _dest

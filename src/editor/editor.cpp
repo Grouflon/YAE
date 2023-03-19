@@ -6,25 +6,40 @@
 #include <yae/serialization/Serializer.h>
 #include <yae/imgui_extension.h>
 #include <yae/rendering/Renderer.h>
+#include <yae/ResourceManager.h>
+#include <yae/program.h>
+#include <yae/Mesh.h>
 
 #include <imgui/imgui.h>
 #include <mirror/mirror.h>
 
 using namespace yae;
 
+class MeshInspector
+{
+public:
+	String meshName;
+	bool opened = true;
+};
+
 struct EditorInstance
 {
+	bool showResources = false;
 	bool showMemoryProfiler = false;
 	bool showFrameRate = false;
 	bool showMirrorDebugWindow = false;
 	bool showRendererDebugWindow = false;
 	bool showDemoWindow = false;
 
+	// resource inspector
+	DataArray<MeshInspector*> meshInspectors;
+
 	// mirror window
 	mirror::TypeID selectedTypeID = mirror::UNDEFINED_TYPEID;
 
 	MIRROR_CLASS_NOVIRTUAL(EditorInstance)
 	(
+		MIRROR_MEMBER(showResources)();
 		MIRROR_MEMBER(showMemoryProfiler)();
 		MIRROR_MEMBER(showFrameRate)();
 		MIRROR_MEMBER(showRendererDebugWindow)();
@@ -33,6 +48,36 @@ struct EditorInstance
 	);
 };
 MIRROR_CLASS_DEFINITION(EditorInstance);
+
+MeshInspector* openMeshInspector(EditorInstance& _editorInstance, const char* _meshName)
+{
+	MeshInspector* inspector = nullptr;
+
+	for (MeshInspector* meshInspector : _editorInstance.meshInspectors)
+	{
+		if (meshInspector->meshName == _meshName)
+		{
+			inspector = meshInspector;
+			break;
+		}
+	}
+
+	if (inspector == nullptr)
+	{
+		inspector = toolAllocator().create<MeshInspector>();
+		inspector->meshName = _meshName;
+		_editorInstance.meshInspectors.push_back(inspector);
+	}
+	return inspector;
+}
+
+void closeMeshInspector(EditorInstance& _editorInstance, MeshInspector* _meshInspector)
+{
+	auto it = _editorInstance.meshInspectors.find(_meshInspector);
+	YAE_ASSERT(it != nullptr);
+	_editorInstance.meshInspectors.erase(it);
+	toolAllocator().destroy(_meshInspector);
+}
 
 void displayTypeTreeNode(EditorInstance* _editorInstance, mirror::TypeDesc* _type, mirror::TypeDesc* _parent = nullptr)
 {
@@ -114,6 +159,12 @@ void afterShutdownApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
 	_application->setUserData("editor", nullptr);
+
+	for (MeshInspector* meshInspector : editorInstance->meshInspectors)
+	{
+		toolAllocator().destroy(meshInspector);
+	}
+
 	toolAllocator().destroy(editorInstance);
 }
 
@@ -134,29 +185,73 @@ void updateApplication(yae::Application* _application, float _dt)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Profiling"))
+        if (ImGui::BeginMenu("Display"))
         {
-        	changedSettings = ImGui::MenuItem("Memory", NULL, &editorInstance->showMemoryProfiler) || changedSettings;
-        	changedSettings = ImGui::MenuItem("Frame rate", NULL, &editorInstance->showFrameRate) || changedSettings;
+	        changedSettings = ImGui::MenuItem("Resources", NULL, &editorInstance->showResources) || changedSettings;
+
+        	if (ImGui::BeginMenu("Profiling"))
+	        {
+	        	changedSettings = ImGui::MenuItem("Memory", NULL, &editorInstance->showMemoryProfiler) || changedSettings;
+	        	changedSettings = ImGui::MenuItem("Frame rate", NULL, &editorInstance->showFrameRate) || changedSettings;
+
+	            ImGui::EndMenu();
+	        }
+
+	        if (ImGui::BeginMenu("Debug"))
+	        {
+	        	changedSettings = ImGui::MenuItem("Mirror", NULL, &editorInstance->showMirrorDebugWindow) || changedSettings;
+	        	changedSettings = ImGui::MenuItem("Renderer", NULL, &editorInstance->showRendererDebugWindow) || changedSettings;
+	            ImGui::EndMenu();
+	        }
+
+	        if (ImGui::BeginMenu("Misc"))
+	        {
+	        	changedSettings = ImGui::MenuItem("ImGui Demo Window", NULL, &editorInstance->showDemoWindow) || changedSettings;
+	            ImGui::EndMenu();
+	        }
 
             ImGui::EndMenu();
         }
-
-        if (ImGui::BeginMenu("Debug"))
-        {
-        	changedSettings = ImGui::MenuItem("Mirror", NULL, &editorInstance->showMirrorDebugWindow) || changedSettings;
-        	changedSettings = ImGui::MenuItem("Renderer", NULL, &editorInstance->showRendererDebugWindow) || changedSettings;
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Misc"))
-        {
-        	changedSettings = ImGui::MenuItem("ImGui Demo Window", NULL, &editorInstance->showDemoWindow) || changedSettings;
-            ImGui::EndMenu();
-        }
-
 
         ImGui::EndMainMenuBar();
+    }
+
+    if (editorInstance->showResources)
+    {
+    	if (ImGui::Begin("Resources", &editorInstance->showResources, ImGuiWindowFlags_AlwaysAutoResize))
+    	{
+    		ResourceManager2& rm = program().resourceManager2();
+    		for (const MeshResource& meshResource : rm.getMeshResources())
+    		{
+	            if (ImGui::Selectable(meshResource.name, false))
+	            {
+	            	openMeshInspector(*editorInstance, meshResource.name);
+	            }
+	            ImGui::SameLine(150);
+	            ImGui::Text("%d vertices", meshResource.mesh->vertices.size());
+	            ImGui::SameLine(300);
+	            ImGui::Text("%d indices", meshResource.mesh->indices.size());
+    		}
+    	}
+    	ImGui::End();
+
+    	DataArray<MeshInspector*> tempInspectors(&scratchAllocator());
+    	tempInspectors = editorInstance->meshInspectors;
+    	for (MeshInspector* meshInspector : tempInspectors)
+    	{
+    		String name(&scratchAllocator());
+    		name = "Mesh: " + meshInspector->meshName;
+    		if (ImGui::Begin(name.c_str(), &meshInspector->opened))
+    		{
+    			ImGui::Text("bonjour!");
+    		}
+    		ImGui::End();
+
+    		if (!meshInspector->opened)
+    		{
+    			closeMeshInspector(*editorInstance, meshInspector);
+    		}
+    	}
     }
 
     if (editorInstance->showMemoryProfiler)

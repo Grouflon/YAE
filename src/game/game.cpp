@@ -6,7 +6,6 @@
 #include <yae/program.h>
 #include <yae/hash.h>
 #include <yae/resources/FileResource.h>
-#include <yae/resources/MeshResource.h>
 #include <yae/resources/TextureResource.h>
 #include <yae/resources/FontResource.h>
 #include <yae/math_types.h>
@@ -17,6 +16,8 @@
 #include <yae/serialization/JsonSerializer.h>
 #include <yae/Application.h>
 #include <yae/imgui_extension.h>
+#include <yae/Mesh.h>
+#include <yae/ResourceManager.h>
 
 #include <game/transform.h>
 
@@ -96,7 +97,7 @@ public:
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
 	Matrix4 fontTransform = Matrix4::IDENTITY;
 
-	MeshResource* mesh = nullptr;
+	Mesh mesh;
 	TextureResource* texture = nullptr;
 	FontResource* font = nullptr;
 
@@ -141,9 +142,8 @@ void afterInitApplication(Application* _app)
 	gameInstance->mesh2Transform[3][0] = 1.f;
 	gameInstance->mesh2Transform[3][1] = -1.f;
 
-	gameInstance->mesh = findOrCreateResource<MeshResource>("./data/models/viking_room.obj");
-	gameInstance->mesh->useLoad();
-	YAE_ASSERT(gameInstance->mesh->isLoaded());
+	YAE_VERIFY(Mesh::LoadFromObjFile(gameInstance->mesh, "./data/models/viking_room.obj"));
+	program().resourceManager2().registerMesh("room", &gameInstance->mesh);
 
 	gameInstance->texture = findOrCreateResource<TextureResource>("./data/textures/viking_room.png");
 	gameInstance->texture->useLoad();
@@ -169,7 +169,7 @@ void beforeShutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
-	gameInstance->mesh->releaseUnuse();
+	program().resourceManager2().unregisterMesh("room");
 	gameInstance->texture->releaseUnuse();
 	gameInstance->font->releaseUnuse();
 
@@ -358,21 +358,22 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
+	Mesh* mesh = program().resourceManager2().getMesh("room");
+
+
 	ImGui::Text("mesh1:");
 	imgui_matrix4((float*)&gameInstance->mesh1Transform);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh1Transform,
-		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(), 
-		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(), 
+		*mesh, 
 		gameInstance->texture->getTextureHandle()
 	);
 
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh2Transform,
-		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(),
-		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
+		*mesh,
 		gameInstance->texture->getTextureHandle()
 	);
 
@@ -388,8 +389,7 @@ void updateApplication(Application* _app, float _dt)
 
 	renderer().drawMesh(
 		gameInstance->node2->getWorldMatrix(),
-		gameInstance->mesh->m_vertices.data(), gameInstance->mesh->m_vertices.size(),
-		gameInstance->mesh->m_indices.data(), gameInstance->mesh->m_indices.size(),
+		*mesh,
 		gameInstance->texture->getTextureHandle()
 	);
 

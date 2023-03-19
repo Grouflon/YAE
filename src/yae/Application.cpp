@@ -181,18 +181,16 @@ bool Application::doFrame()
 	}
 
     // Rendering
-	FrameHandle frameHandle = m_renderer->beginFrame();
+    OpenGLRenderer* renderer = (OpenGLRenderer*)m_renderer;
 
-    // Mesh
-    m_renderer->drawCommands(frameHandle);
+    renderer->beginRenderTarget();
+    m_renderer->drawCommands(nullptr);
+	m_im3dSystem->render(nullptr);
+    renderer->endRenderTarget();
 
-	// Im3d
-	m_im3dSystem->render(frameHandle);
-
-	// ImGui
-	m_imGuiSystem->render(frameHandle);
-
-	// End Frame
+	renderer->beginFrame();
+	renderer->drawRenderTarget();
+	m_imGuiSystem->render(nullptr);
 	m_renderer->endFrame();
 
 	// Settings
@@ -328,6 +326,7 @@ void Application::loadSettings()
 	if (settings.windowWidth > 0 && settings.windowHeight > 0)
 	{
 		glfwSetWindowSize(m_window, settings.windowWidth, settings.windowHeight);
+		m_renderer->notifyFrameBufferResized(settings.windowWidth, settings.windowHeight); // @TODO(remi): This should be notified automatically. Maybe we should wrap this call
 	}
 	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
 	if (settings.windowX != -1 && settings.windowY != -1)

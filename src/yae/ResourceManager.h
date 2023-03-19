@@ -1,17 +1,17 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/containers/HashMap.h>
+#include <yae/hash.h>
 
 namespace yae {
 
-typedef Resource* (*AllocateResourceFunction)(Allocator* _allocator);
-typedef void (*DeallocateResourceFunction)(Allocator* _allocator, Resource* _resource);
+struct Mesh;
 
-struct ResourceTypeDescriptor
+struct MeshResource
 {
-	String name;
-	AllocateResourceFunction allocateFunction = nullptr;
-	DeallocateResourceFunction deallocateFunction = nullptr;
+	char name[256] = {};
+	Mesh* mesh;
 };
 
 class YAE_API ResourceManager2
@@ -19,37 +19,14 @@ class YAE_API ResourceManager2
 public:
 	ResourceManager2() {}
 
-	void registerResourceType(const ResourceTypeDescriptor& _descriptor)
-	{
-		StringHash hash = StringHash(_descriptor.name.c_str());
-		YAE_ASSERT(m_resourceTypes.get(hash) == nullptr);
-		m_resourceTypes.set(hash, _descriptor);
-	}
-
-	void unregisterResourceType(const char* _name)
-	{
-		StringHash hash = StringHash(_name);
-		YAE_ASSERT(m_resourceTypes.get(hash) != nullptr);
-		m_resourceTypes.remove(hash);
-	}
+	void registerMesh(const char* _name, Mesh* _mesh);
+	void unregisterMesh(const char* _name);
+	Mesh* getMesh(const char* _name) const;
+	const DataArray<MeshResource>& getMeshResources() const;
 
 //private:
-	HashMap<StringHash, ResourceTypeDescriptor> m_resourceTypes;
+	HashMap<StringHash, MeshResource> m_meshesByName;
+	DataArray<MeshResource> m_meshes;
 };
-
-#define REGISTER_RESOURCE_TYPE(ResourceType) \
-do { \
-	yae::ResourceTypeDescriptor __descriptor; \
-	__descriptor.name = #ResourceType; \
-	__descriptor.allocateFunction = [](yae::Allocator* _allocator) -> yae::Resource* \
-	{ \
-		return _allocator->create<ResourceType>(); \
-	}; \
-	__descriptor.deallocateFunction = [](yae::Allocator* _allocator, Resource* _resource) \
-	{ \
-		return _allocator->destroy(_resource); \
-	}; \
-	yae::program().resourceManager2().registerResourceType(__descriptor); \
-} while(0)\
 
 } // namespace yae

@@ -81,7 +81,7 @@ void testQuaternion()
 
         TEST(toGlm(q) == g_q);
         glm::vec3 g_a = glm::eulerAngles(g_q);
-        Vector3 a = yae::math::euler(q);
+        Vector3 a = yae::math::euler(q, false);
         TEST(yae::math::isEqual(a, toYae(g_a)));
     }
 
@@ -95,7 +95,7 @@ void testQuaternion()
         // euler angles
         TEST(yae::math::isEqual(qa, toYae(g_qa)));
         glm::vec3 g_ea = glm::eulerAngles(g_qa);
-        Vector3 ea = yae::math::euler(qa);
+        Vector3 ea = yae::math::euler(qa, false);
         TEST(yae::math::isEqual(ea, toYae(g_ea)));
 
         glm::quat g_qaa = glm::quat(g_ea);        

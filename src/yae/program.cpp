@@ -198,8 +198,6 @@ void Program::init(char** _args, int _argCount)
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
 	m_resourceManager2 = defaultAllocator().create<ResourceManager2>();
 
-	REGISTER_RESOURCE_TYPE(FileResource);
-
 	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
 	{
 		platform::getWindowSize(consoleWindowHandle, &m_previousConsoleWindowWidth, &m_previousConsoleWindowHeight);

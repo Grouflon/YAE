@@ -14,6 +14,7 @@ namespace Im3d
 namespace yae {
 
 class FontResource;
+struct Mesh;
 
 class YAE_API Renderer
 {
@@ -39,12 +40,17 @@ public:
 	virtual bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) = 0;
 	virtual void destroyTexture(TextureHandle& _inTextureHandle) = 0;
 
+	virtual bool createRenderTarget(int _width, int _height, RenderTarget& _outRenderTarget) = 0;
+	virtual void resizeRenderTarget(RenderTarget& _RenderTarget, int _width, int _height) = 0;
+	virtual void destroyRenderTarget(RenderTarget& _outRenderTarget) = 0;
+
 	virtual bool createShader(ShaderType _type, const char* _source, size_t _sourceSize, ShaderHandle& _outShaderHandle) = 0;
 	virtual void destroyShader(ShaderHandle& _shaderHandle) = 0;
 
 	virtual bool createShaderProgram(ShaderHandle* _shaderHandles, u16 _shaderHandleCount, ShaderProgramHandle& _outShaderProgramHandle) = 0;
 	virtual void destroyShaderProgram(ShaderProgramHandle& _shaderProgramHandle) = 0;
 
+	void drawMesh(const Matrix4& _transform, const Mesh& _mesh, const TextureHandle& _textureHandle);
 	virtual void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const TextureHandle& _textureHandle) = 0;
 	virtual void drawText(const Matrix4& _transform, const FontResource* _font, const char* _text) = 0;
 

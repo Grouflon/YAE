@@ -57,6 +57,7 @@ private:
 	Allocator* m_allocator = nullptr;
 };
 
+YAE_API String operator+(const char* _lhs, const String& _rhs);
 
 
 class YAE_API MallocString : public String

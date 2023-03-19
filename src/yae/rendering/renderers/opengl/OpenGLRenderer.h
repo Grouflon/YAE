@@ -21,6 +21,11 @@ public:
 
 	virtual FrameHandle beginFrame() override;
   	virtual void endFrame() override;
+
+  	void beginRenderTarget();
+  	void endRenderTarget();
+  	void drawRenderTarget();
+
 	virtual void waitIdle() override;
 
 	virtual Vector2 getFrameBufferSize() const override;
@@ -30,6 +35,10 @@ public:
 
 	virtual bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) override;
 	virtual void destroyTexture(TextureHandle& _inTextureHandle) override;
+
+	virtual bool createRenderTarget(int _width, int _height, RenderTarget& _outRenderTarget) override;
+	virtual void resizeRenderTarget(RenderTarget& _renderTarget, int _width, int _height) override;
+	virtual void destroyRenderTarget(RenderTarget& _outRenderTarget) override;
 
 	virtual bool createShader(ShaderType _type, const char* _source, size_t _sourceSize, ShaderHandle& _outShaderHandle) override;
 	virtual void destroyShader(ShaderHandle& _shaderHandle) override;
@@ -52,6 +61,7 @@ public:
 
 	ShaderProgramHandle m_shader = nullptr;
 	ShaderProgramHandle m_fontShader = nullptr;
+	ShaderProgramHandle m_renderTargetShader = nullptr;
 
 	u32 m_vao = 0;
 	u32 m_vertexBufferObject = 0;
@@ -73,6 +83,11 @@ public:
 	ShaderProgramHandle m_im3dShaderPoints = nullptr;
 	ShaderProgramHandle m_im3dShaderLines = nullptr;
 	ShaderProgramHandle m_im3dShaderTriangles = nullptr;
+
+	u32 m_quadVertexArray = 0;
+	u32 m_quadVertexBuffer = 0;
+
+	RenderTarget m_renderTarget;
 };
 
 } // namespace yae
