@@ -9,8 +9,11 @@
 #include <yae/ResourceManager.h>
 #include <yae/program.h>
 #include <yae/Mesh.h>
+#include <yae/math_3d.h>
+#include <yae/im3d_extension.h>
 
 #include <imgui/imgui.h>
+#include <im3d/im3d.h>
 #include <mirror/mirror.h>
 
 using namespace yae;
@@ -20,6 +23,7 @@ class MeshInspector
 public:
 	String meshName;
 	bool opened = true;
+	RenderTarget* renderTarget = nullptr;
 };
 
 struct EditorInstance
@@ -66,8 +70,16 @@ MeshInspector* openMeshInspector(EditorInstance& _editorInstance, const char* _m
 	{
 		inspector = toolAllocator().create<MeshInspector>();
 		inspector->meshName = _meshName;
+		inspector->renderTarget = renderer().createRenderTarget(false, 8, 8);
+		RenderScene* scene = renderer().createScene(_meshName);
+		RenderCamera* camera = renderer().createCamera(_meshName);
+		scene->addCamera(camera);
+		camera->renderTarget = inspector->renderTarget;
+		camera->clearColor = Vector4(.1f, .1f, .1f, 1.f);
 		_editorInstance.meshInspectors.push_back(inspector);
 	}
+
+
 	return inspector;
 }
 
@@ -76,6 +88,10 @@ void closeMeshInspector(EditorInstance& _editorInstance, MeshInspector* _meshIns
 	auto it = _editorInstance.meshInspectors.find(_meshInspector);
 	YAE_ASSERT(it != nullptr);
 	_editorInstance.meshInspectors.erase(it);
+
+	renderer().destroyRenderTarget(_meshInspector->renderTarget);
+	renderer().destroyScene(_meshInspector->meshName.c_str());
+	renderer().destroyCamera(_meshInspector->meshName.c_str());
 	toolAllocator().destroy(_meshInspector);
 }
 
@@ -239,11 +255,48 @@ void updateApplication(yae::Application* _application, float _dt)
     	tempInspectors = editorInstance->meshInspectors;
     	for (MeshInspector* meshInspector : tempInspectors)
     	{
+    		Mesh* mesh = program().resourceManager2().getMesh(meshInspector->meshName.c_str());
+    		YAE_ASSERT(mesh != nullptr);
+
+    		RenderCamera* camera = renderer().getCamera(meshInspector->meshName.c_str());
+    		Vector3 cameraArm = Vector3::FORWARD * -4.f + Vector3::RIGHT * -4.f + Vector3::UP * 2.f; 
+			camera->position = Quaternion::FromAngleAxis(app().getTime() * PI * 0.2f, Vector3::UP) * cameraArm;
+			Matrix4 cameraTransform = math::inverse(Matrix4::FromLookAt(camera->position, Vector3::ZERO, -Vector3::UP));
+			camera->rotation = Quaternion::FromMatrix4(cameraTransform);
+
+    		renderer().pushScene(meshInspector->meshName.c_str());
+    		{
+				Im3d::SetSize(4.0f);
+    			Im3d::DrawRotation(Quaternion::IDENTITY, 1.5f);
+
+    			static int gridSize = 20;
+				const float gridHalf = (float)gridSize * 0.5f;
+				Im3d::SetAlpha(1.0f);
+				Im3d::SetSize(2.0f);
+				Im3d::BeginLines();
+					for (int x = 0; x <= gridSize; ++x)
+					{
+						Im3d::Vertex(-gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(0.0f, 0.0f, 0.0f));
+						Im3d::Vertex( gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(1.0f, 0.0f, 0.0f));
+					}
+					for (int z = 0; z <= gridSize; ++z)
+					{
+						Im3d::Vertex((float)z - gridHalf, 0.0f, -gridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
+						Im3d::Vertex((float)z - gridHalf, 0.0f,  gridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
+					}
+				Im3d::End();
+
+				renderer().drawMesh(Matrix4::IDENTITY, *mesh, 0, 0);
+    		}
+    		renderer().popScene();
+
     		String name(&scratchAllocator());
     		name = "Mesh: " + meshInspector->meshName;
     		if (ImGui::Begin(name.c_str(), &meshInspector->opened))
     		{
-    			ImGui::Text("bonjour!");
+    			ImVec2 windowSize = ImGui::GetContentRegionAvail();
+    			renderer().resizeRenderTarget(meshInspector->renderTarget, windowSize.x , windowSize.y);
+    			ImGui::Image((void*)meshInspector->renderTarget->m_renderTexture, windowSize);
     		}
     		ImGui::End();
 
@@ -329,10 +382,12 @@ void updateApplication(yae::Application* _application, float _dt)
     	bool previousOpen = editorInstance->showRendererDebugWindow;
 		if (ImGui::Begin("Renderer", &editorInstance->showRendererDebugWindow))
     	{
+    		/*
     		ImGui::Text("view matrix:");
 			imgui_matrix4(renderer().m_viewMatrix);
     		ImGui::Text("projection matrix:");
 			imgui_matrix4(renderer().m_projMatrix);
+			*/
     	}
     	ImGui::End();
 

@@ -5,10 +5,9 @@
 #include <yae/Module.h>
 #include <yae/time.h>
 #include <yae/memory.h>
+#include <yae/string.h>
 #include <yae/input.h>
 #include <yae/math_3d.h>
-#include <yae/ImGuiSystem.h>
-#include <yae/Im3dSystem.h>
 #include <yae/resources/FileResource.h>
 #include <yae/filesystem.h>
 #include <yae/serialization/serialization.h>
@@ -21,6 +20,7 @@
 #include <yae/rendering/renderers/opengl/OpenGLRenderer.h>
 #endif
 
+#include <imgui/backends/imgui_impl_glfw.h>
 #include <GLFW/glfw3.h>
 
 namespace yae {
@@ -32,17 +32,12 @@ struct ApplicationSettings
 	i32 windowX = -1;
 	i32 windowY = -1;
 
-	float cameraPosition[3] = {};
-	float cameraRotation[4] = {0.f, 0.f, 0.f, 1.f};
-
 	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
 	(
 		MIRROR_MEMBER(windowWidth)();
 		MIRROR_MEMBER(windowHeight)();
 		MIRROR_MEMBER(windowX)();
 		MIRROR_MEMBER(windowY)();
-		MIRROR_MEMBER(cameraPosition)();
-		MIRROR_MEMBER(cameraRotation)();
 	);
 };
 
@@ -82,11 +77,39 @@ void Application::init(char** _args, int _argCount)
 	glfwSetWindowUserPointer(m_window, this);
 
 	YAE_ASSERT(m_window);
+	// Setup callbacks
+	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
+	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
+	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
+	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
+	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
+
 	YAE_VERBOSE_CAT("glfw", "Created glfw window");
 
 	// Init Input System
 	m_inputSystem = defaultAllocator().create<InputSystem>();
 	m_inputSystem->init(m_window);
+
+	// ImGui
+	m_imguiContext = ImGui::CreateContext();
+	ImGui::SetCurrentContext(m_imguiContext);
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	ImGui::StyleColorsDark();
+	switch(m_renderer->getType())
+	{
+		case RendererType::Vulkan: 
+		{
+			YAE_VERIFY(ImGui_ImplGlfw_InitForVulkan(m_window, true));
+		}
+		break;
+		case RendererType::OpenGL:
+		{
+			YAE_VERIFY(ImGui_ImplGlfw_InitForOpenGL(m_window, true));
+		}
+		break;
+	}
 
 	// Init renderer
 	YAE_VERIFY(m_renderer->init(m_window) == true);
@@ -95,39 +118,24 @@ void Application::init(char** _args, int _argCount)
 
 	loadSettings();
 
-	// Setup callbacks
-	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
-	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
-	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
-	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
-	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
-
-	// Setup Dear ImGui context (depends on glfw callbacks being already bound, therefore is after)
-	m_imGuiSystem = defaultAllocator().create<ImGuiSystem>();
-	m_imGuiSystem->init(m_window, m_renderer);
-
-	// Setup Im3d
-	m_im3dSystem = defaultAllocator().create<Im3dSystem>();
-	m_im3dSystem->init();
+	ImGui::SetCurrentContext(nullptr);
 }
 
 void Application::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
 
+	ImGui::SetCurrentContext(m_imguiContext);
 	renderer().waitIdle();
-
-	m_im3dSystem->shutdown();
-	defaultAllocator().destroy(m_im3dSystem);
-	m_im3dSystem = nullptr;
-
-	m_imGuiSystem->shutdown();
-	defaultAllocator().destroy(m_imGuiSystem);
-	m_imGuiSystem = nullptr;
 
 	m_renderer->shutdown();
 	defaultAllocator().destroy(m_renderer);
 	m_renderer = nullptr;
+
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::SetCurrentContext(nullptr);
+	ImGui::DestroyContext(m_imguiContext);
+	m_imguiContext = nullptr;
 
 	m_inputSystem->shutdown();
 	defaultAllocator().destroy(m_inputSystem);
@@ -142,8 +150,11 @@ bool Application::doFrame()
 {
 	YAE_CAPTURE_FUNCTION();
 
+	ImGui::SetCurrentContext(m_imguiContext);
+
 	Time frameTime = m_clock.reset();
-	float dt = frameTime.asSeconds();
+	m_dt = frameTime.asSeconds();
+	m_time += m_dt;
 
 	if (glfwWindowShouldClose(m_window))
 		return false;
@@ -154,43 +165,22 @@ bool Application::doFrame()
 		//glfwPollEvents();
 		m_inputSystem->update();
 
-		m_imGuiSystem->newFrame();
-
-		// This is weird that this is here, it should be just before rendering
-		// But im3d seems to need them when its newframe call is done...
-		Matrix4 view = _computeCameraView();
-		Matrix4 proj = _computeCameraProj();
-		renderer().setViewProjectionMatrix(view, proj);
-
-		Im3dCamera im3dCamera = {};
-		im3dCamera.position = m_cameraPosition;
-		im3dCamera.direction = math::rotate(m_cameraRotation, Vector3::FORWARD);
-		im3dCamera.view = view;
-		im3dCamera.projection = proj;
-		im3dCamera.fov = m_cameraFov * D2R;
-		im3dCamera.orthographic = false;
-		m_im3dSystem->newFrame(dt, im3dCamera);
+		m_renderer->beginFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 	}
 
 	for (Module* module : program().getModules())
 	{
 		if (module->updateApplicationFunction != nullptr)
 		{
-			module->updateApplicationFunction(this, dt);
+			module->updateApplicationFunction(this, m_dt);
 		}
 	}
 
     // Rendering
-    OpenGLRenderer* renderer = (OpenGLRenderer*)m_renderer;
-
-    renderer->beginRenderTarget();
-    m_renderer->drawCommands(nullptr);
-	m_im3dSystem->render(nullptr);
-    renderer->endRenderTarget();
-
-	renderer->beginFrame();
-	renderer->drawRenderTarget();
-	m_imGuiSystem->render(nullptr);
+	ImGui::Render();
+    m_renderer->render();
 	m_renderer->endFrame();
 
 	// Settings
@@ -223,40 +213,6 @@ Renderer& Application::renderer() const
 {
 	YAE_ASSERT(m_renderer != nullptr);
 	return *m_renderer;
-}
-
-ImGuiSystem& Application::imguiSystem() const
-{
-	YAE_ASSERT(m_imGuiSystem != nullptr);
-	return *m_imGuiSystem;
-}
-
-Vector3 Application::getCameraPosition() const
-{
-	return m_cameraPosition;
-}
-
-Quaternion Application::getCameraRotation() const
-{
-	return m_cameraRotation;
-}
-
-void Application::setCameraPosition(const Vector3& _position)
-{
-	if (_position == m_cameraPosition)
-		return;
-
-	m_cameraPosition = _position;
-	_requestSaveSettings();
-}
-
-void Application::setCameraRotation(const Quaternion& _rotation)
-{
-	if (_rotation == m_cameraRotation)
-		return;
-
-	m_cameraRotation = _rotation;
-	_requestSaveSettings();
 }
 
 void* Application::getUserData(const char* _name) const
@@ -334,12 +290,6 @@ void Application::loadSettings()
 		glfwSetWindowPos(m_window, settings.windowX, settings.windowY);
 	}
 
-	Vector3 cameraPosition;
-	Quaternion cameraRotation;
-	memcpy(math::data(cameraPosition), settings.cameraPosition, sizeof(settings.cameraPosition));
-	memcpy(math::data(cameraRotation), settings.cameraRotation, sizeof(settings.cameraRotation));
-	setCameraPosition(cameraPosition);
-	setCameraRotation(cameraRotation);
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
 }
 
@@ -348,8 +298,6 @@ void Application::saveSettings()
 	ApplicationSettings settings;
 	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
 	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
-	memcpy(settings.cameraPosition, math::data(getCameraPosition()), sizeof(settings.cameraPosition));
-	memcpy(settings.cameraRotation, math::data(getCameraRotation()), sizeof(settings.cameraRotation));
 
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
@@ -371,6 +319,16 @@ void Application::saveSettings()
 	file.close();
 
 	YAE_VERBOSEF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
+}
+
+float Application::getDeltaTime() const
+{
+	return m_dt;
+}
+
+float Application::getTime() const
+{
+	return m_time;
 }
 
 void Application::_glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y)
@@ -404,23 +362,6 @@ void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, dou
 {
 	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
 	Application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
-}
-
-Matrix4 Application::_computeCameraView() const
-{
-	Matrix4 cameraTransform = Matrix4::FromTransform(m_cameraPosition, m_cameraRotation, Vector3::ONE);
-	Matrix4 view = math::inverse(cameraTransform);
-	return view;
-}
-
-Matrix4 Application::_computeCameraProj() const
-{
-	Vector2 viewportSize = renderer().getFrameBufferSize();
-	YAE_ASSERT(!math::isZero(viewportSize));
-	float fov = m_cameraFov * D2R;
-	float aspectRatio = viewportSize.x / viewportSize.y;
-	Matrix4 proj = Matrix4::FromPerspective(fov, aspectRatio, .1f, 100.f);
-	return proj;
 }
 
 void Application::_requestSaveSettings()

@@ -134,7 +134,8 @@ extern Allocator* g_toolAllocator;
 } // namespace yae
 
 // BASE INCLUDES
-#include <yae/string.h>
+#include <yae/string_types.h>
 #include <yae/logging.h>
 #include <yae/profiling.h>
 #include <yae/math_types.h>
+#include <yae/StringHash.h>

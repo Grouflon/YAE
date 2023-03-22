@@ -3,12 +3,6 @@
 #include <cmath>
 
 namespace yae {
-
-String toString(const Vector4& _v)
-{
-	return string::format("{%.2f, %.2f, %.2f, %.2f}", _v.x, _v.y, _v.z, _v.w);
-}
-
 namespace math {
 
 bool isZero(const Vector4& _v, float _threshold)

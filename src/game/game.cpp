@@ -4,7 +4,6 @@
 #include <yae/containers/Array.h>
 #include <yae/filesystem.h>
 #include <yae/program.h>
-#include <yae/hash.h>
 #include <yae/resources/FileResource.h>
 #include <yae/resources/TextureResource.h>
 #include <yae/resources/FontResource.h>
@@ -18,6 +17,8 @@
 #include <yae/imgui_extension.h>
 #include <yae/Mesh.h>
 #include <yae/ResourceManager.h>
+#include <yae/serialization/serialization.h>
+#include <yae/im3d_extension.h>
 
 #include <game/transform.h>
 
@@ -29,31 +30,6 @@
 #include <vector>
 
 using namespace yae;
-
-namespace Im3d {
-	void DrawRotation(const Quaternion& _q, float _radius = 1.f)
-	{
-		Vector3 forward = math::forward(_q) * _radius;
-		Vector3 up = math::up(_q) * _radius;
-		Vector3 right = math::right(_q) * _radius;
-
-	    Im3d::BeginLines();
-	    	Im3d::SetColor(Im3d::Color_Red);
-	    	Im3d::Vertex(0.f, 0.f, 0.f);
-	    	Im3d::Vertex(forward.x, forward.y, forward.z);
-	    Im3d::End();
-	    Im3d::BeginLines();
-	    	Im3d::SetColor(Im3d::Color_Green);
-	    	Im3d::Vertex(0.f, 0.f, 0.f);
-	    	Im3d::Vertex(up.x, up.y, up.z);
-	    Im3d::End();
-	    Im3d::BeginLines();
-	    	Im3d::SetColor(Im3d::Color_Blue);
-	    	Im3d::Vertex(0.f, 0.f, 0.f);
-	    	Im3d::Vertex(right.x, right.y, right.z);
-	    Im3d::End();
-	}
-}
 
 static void drawNode(NodeID _nodeID)
 {
@@ -92,6 +68,7 @@ class GameInstance
 public:
 	float pitch = 0.f;
 	float yaw = 0.f;
+	float cameraPosition[3] = {};
 	bool fpsModeEnabled = false;
 	Matrix4 mesh1Transform = Matrix4::IDENTITY;
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
@@ -105,7 +82,15 @@ public:
 	NodeID node2;
 	NodeID node3;
 	NodeID node4;
+
+	MIRROR_CLASS_NOVIRTUAL(GameInstance)
+	(
+		MIRROR_MEMBER(pitch)();
+		MIRROR_MEMBER(yaw)();
+		MIRROR_MEMBER(cameraPosition)();
+	);
 };
+MIRROR_CLASS_DEFINITION(GameInstance);
 
 void onModuleLoaded(yae::Program* _program, yae::Module* _module)
 {
@@ -123,15 +108,17 @@ void shutdownModule(yae::Program* _program, yae::Module* _module)
 {
 }
 
-void afterInitApplication(Application* _app)
+void beforeInitApplication(Application* _app)
 {
 	GameInstance* gameInstance = defaultAllocator().create<GameInstance>();
 	YAE_ASSERT(gameInstance != nullptr);
 	app().setUserData("game", gameInstance);
+}
 
-	Vector3 cameraAngles = R2D * math::euler(app().getCameraRotation());
-	gameInstance->pitch = cameraAngles.x;
-	gameInstance->yaw = cameraAngles.y;
+void afterInitApplication(Application* _app)
+{
+	GameInstance* gameInstance = (GameInstance*)_app->getUserData("game");
+	YAE_ASSERT(gameInstance != nullptr);
 
 	//app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
@@ -163,6 +150,17 @@ void afterInitApplication(Application* _app)
 	gameInstance->node2->setLocalPosition(Vector3(0.f, 0.f, 1.f));
 
 	gameInstance->node2->setParent(gameInstance->node1);
+
+	RenderCamera* gameCamera = renderer().createCamera("game");
+	gameCamera->fov = 45.f;
+	gameCamera->nearPlane = .1f;
+	gameCamera->farPlane = 100.f;
+	gameCamera->position = Vector3(gameInstance->cameraPosition[0], gameInstance->cameraPosition[1], gameInstance->cameraPosition[2]);
+	gameCamera->rotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
+	gameCamera->clearColor = Vector4(.5f, .5f, .5f, 1.f);
+
+	RenderScene* defaultScene = renderer().createScene("game");
+	defaultScene->addCamera(gameCamera);
 }
 
 void beforeShutdownApplication(Application* _app)
@@ -176,17 +174,26 @@ void beforeShutdownApplication(Application* _app)
 	spatialSystem().destroyNode(gameInstance->node2);
 	spatialSystem().destroyNode(gameInstance->node1);
 
-	defaultAllocator().destroy(gameInstance);
-	app().setUserData("game", nullptr);
-
 	SpatialSystem* spatialSystemPtr = (SpatialSystem*)(app().getUserData("spatialSystem"));
 	defaultAllocator().destroy(spatialSystemPtr);
 	app().setUserData("spatialSystem", nullptr);
 }
 
+void afterShutdownApplication(Application* _app)
+{
+	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
+	defaultAllocator().destroy(gameInstance);
+	app().setUserData("game", nullptr);
+}
+
 void updateApplication(Application* _app, float _dt)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
+	YAE_ASSERT(gameInstance);
+	RenderCamera* gameCamera = renderer().getCamera("game");
+	YAE_ASSERT(gameCamera);
+
+	renderer().pushScene("game");
 
 	// EXIT PROGRAM
 	if (input().isKeyDown(GLFW_KEY_ESCAPE))
@@ -222,13 +229,13 @@ void updateApplication(Application* _app, float _dt)
 		Vector2 rotationInputRate = -input().getMouseDelta();
 		gameInstance->yaw = math::mod(gameInstance->yaw + rotationInputRate.x * rotationSpeed * -1.f, 360.f);
 		gameInstance->pitch = math::clamp(gameInstance->pitch + rotationInputRate.y * rotationSpeed * -1.f, -90.f, 90.f);
-		Quaternion cameraRotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
-		app().setCameraRotation(cameraRotation);		
+		gameCamera->rotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
 
 		// TRANSLATION
-		Vector3 forward = math::forward(app().getCameraRotation()); // @NOTE: forward is reversed, we need to figure out why at some point
-		Vector3 right = math::right(app().getCameraRotation());
-		//Vector3 up = app().getCameraRotation().up();
+		Vector3 forward = math::forward(gameCamera->rotation);
+		Vector3 right = math::right(gameCamera->rotation);
+		//Vector3 up = math::up(gameCamera->rotation);
+
 		Vector3 inputRate = Vector3::ZERO;
 
 		if (input().isKeyDown(GLFW_KEY_D))
@@ -250,23 +257,29 @@ void updateApplication(Application* _app, float _dt)
 
 		float linearSpeed = 2.f;
 		inputRate = math::safeNormalize(inputRate);
-		Vector3 cameraPosition = app().getCameraPosition();
-		cameraPosition += inputRate * linearSpeed * _dt;
-		app().setCameraPosition(cameraPosition);
+		gameCamera->position += inputRate * linearSpeed * _dt;
+		gameInstance->cameraPosition[0] = gameCamera->position.x;
+		gameInstance->cameraPosition[1] = gameCamera->position.y;
+		gameInstance->cameraPosition[2] = gameCamera->position.z;
 
-		
+		if (!math::isZero(inputRate) || !math::isZero(rotationInputRate))
+		{
+			app().saveSettings();
+		}
 	}
 
 	ImGui::Text("camera:");
-	Vector3 p = app().getCameraPosition();
-	if (ImGui::DragVector3("position", p, .05f))
+	if (ImGui::DragVector3("position", gameCamera->position, .05f))
 	{
-		app().setCameraPosition(p);
+		gameInstance->cameraPosition[0] = gameCamera->position.x;
+		gameInstance->cameraPosition[1] = gameCamera->position.y;
+		gameInstance->cameraPosition[2] = gameCamera->position.z;
 	}
-	Quaternion r = app().getCameraRotation();
-	if (ImGui::DragRotation("rotation", r))
+	if (ImGui::DragRotation("rotation", gameCamera->rotation))
 	{
-		app().setCameraRotation(r);
+		Vector3 euler = math::euler(gameCamera->rotation);
+		gameInstance->pitch = euler.x * R2D;
+		gameInstance->yaw = euler.y * R2D;
 	}
 
 	/*
@@ -367,6 +380,7 @@ void updateApplication(Application* _app, float _dt)
 	renderer().drawMesh(
 		gameInstance->mesh1Transform,
 		*mesh, 
+		0,
 		gameInstance->texture->getTextureHandle()
 	);
 
@@ -374,6 +388,7 @@ void updateApplication(Application* _app, float _dt)
 	renderer().drawMesh(
 		gameInstance->mesh2Transform,
 		*mesh,
+		0,
 		gameInstance->texture->getTextureHandle()
 	);
 
@@ -390,6 +405,7 @@ void updateApplication(Application* _app, float _dt)
 	renderer().drawMesh(
 		gameInstance->node2->getWorldMatrix(),
 		*mesh,
+		0,
 		gameInstance->texture->getTextureHandle()
 	);
 
@@ -397,4 +413,12 @@ void updateApplication(Application* _app, float _dt)
 	{
 		drawNode(node);
 	}
+
+	renderer().popScene();
+}
+
+bool onSerializeApplicationSettings(Application* _application, Serializer* _serializer)
+{
+	GameInstance* gameInstance = (GameInstance*)_application->getUserData("game");
+	return serialization::serializeMirrorType(_serializer, *gameInstance, "game");
 }

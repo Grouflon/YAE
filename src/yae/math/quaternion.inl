@@ -8,12 +8,6 @@
 #include <cmath>
 
 namespace yae {
-
-String toString(const Quaternion& _q)
-{
-	return string::format("{%.2f, %.2f, %.2f, %.2f}", _q.w, _q.x, _q.y, _q.z);
-}
-
 namespace math {
 
 template <>

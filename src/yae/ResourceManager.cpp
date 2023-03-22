@@ -1,5 +1,7 @@
 #include "ResourceManager.h"
 
+#include <yae/string.h>
+
 #include <cstring>
 
 namespace yae {
@@ -8,10 +10,7 @@ void ResourceManager2::registerMesh(const char* _name, Mesh* _mesh)
 {
 	MeshResource meshResource;
 
-	size_t nameLength = strlen(_name);
-	YAE_ASSERT(nameLength < countof(meshResource.name));
-	strncpy(meshResource.name, _name, math::min(nameLength, countof(meshResource.name)));
-	meshResource.name[countof(meshResource.name) - 1] = 0;
+	YAE_VERIFY(string::safeCopyToBuffer(meshResource.name, _name, countof(meshResource.name)) < countof(meshResource.name));
 
 	YAE_ASSERT(_mesh != nullptr);
 	meshResource.mesh = _mesh;

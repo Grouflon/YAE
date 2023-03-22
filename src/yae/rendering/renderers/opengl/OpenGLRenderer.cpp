@@ -12,8 +12,9 @@
 #else
 #include <GL/gl3w.h>
 #endif
-#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 #include <im3d/im3d.h>
+
 #include <GLFW/glfw3.h>
 
 #if YAE_PLATFORM_WEB == 0
@@ -72,9 +73,9 @@ void OpenGLRenderer::hintWindow()
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 }
 
-bool OpenGLRenderer::init(GLFWwindow* _window)
+bool OpenGLRenderer::_init()
 {	
-	glfwMakeContextCurrent(_window);
+	glfwMakeContextCurrent(m_window);
     glfwSwapInterval(1); // Enable vsync
 
     /*
@@ -120,8 +121,6 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 
 	const char* glVersion = (const char*)glGetString(GL_VERSION);
 	YAE_LOGF_CAT("renderer", "OpenGL Version: \"%s\"", glVersion);
-
-	m_window = _window;
 
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_vao));
 	YAE_GL_VERIFY(glBindVertexArray(m_vao));
@@ -197,30 +196,6 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 		vertexShader->releaseUnuse();
 	}
 
-	// RenderTarget Shader
-	{
-		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/pass_through.vert", ShaderType::VERTEX);
-		vertexShader->useLoad();
-		YAE_ASSERT(vertexShader->isLoaded());
-
-		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/simple_texture.frag", ShaderType::FRAGMENT);
-		fragmentShader->useLoad();
-		YAE_ASSERT(fragmentShader->isLoaded());
-
-		ShaderHandle shaders[] =
-		{
-			vertexShader->getShaderHandle(),
-			fragmentShader->getShaderHandle()
-		};
-		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_renderTargetShader));
-
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_renderTargetShader, 0, "inPosition"));
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_renderTargetShader, 1, "inTexCoord"));
-
-		fragmentShader->releaseUnuse();
-		vertexShader->releaseUnuse();
-	}
-
 	// Quad
 	{
 		YAE_GL_VERIFY(glGenVertexArrays(1, &m_quadVertexArray));
@@ -247,31 +222,21 @@ bool OpenGLRenderer::init(GLFWwindow* _window)
 		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
 	}
 
-	int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-	YAE_VERIFY(createRenderTarget(width, height, m_renderTarget));
-
 	return true;
 }
 
-void OpenGLRenderer::shutdown()
+void OpenGLRenderer::_shutdown()
 {
-	destroyRenderTarget(m_renderTarget);
-	m_renderTarget = {};
-
 	glDeleteBuffers(1, &m_quadVertexBuffer);
 	m_quadVertexBuffer = 0;
 	glDeleteVertexArrays(1, &m_quadVertexArray);
 	m_quadVertexArray = 0;
 
-	destroyShaderProgram(m_renderTargetShader);
-	m_renderTargetShader = nullptr;
-
 	destroyShaderProgram(m_fontShader);
-	m_fontShader = nullptr;
+	m_fontShader = 0;
 
 	destroyShaderProgram(m_shader);
-	m_shader = nullptr;
+	m_shader = 0;
 
 	GLuint buffers[2] = { m_vertexBufferObject, m_indexBufferObject};
 	glDeleteBuffers(2, buffers);
@@ -282,185 +247,9 @@ void OpenGLRenderer::shutdown()
 	m_vao = 0;
 }
 
-FrameHandle OpenGLRenderer::beginFrame()
-{
-	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
-
-	int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-    glViewport(0, 0, width, height);
-    glScissor(0, 0, width, height);
-    glClearColor(0.5f, 0.0f, 0.5f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-	return nullptr;
-}
-
-void OpenGLRenderer::endFrame()
-{
-	glfwSwapBuffers(m_window);
-}
-
-void OpenGLRenderer::beginRenderTarget()
-{
-	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)m_renderTarget.frameBuffer)); 
-	glViewport(0, 0, m_renderTarget.width, m_renderTarget.height);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-}
-
-void OpenGLRenderer::endRenderTarget()
-{
-	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)0));
-}
-
-void OpenGLRenderer::drawRenderTarget()
-{
-	YAE_GL_VERIFY(glUseProgram((GLuint)m_renderTargetShader));
-
-	
-	YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-	GLint textureLocation = glGetUniformLocation((GLuint)m_renderTargetShader, "texture");
-	YAE_GL_VERIFY();
-	if (textureLocation >= 0)
-	{
-		YAE_GL_VERIFY(glUniform1i(textureLocation, 0));
-	}
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)m_renderTarget.renderTexture));
-
-	YAE_GL_VERIFY(glBindVertexArray(m_quadVertexArray));
-	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_quadVertexBuffer));
-
-	/*
-	YAE_GL_VERIFY(glEnableVertexAttribArray(0));
-	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
-	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)0));
-	YAE_GL_VERIFY(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)(sizeof(float)*3)));
-	*/
-
-	YAE_GL_VERIFY(glDrawArrays(GL_TRIANGLES, 0, 6));
-
-	/*
-	YAE_GL_VERIFY(glDisableVertexAttribArray(1));
-	YAE_GL_VERIFY(glDisableVertexAttribArray(0));
-	*/
-
-	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	YAE_GL_VERIFY(glBindVertexArray(0));
-}
-
 void OpenGLRenderer::waitIdle()
 {
 
-}
-
-Vector2 OpenGLRenderer::getFrameBufferSize() const 
-{
-    int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-
-    return Vector2(width, height);
-}
-
-void OpenGLRenderer::notifyFrameBufferResized(int _width, int _height)
-{
-	resizeRenderTarget(m_renderTarget, _width, _height);
-}
-
-
-void OpenGLRenderer::drawCommands(FrameHandle _frameHandle)
-{
-	YAE_CAPTURE_FUNCTION();
-
-	glGetError();
-
-	{
-		YAE_CAPTURE_SCOPE("prepare buffers");
-
-		YAE_GL_VERIFY(glBindVertexArray(m_vao));
-
-		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
-	    YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(*m_vertices.data()), m_vertices.data(), GL_STATIC_DRAW));
-
-	    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
-	    YAE_GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(*m_indices.data()), m_indices.data(), GL_STATIC_DRAW));
-
-	    YAE_GL_VERIFY(glEnableVertexAttribArray(0));
-		YAE_GL_VERIFY(glEnableVertexAttribArray(1));
-		YAE_GL_VERIFY(glEnableVertexAttribArray(2));
-		YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0));
-		YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
-		YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));	
-	}
-	
-
-	YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-    YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
-    YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
-    YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
-    YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
-    YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
-    YAE_GL_VERIFY(glCullFace(GL_FRONT));
-    YAE_GL_VERIFY(glEnable(GL_BLEND));
-	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
-    Matrix4 viewProj = getViewProjectionMatrix();
-
-	for (auto& pair : m_drawCommands)
-	{
-		YAE_CAPTURE_SCOPE("draw command pass");
-
-		GLuint shader = (GLuint)pair.key;
-		YAE_GL_VERIFY(glUseProgram(shader));
-
-		GLint viewProjLocation = glGetUniformLocation((GLuint)shader, "viewProj");
-		YAE_GL_VERIFY();
-		if (viewProjLocation >= 0)
-		{
-			YAE_GL_VERIFY(glUniformMatrix4fv(viewProjLocation, 1, GL_FALSE, (float*)&viewProj));
-		}
-
-		GLint modelLocation = glGetUniformLocation((GLuint)shader, "model");
-		YAE_GL_VERIFY();
-
-		GLint textureLocation = glGetUniformLocation((GLuint)shader, "texture");
-		YAE_GL_VERIFY();
-		if (textureLocation >= 0)
-		{
-			YAE_GL_VERIFY(glUniform1i(textureLocation, 0));
-
-		}
-
-		for (DrawCommand& cmd : pair.value)
-		{
-			YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)cmd.textureId));
-
-			if (modelLocation >= 0)
-			{
-				YAE_GL_VERIFY(glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (float*)&cmd.transform));
-			}
-
-			void* offset = (void*)(intptr_t)(cmd.indexOffset * sizeof(*m_indices.data()));
-    		YAE_GL_VERIFY(glDrawElements(
-    			GL_TRIANGLES, 
-    			cmd.elementCount, 
-    			GL_UNSIGNED_INT, 
-    			offset
-    		));
-		}
-
-		pair.value.clear();
-	}
-
-	YAE_GL_VERIFY(glDisableVertexAttribArray(0));
-	YAE_GL_VERIFY(glDisableVertexAttribArray(1));
-	YAE_GL_VERIFY(glDisableVertexAttribArray(2));
-
-	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-	m_vertices.clear();
-	m_indices.clear();
 }
 
 bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
@@ -521,7 +310,7 @@ bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _ch
     	_data
     ));
 
-	_outTextureHandle = reinterpret_cast<void*>(textureId);
+	_outTextureHandle = textureId;
 	return true;
 }
 
@@ -531,80 +320,6 @@ void OpenGLRenderer::destroyTexture(TextureHandle& _inTextureHandle)
 
 	GLuint textureId = reinterpret_cast<GLuint>(_inTextureHandle);
     YAE_GL_VERIFY(glDeleteTextures(1, &textureId));
-}
-
-bool OpenGLRenderer::createRenderTarget(int _width, int _height, RenderTarget& _outRenderTarget)
-{
-	YAE_CAPTURE_FUNCTION();
-
-	_outRenderTarget.width = _width;
-	_outRenderTarget.height = _height;
-
-	GLuint textures[2];
-	YAE_GL_VERIFY(glGenTextures(2, textures));
-	_outRenderTarget.renderTexture = (TextureHandle)textures[0];
-	_outRenderTarget.depthTexture = (TextureHandle)textures[1];
-
-	// Render Texture
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_outRenderTarget.renderTexture));
-
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER));
-	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
-
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
-
-	// Depth Texture
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_outRenderTarget.depthTexture));
-
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
-
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
-
-	// Frame Buffer
-	YAE_GL_VERIFY(glGenFramebuffers(1, (GLuint*)&_outRenderTarget.frameBuffer));
-	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)_outRenderTarget.frameBuffer));
-
-	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (GLuint)_outRenderTarget.renderTexture, 0));
-	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)_outRenderTarget.depthTexture, 0));
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE)
-	{
-		// What should we do if it fails ? let's think about this when it happens
-		return false;
-	}
-
-	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-	return true;
-}
-
-void OpenGLRenderer::resizeRenderTarget(RenderTarget& _renderTarget, int _width, int _height)
-{
-	_renderTarget.width = _width;
-	_renderTarget.height = _height;
-
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.renderTexture));
-	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
-
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.depthTexture));
-	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
-
-	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
-}
-
-void OpenGLRenderer::destroyRenderTarget(RenderTarget& _outRenderTarget)
-{
-	YAE_CAPTURE_FUNCTION();
-
-	GLuint textures[2] = {(GLuint)_outRenderTarget.renderTexture, (GLuint)_outRenderTarget.depthTexture };
-    YAE_GL_VERIFY(glDeleteTextures(2, textures));
-    YAE_GL_VERIFY(glDeleteFramebuffers(1, (GLuint*)&_outRenderTarget.frameBuffer));
 }
 
 bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _codeSize, ShaderHandle& _outShaderHandle)
@@ -638,7 +353,7 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
     YAE_GL_VERIFY(glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &logLength));
     if ((GLboolean)status == GL_TRUE)
     {
-    	_outShaderHandle = (void*)shaderId;
+    	_outShaderHandle = shaderId;
     }
     else
     {
@@ -685,7 +400,7 @@ bool OpenGLRenderer::createShaderProgram(ShaderHandle* _shaderHandles, u16 _shad
     YAE_GL_VERIFY(glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &logLength));
     if ((GLboolean)status == GL_TRUE)
     {
-    	_outShaderProgramHandle = (void*)programId;
+    	_outShaderProgramHandle = programId;
     }
     else
     {
@@ -712,112 +427,233 @@ void OpenGLRenderer::destroyShaderProgram(ShaderProgramHandle& _shaderProgramHan
 	YAE_GL_VERIFY(glDeleteProgram(programId));
 }
 
-
-void OpenGLRenderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const TextureHandle& _textureHandle)
-{
-	u32 shaderId = (u32)m_shader;
-	DataArray<DrawCommand>* commandArray = m_drawCommands.get(shaderId);
-	if (commandArray == nullptr)
-	{
-		commandArray = &m_drawCommands.set(shaderId, DataArray<DrawCommand>());
-	}
-
-	u32 baseIndex = m_vertices.size();
-	u32 startIndex = m_indices.size();
-
-	DrawCommand command;
-	command.transform = _transform;
-	command.indexOffset = startIndex;
-	command.elementCount = _indicesCount;
-	command.textureId = (u32)_textureHandle;
-	commandArray->push_back(command);
-
-	m_vertices.push_back(_vertices, _verticesCount);
-
-	m_indices.resize(m_indices.size() + _indicesCount);
-	for (u32 i = 0; i < _indicesCount; ++i)
-	{
-		m_indices[startIndex + i] = baseIndex + _indices[i];
-	}
-}
-
-
-void OpenGLRenderer::drawText(const Matrix4& _transform, const FontResource* _font, const char* _text)
-{
-	glm::vec3 _color(1.f, 1.f, 1.f);
-
-	u32 shaderId = (u32)m_fontShader;
-	DataArray<DrawCommand>* commandArray = m_drawCommands.get(shaderId);
-	if (commandArray == nullptr)
-	{
-		commandArray = &m_drawCommands.set(shaderId, DataArray<DrawCommand>());
-	}
-
-	u32 indicesStart = m_indices.size();
-	u32 verticesStart = m_vertices.size();
-	u32 textLength = strlen(_text);
-
-	m_vertices.resize(m_vertices.size() + textLength * 4);
-	m_indices.resize(m_indices.size() + textLength * 6);
-
-	float xPos = 0.f;
-	float yPos = 0.f;
-	Vertex vertices[4];
-	vertices[0].color = _color;
-	vertices[1].color = _color;
-	vertices[2].color = _color;
-	vertices[3].color = _color;
-	u32 indices[6] =
-	{
-		0, 1, 2,
-		0, 2, 3
-	};
-
-	stbtt_aligned_quad quad;
-	u32 indicesOffset = verticesStart;
-	for (u32 i = 0; i < textLength; ++i)
-	{
-
-		stbtt_GetPackedQuad(
-			_font->m_packedChar,
-			_font->m_atlasWidth, _font->m_atlasHeight,
-			_text[i],
-			&xPos, &yPos,
-			&quad,
-			1
-		);
-
-		vertices[0].pos = glm::vec3(quad.x0, quad.y0, 0.f);
-		vertices[1].pos = glm::vec3(quad.x1, quad.y0, 0.f);
-		vertices[2].pos = glm::vec3(quad.x1, quad.y1, 0.f);
-		vertices[3].pos = glm::vec3(quad.x0, quad.y1, 0.f);
-		vertices[0].texCoord = glm::vec2(quad.s0, quad.t0);
-		vertices[1].texCoord = glm::vec2(quad.s1, quad.t0);
-		vertices[2].texCoord = glm::vec2(quad.s1, quad.t1);
-		vertices[3].texCoord = glm::vec2(quad.s0, quad.t1);
-		memcpy(m_vertices.data() + verticesStart + (i * 4), vertices, sizeof(*vertices) * 4);
-
-		for (u32 j = 0; j < 6; ++j)
-		{
-			m_indices[indicesStart + (i * 6) + j] = indices[j] + indicesOffset;
-		}
-		indicesOffset += 4;
-	}
-
-	DrawCommand command;
-	command.transform = _transform;
-	command.indexOffset = indicesStart;
-	command.elementCount = textLength * 6;
-	command.textureId = (u32)_font->m_fontTexture;
-	commandArray->push_back(command);
-}
-
 const char* OpenGLRenderer::getShaderVersion() const
 {
 	return OPENGL_SHADER_VERSION;
 }
 
-void OpenGLRenderer::initIm3d()
+bool OpenGLRenderer::_initImGui()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	return ImGui_ImplOpenGL3_Init(getShaderVersion());
+}
+
+void OpenGLRenderer::_renderImGui()
+{
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
+
+	ImDrawData* imguiDrawData = ImGui::GetDrawData();
+	const bool isMinimized = (imguiDrawData->DisplaySize.x <= 0.0f || imguiDrawData->DisplaySize.y <= 0.0f);
+	if (!isMinimized)
+	{
+		ImGui_ImplOpenGL3_RenderDrawData(imguiDrawData);
+	}
+}
+
+void OpenGLRenderer::_shutdownImGui()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	ImGui_ImplOpenGL3_Shutdown();
+}
+
+void OpenGLRenderer::_initRenderTarget(RenderTarget& _renderTarget)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	GLuint textures[2];
+	YAE_GL_VERIFY(glGenTextures(2, textures));
+	_renderTarget.m_renderTexture = (TextureHandle)textures[0];
+	_renderTarget.m_depthTexture = (TextureHandle)textures[1];
+
+	// Render Texture
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.m_renderTexture));
+
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderTarget.m_width, _renderTarget.m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+
+	// Depth Texture
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.m_depthTexture));
+
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _renderTarget.m_width, _renderTarget.m_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+
+	// Frame Buffer
+	YAE_GL_VERIFY(glGenFramebuffers(1, (GLuint*)&_renderTarget.m_frameBuffer));
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)_renderTarget.m_frameBuffer));
+
+	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (GLuint)_renderTarget.m_renderTexture, 0));
+	YAE_GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)_renderTarget.m_depthTexture, 0));
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// What should we do if it fails ? let's think about this when it happens
+		YAE_ASSERT(false);
+	}
+
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+}
+
+void OpenGLRenderer::_resizeRenderTarget(RenderTarget& _renderTarget)
+{
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.m_renderTexture));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderTarget.m_width, _renderTarget.m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.m_depthTexture));
+	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _renderTarget.m_width, _renderTarget.m_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL));
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, 0));
+}
+
+void OpenGLRenderer::_shutdownRenderTarget(RenderTarget& _renderTarget)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	GLuint textures[2] = {(GLuint)_renderTarget.m_renderTexture, (GLuint)_renderTarget.m_depthTexture };
+    YAE_GL_VERIFY(glDeleteTextures(2, textures));
+    YAE_GL_VERIFY(glDeleteFramebuffers(1, (GLuint*)&_renderTarget.m_frameBuffer));
+}
+
+void OpenGLRenderer::_beginFrame()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+}
+
+void OpenGLRenderer::_beginRender()
+{
+	YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
+
+	Vector2 frameBufferSize = getFrameBufferSize();
+    glScissor(0, 0, frameBufferSize.x, frameBufferSize.y);
+}
+
+void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(_camera != nullptr);
+	YAE_ASSERT(_camera->m_scene != nullptr);
+
+	glGetError();
+
+	{
+		YAE_CAPTURE_SCOPE("prepare state");
+
+		YAE_GL_VERIFY(glBindVertexArray(m_vao));
+
+		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, (GLuint)m_vertexBufferObject));
+	    YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(*m_vertices.data()), m_vertices.data(), GL_STATIC_DRAW));
+
+	    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)m_indexBufferObject));
+	    YAE_GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(*m_indices.data()), m_indices.data(), GL_STATIC_DRAW));
+
+	    YAE_GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+	    YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
+	    YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
+	    YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
+	    YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
+	    YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
+	    YAE_GL_VERIFY(glFrontFace(GL_CW));
+	    YAE_GL_VERIFY(glCullFace(GL_BACK));
+	    YAE_GL_VERIFY(glEnable(GL_BLEND));
+		YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	}
+
+	Vector2 viewportSize = _camera->getViewportSize();
+    Matrix4 viewProj = _camera->computeViewProjectionMatrix();
+    RenderScene* scene = _camera->m_scene;
+
+	{
+		YAE_CAPTURE_SCOPE("clear");
+
+		if (_camera->renderTarget != nullptr)
+		{
+			YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, _camera->renderTarget->m_frameBuffer)); 
+		}
+		else
+		{
+			YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
+
+		}
+
+	    glViewport(0, 0, viewportSize.x, viewportSize.y);
+	    glScissor(0, 0, viewportSize.x, viewportSize.y);
+	    glClearColor(_camera->clearColor.x, _camera->clearColor.y, _camera->clearColor.z, _camera->clearColor.w);
+	    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	}
+
+	for (auto& pair : scene->m_drawCommands)
+	{
+		YAE_CAPTURE_SCOPE("draw command pass");
+
+		GLuint shader = (GLuint)pair.key;
+		YAE_GL_VERIFY(glUseProgram(shader));
+
+		GLint viewProjLocation = glGetUniformLocation((GLuint)shader, "viewProj");
+		YAE_GL_VERIFY();
+		if (viewProjLocation >= 0)
+		{
+			YAE_GL_VERIFY(glUniformMatrix4fv(viewProjLocation, 1, GL_FALSE, (float*)&viewProj));
+		}
+
+		GLint modelLocation = glGetUniformLocation((GLuint)shader, "model");
+		YAE_GL_VERIFY();
+
+		GLint textureLocation = glGetUniformLocation((GLuint)shader, "texture");
+		YAE_GL_VERIFY();
+		if (textureLocation >= 0)
+		{
+			YAE_GL_VERIFY(glUniform1i(textureLocation, 0));
+
+		}
+
+		for (DrawCommand& cmd : pair.value)
+		{
+			YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)cmd.textureId));
+
+			if (modelLocation >= 0)
+			{
+				YAE_GL_VERIFY(glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (float*)&cmd.transform));
+			}
+
+			void* offset = (void*)(intptr_t)(cmd.indexOffset * sizeof(*m_indices.data()));
+    		YAE_GL_VERIFY(glDrawElements(
+    			GL_TRIANGLES, 
+    			cmd.elementCount, 
+    			GL_UNSIGNED_INT, 
+    			offset
+    		));
+		}
+
+		pair.value.clear();
+	}
+
+	YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    YAE_GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+    YAE_GL_VERIFY(glBindVertexArray(0));
+}
+
+void OpenGLRenderer::_endRender()
+{
+	glfwSwapBuffers(m_window);	
+}
+
+void OpenGLRenderer::_endFrame()
+{
+}
+
+bool OpenGLRenderer::_initIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -898,9 +734,11 @@ void OpenGLRenderer::initIm3d()
 	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
 	YAE_GL_VERIFY(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
 	YAE_GL_VERIFY(glBindVertexArray(0));
+
+	return true;
 }
 
-void OpenGLRenderer::shutdownIm3d()
+void OpenGLRenderer::_shutdownIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -908,23 +746,22 @@ void OpenGLRenderer::shutdownIm3d()
 	YAE_GL_VERIFY(glDeleteBuffers(1, &m_im3dVertexBuffer));
 
 	destroyShaderProgram(m_im3dShaderPoints);
-	m_im3dShaderPoints = nullptr;
+	m_im3dShaderPoints = 0;
 
 	destroyShaderProgram(m_im3dShaderLines);
-	m_im3dShaderPoints = nullptr;
+	m_im3dShaderPoints = 0;
 
 	destroyShaderProgram(m_im3dShaderTriangles);
-	m_im3dShaderPoints = nullptr;
+	m_im3dShaderPoints = 0;
 }
 
-void OpenGLRenderer::drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCount)
+void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 {
 	YAE_CAPTURE_FUNCTION();
 
 	const Vector2 viewportSize = getFrameBufferSize();
-	const Matrix4 viewProj = getViewProjectionMatrix();
+	const Matrix4 viewProj = _camera->computeViewProjectionMatrix();
 
-	YAE_GL_VERIFY(glViewport(0, 0, (GLsizei)viewportSize.x, (GLsizei)viewportSize.y));
     YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
     YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
 	YAE_GL_VERIFY(glEnable(GL_BLEND));
@@ -932,9 +769,9 @@ void OpenGLRenderer::drawIm3d(const Im3d::DrawList* _drawLists, u32 _drawListCou
 	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	YAE_GL_VERIFY(glEnable(GL_PROGRAM_POINT_SIZE));
 		
-	for (u32 i = 0; i < _drawListCount; ++i)
+	for (u32 i = 0; i < Im3d::GetDrawListCount(); ++i)
 	{
-		const Im3d::DrawList& drawList = _drawLists[i];
+		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
  
 		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
 		{

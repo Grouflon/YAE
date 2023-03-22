@@ -1,7 +1,7 @@
 #include "logger.h"
 
 #include <yae/program.h>
-#include <yae/hash.h>
+
 
 namespace yae {
 

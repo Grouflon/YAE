@@ -4,16 +4,14 @@
 #include <yae/time.h>
 #include <yae/math_types.h>
 #include <yae/containers/HashMap.h>
-#include <yae/hash.h>
 
 struct GLFWwindow;
+struct ImGuiContext;
 
 namespace yae {
 
 class Renderer;
 class InputSystem;
-class ImGuiSystem;
-class Im3dSystem;
 class Serializer;
 
 class YAE_API Application
@@ -34,18 +32,15 @@ public:
 
 	InputSystem& input() const;
 	Renderer& renderer() const;
-	ImGuiSystem& imguiSystem() const;
-
-	Vector3 getCameraPosition() const;
-	Quaternion getCameraRotation() const;
-	void setCameraPosition(const Vector3& _position);
-	void setCameraRotation(const Quaternion& _rotation);
 
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
 
 	void loadSettings();
 	void saveSettings();
+
+	float getDeltaTime() const;
+	float getTime() const;
 
 //private:
 	static void _glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y);
@@ -54,9 +49,6 @@ public:
 	static void _glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods);
 	static void _glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset);
 
-	Matrix4 _computeCameraView() const;
-	Matrix4 _computeCameraProj() const;
-
 	void _requestSaveSettings();
 
 	String m_name;
@@ -64,17 +56,14 @@ public:
 	u32 m_baseHeight = 0;
 
 	InputSystem* m_inputSystem = nullptr;
-	ImGuiSystem* m_imGuiSystem = nullptr;
-	Im3dSystem* m_im3dSystem = nullptr;
 	Renderer* m_renderer = nullptr;
+	ImGuiContext* m_imguiContext = nullptr;
 
 	GLFWwindow* m_window = nullptr;
 
 	Clock m_clock;
-
-	Vector3 m_cameraPosition = Vector3::ZERO;
-	Quaternion m_cameraRotation = Quaternion::IDENTITY;
-	float m_cameraFov = 45.f;
+	float m_dt = 0.f;
+	float m_time = 0.f;
 
 	HashMap<StringHash, void*> m_userData;
 

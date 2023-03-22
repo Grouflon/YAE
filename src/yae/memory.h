@@ -1,9 +1,8 @@
 #pragma once
 
-#include <stdio.h>
-
 #include <yae/types.h>
-#include <yae/math.h>
+
+#include <stdio.h>
 
 namespace yae {
 
@@ -170,7 +169,10 @@ public:
 				{
 					u8* previousStart = (u8*)_memory;
 					u8* previousEnd = m_buffer + m_cursor;
-					memcpy(m_buffer + m_cursor, m_buffer + i, yae::math::min((i64)_size, (i64)(previousEnd - previousStart)));
+					i64 min1 = (i64)_size;
+					i64 min2 = (i64)(previousEnd - previousStart);
+					i64 min = min1 < min2 ? min1 : min2;
+					memcpy(m_buffer + m_cursor, m_buffer + i, min);
 				}
 				m_cursor = (start + _size) - m_buffer;
 				return start;

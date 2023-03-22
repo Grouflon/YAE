@@ -1,6 +1,8 @@
 #include <yae/math/matrix3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/ext/matrix_projection.hpp>
 
 namespace yae {
 namespace math {
@@ -13,6 +15,44 @@ const float* data(const Matrix4& _m)
 float* data(Matrix4& _m)
 {
 	return (float*)&_m;
+}
+
+Vector3 translation(const Matrix4& _m)
+{
+	glm::vec3 scale, translation, skew;
+	glm::vec4 perspective;
+	glm::quat rotation;
+	glm::decompose(toGlm(_m), scale, rotation, translation, skew, perspective);
+	return toYae(translation);
+}
+
+Quaternion rotation(const Matrix4& _m)
+{
+	glm::vec3 scale, translation, skew;
+	glm::vec4 perspective;
+	glm::quat rotation;
+	glm::decompose(toGlm(_m), scale, rotation, translation, skew, perspective);
+	return toYae(rotation);
+}
+
+Vector3 scale(const Matrix4& _m)
+{
+	glm::vec3 scale, translation, skew;
+	glm::vec4 perspective;
+	glm::quat rotation;
+	glm::decompose(toGlm(_m), scale, rotation, translation, skew, perspective);
+	return toYae(scale);
+}
+
+void decompose(const Matrix4& _m, Vector3& _translation, Quaternion& _rotation, Vector3& _scale)
+{
+	glm::vec3 scale, translation, skew;
+	glm::vec4 perspective;
+	glm::quat rotation;
+	glm::decompose(toGlm(_m), scale, rotation, translation, skew, perspective);
+	_translation = toYae(translation);
+	_rotation = toYae(rotation);
+	_scale = toYae(scale);
 }
 
 Matrix4 translate(const Matrix4& _m, const Vector3& _translation)
@@ -34,6 +74,35 @@ Matrix4 inverse(const Matrix4& _m)
 {
 	return toYae(glm::inverse(toGlm(_m)));
 }
-	
+
+Vector3 project(const Vector3& _worldPosition, const Matrix4& _view, const Matrix4& _projection, const Vector4& _viewport)
+{
+	return toYae(glm::project(
+		toGlm(_worldPosition),
+		toGlm(_view),
+		toGlm(_projection),
+		toGlm(_viewport)
+	));
+}
+
+void unproject(const Vector2& _windowPosition, const Matrix4& _view, const Matrix4& _projection, const Vector4& _viewport, Vector3& _outRayOrigin, Vector3& _outRayDirection)
+{
+	glm::vec3 near = glm::unProject(
+		glm::vec3(_windowPosition.x, _windowPosition.y, -1.f),
+		toGlm(_view),
+		toGlm(_projection),
+		toGlm(_viewport)
+	);
+	glm::vec3 far = glm::unProject(
+		glm::vec3(_windowPosition.x, _windowPosition.y, 1.f),
+		toGlm(_view),
+		toGlm(_projection),
+		toGlm(_viewport)
+	);
+
+	_outRayOrigin = toYae(near);
+	_outRayDirection = toYae(glm::normalize(far - near));
+}
+
 } // namespace math
 } // namespace yae

@@ -2,6 +2,7 @@
 
 #include <yae/filesystem.h>
 #include <yae/program.h>
+#include <yae/string.h>
 
 namespace yae {
 

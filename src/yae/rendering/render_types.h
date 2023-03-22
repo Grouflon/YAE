@@ -67,7 +67,7 @@ struct TextureHandle
 	VkSampler sampler = VK_NULL_HANDLE;
 };
 */
-typedef void* TextureHandle;
+typedef u32 TextureHandle;
 
 /*
 struct MeshHandle
@@ -79,7 +79,7 @@ struct MeshHandle
 	VkDeviceSize indicesCount = 0;
 };
 */
-typedef void* MeshHandle;
+typedef u32 MeshHandle;
 
 /*
 struct ShaderHandle
@@ -87,10 +87,10 @@ struct ShaderHandle
 	VkShaderModule shaderModule;
 };
 */
-typedef void* ShaderHandle;
-typedef void* ShaderProgramHandle;
+typedef u32 ShaderHandle;
+typedef u32 ShaderProgramHandle;
 
-typedef void* FrameHandle;
+typedef u32 FrameHandle;
 
 struct Vertex {
 	glm::vec3 pos;
@@ -112,15 +112,6 @@ enum class ShaderType : u8
 	FRAGMENT,
 };
 
-typedef void* FrameBufferHandle;
-
-struct RenderTarget
-{
-	u32 width;
-	u32 height;
-	FrameBufferHandle frameBuffer;
-	TextureHandle renderTexture;
-	TextureHandle depthTexture;
-};
+typedef u32 FrameBufferHandle;
 
 } // namespace yae

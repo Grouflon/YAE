@@ -1,7 +1,8 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/hash.h>
+#include <yae/containers/Array.h>
+#include <yae/containers/HashMap.h>
 
 namespace yae {
 

@@ -1,10 +1,4 @@
 namespace yae {
-
-String toString(const Vector2& _v)
-{
-	return string::format("{%.2f, %.2f}", _v.x, _v.y);
-}
-
 namespace math {
 
 bool isZero(const Vector2& _v, float _threshold)

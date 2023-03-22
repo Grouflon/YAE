@@ -322,7 +322,7 @@ struct YAE_API Matrix4
 	static Matrix4 FromScale(const Vector3& _scale);
 	static Matrix4 FromTransform(const Vector3& _position, const Quaternion& _rotation, const Vector3& _scale);
 	static Matrix4 FromPerspective(float _fov, float _aspectRatio, float _nearPlane, float _farPlane);
-	static Matrix4 FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up);
+	static Matrix4 FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up = Vector3::UP);
 	static Matrix4 FromMatrix3(const Matrix3& _m);
 
 	// Constants

@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/containers/HashMap.h>
-#include <yae/hash.h>
+
 
 namespace yae {
 

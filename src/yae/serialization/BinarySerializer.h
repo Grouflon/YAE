@@ -2,10 +2,9 @@
 
 #include <yae/types.h>
 
-#include <yae/hash.h>
+
 #include <yae/containers/Array.h>
 #include <yae/containers/HashMap.h>
-
 #include <yae/serialization/Serializer.h>
 
 namespace yae {

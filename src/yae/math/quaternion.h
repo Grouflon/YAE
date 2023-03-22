@@ -4,9 +4,6 @@
 #include <yae/math.h>
 
 namespace yae {
-
-inline String toString(const Quaternion& _q);
-
 namespace math {
 
 template <>

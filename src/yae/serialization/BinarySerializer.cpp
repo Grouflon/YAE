@@ -1,6 +1,8 @@
 #include "BinarySerializer.h"
 
 #include <yae/memory.h>
+#include <yae/math.h>
+#include <yae/string.h>
 
 /*
 Memory layout:

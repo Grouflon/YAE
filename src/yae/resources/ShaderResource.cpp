@@ -3,6 +3,7 @@
 #include <yae/filesystem.h>
 #include <yae/platform.h>
 #include <yae/program.h>
+#include <yae/string.h>
 #include <yae/resources/FileResource.h>
 #include <yae/rendering/Renderer.h>
 

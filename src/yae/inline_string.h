@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/string.h>
+#include <yae/string_types.h>
 #include <yae/memory.h>
 
 namespace yae {

@@ -4,9 +4,6 @@
 #include <yae/math_types.h>
 
 namespace yae {
-
-inline String toString(const Vector4& _v);
-
 namespace math {
 
 inline bool isZero(const Vector4& _v, float _threshold = SMALL_NUMBER);

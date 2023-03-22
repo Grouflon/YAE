@@ -1,6 +1,7 @@
 #include "JsonSerializer.h"
 
 #include <yae/memory.h>
+#include <yae/string.h>
 
 #include <json/json.h>
 

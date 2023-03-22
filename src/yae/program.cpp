@@ -6,7 +6,9 @@
 #include <yae/Application.h>
 #include <yae/profiler.h>
 #include <yae/logger.h>
-#include <yae/hash.h>
+
+#include <yae/string.h>
+#include <yae/StringHashRepository.h>
 #include <yae/Module.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/JsonSerializer.h>

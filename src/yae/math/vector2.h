@@ -3,9 +3,6 @@
 #include <yae/types.h>
 
 namespace yae {
-
-inline String toString(const Vector2& _v);
-
 namespace math {
 
 inline bool isZero(const Vector2& _v, float _threshold = SMALL_NUMBER);
