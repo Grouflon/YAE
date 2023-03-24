@@ -1,6 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
+
 #include <yae/Date.h>
 
 // interesting stuff: http://utf8everywhere.org/
@@ -68,6 +69,26 @@ private:
 	String      m_path;
 	OpenMode    m_openMode;
 	void*       m_fileHandle;
+};
+
+class YAE_API FileReader
+{
+public:
+	FileReader(const char* _path, Allocator* _allocator = nullptr);
+	~FileReader();
+
+	bool load();
+	u32 getContentSize() const;
+	const void* getContent() const;
+
+	Allocator& allocator() const;
+
+private:
+	String m_path;
+	void* m_content = nullptr;
+	u32 m_contentSize = 0;
+	bool m_isLoaded = false;
+	Allocator* m_allocator = nullptr;
 };
 
 } // namespace yae

@@ -40,7 +40,6 @@ public:
 	// Services getters
 	Application& currentApplication();
 	ResourceManager& resourceManager();
-	ResourceManager2& resourceManager2();
 	Logger& logger();
 	Profiler& profiler();
 
@@ -68,7 +67,6 @@ public:
 
 	Logger* m_logger = nullptr;
 	ResourceManager* m_resourceManager = nullptr;
-	ResourceManager2* m_resourceManager2 = nullptr;
 	Profiler* m_profiler = nullptr;
 
 	Array<Application*> m_applications;

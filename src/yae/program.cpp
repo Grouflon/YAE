@@ -2,17 +2,16 @@
 
 #include <yae/platform.h>
 #include <yae/filesystem.h>
-#include <yae/resource.h>
 #include <yae/Application.h>
 #include <yae/profiler.h>
 #include <yae/logger.h>
-
 #include <yae/string.h>
 #include <yae/StringHashRepository.h>
 #include <yae/Module.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/JsonSerializer.h>
-#include <yae/resources/FileResource.h>
+#include <yae/resource.h>
+#include <yae/resources/File.h>
 #include <yae/ResourceManager.h>
 
 #if YAE_PLATFORM_WEB
@@ -198,7 +197,6 @@ void Program::init(char** _args, int _argCount)
 	}
 
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
-	m_resourceManager2 = defaultAllocator().create<ResourceManager2>();
 
 	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
 	{
@@ -216,9 +214,6 @@ void Program::shutdown()
 	m_resourceManager->flushResources();
 	defaultAllocator().destroy(m_resourceManager);
 	m_resourceManager = nullptr;
-
-	defaultAllocator().destroy(m_resourceManager2);
-	m_resourceManager2 = nullptr;
 
 	for (int i = m_modules.size() - 1; i >= 0; --i)
 	{
@@ -411,12 +406,6 @@ ResourceManager& Program::resourceManager()
 	return *m_resourceManager;
 }
 
-ResourceManager2& Program::resourceManager2()
-{
-	YAE_ASSERT(m_resourceManager2 != nullptr);
-	return *m_resourceManager2;
-}
-
 Logger& Program::logger()
 {
 	YAE_ASSERT(m_logger != nullptr);
@@ -442,11 +431,11 @@ static bool serializeSettings(Serializer* _serializer, ProgramSettings* _setting
 void Program::loadSettings()
 {
 	String filePath = getSettingsFilePath();
-	FileResource* settingsFile = findOrCreateResource<FileResource>(filePath.c_str());
-	if (!settingsFile->useLoad())
+	File* settingsFile = resource::findOrCreateFile<File>(filePath.c_str());
+	if (!settingsFile->load())
 	{
 		YAE_ERRORF_CAT("program", "Failed to load settings file \"%s\"", filePath.c_str());
-		settingsFile->releaseUnuse();
+		settingsFile->release();
 		return;
 	}
 
@@ -454,10 +443,10 @@ void Program::loadSettings()
 	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
 	{
 		YAE_ERRORF_CAT("program", "Failed to parse json settings file \"%s\"", filePath.c_str());
-		settingsFile->releaseUnuse();
+		settingsFile->release();
 		return;	
 	}
-	settingsFile->releaseUnuse();
+	settingsFile->release();
 
 	ProgramSettings settings;
 	serializer.beginRead();

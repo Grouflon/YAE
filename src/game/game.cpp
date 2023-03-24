@@ -1,24 +1,25 @@
 #include "game.h"
 
-#include <yae/Module.h>
+#include <yae/Application.h>
 #include <yae/containers/Array.h>
 #include <yae/filesystem.h>
-#include <yae/program.h>
-#include <yae/resources/FileResource.h>
-#include <yae/resources/TextureResource.h>
-#include <yae/resources/FontResource.h>
-#include <yae/math_types.h>
+#include <yae/im3d_extension.h>
+#include <yae/imgui_extension.h>
 #include <yae/input.h>
 #include <yae/math_3d.h>
+#include <yae/math_types.h>
+#include <yae/Module.h>
+#include <yae/program.h>
 #include <yae/rendering/Renderer.h>
+#include <yae/ResourceManager.h>
+#include <yae/resource.h>
+#include <yae/resources/File.h>
+#include <yae/resources/MeshFile.h>
+#include <yae/resources/FontFile.h>
+#include <yae/resources/TextureFile.h>
 #include <yae/serialization/BinarySerializer.h>
 #include <yae/serialization/JsonSerializer.h>
-#include <yae/Application.h>
-#include <yae/imgui_extension.h>
-#include <yae/Mesh.h>
-#include <yae/ResourceManager.h>
 #include <yae/serialization/serialization.h>
-#include <yae/im3d_extension.h>
 
 #include <game/transform.h>
 
@@ -74,9 +75,9 @@ public:
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
 	Matrix4 fontTransform = Matrix4::IDENTITY;
 
-	Mesh mesh;
-	TextureResource* texture = nullptr;
-	FontResource* font = nullptr;
+	MeshFile* mesh = nullptr;
+	TextureFile* texture = nullptr;
+	FontFile* font = nullptr;
 
 	NodeID node1;
 	NodeID node2;
@@ -129,15 +130,17 @@ void afterInitApplication(Application* _app)
 	gameInstance->mesh2Transform[3][0] = 1.f;
 	gameInstance->mesh2Transform[3][1] = -1.f;
 
-	YAE_VERIFY(Mesh::LoadFromObjFile(gameInstance->mesh, "./data/models/viking_room.obj"));
-	program().resourceManager2().registerMesh("room", &gameInstance->mesh);
+	gameInstance->mesh = resource::findOrCreateFile<MeshFile>("./data/models/viking_room.obj");
+	gameInstance->mesh->load();
+	YAE_ASSERT(gameInstance->mesh->isLoaded());
 
-	gameInstance->texture = findOrCreateResource<TextureResource>("./data/textures/viking_room.png");
-	gameInstance->texture->useLoad();
+	gameInstance->texture = resource::findOrCreateFile<TextureFile>("./data/textures/viking_room.png");
+	gameInstance->texture->load();
 	YAE_ASSERT(gameInstance->texture->isLoaded());
 
-	gameInstance->font = findOrCreateResource<FontResource>("data/fonts/Roboto-Regular.ttf", 64);
-	gameInstance->font->useLoad();
+	gameInstance->font = resource::findOrCreateFile<FontFile>("data/fonts/Roboto-Regular.ttf");
+	gameInstance->font->setSize(64);
+	gameInstance->font->load();
 	YAE_ASSERT(gameInstance->font->isLoaded());
 
 	SpatialSystem* spatialSystem = defaultAllocator().create<SpatialSystem>();
@@ -167,9 +170,9 @@ void beforeShutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
-	program().resourceManager2().unregisterMesh("room");
-	gameInstance->texture->releaseUnuse();
-	gameInstance->font->releaseUnuse();
+	gameInstance->texture->release();
+	gameInstance->font->release();
+	gameInstance->mesh->release();
 
 	spatialSystem().destroyNode(gameInstance->node2);
 	spatialSystem().destroyNode(gameInstance->node1);
@@ -371,15 +374,12 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
-	Mesh* mesh = program().resourceManager2().getMesh("room");
-
-
 	ImGui::Text("mesh1:");
 	imgui_matrix4((float*)&gameInstance->mesh1Transform);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh1Transform,
-		*mesh, 
+		gameInstance->mesh,
 		0,
 		gameInstance->texture->getTextureHandle()
 	);
@@ -387,7 +387,7 @@ void updateApplication(Application* _app, float _dt)
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh2Transform,
-		*mesh,
+		gameInstance->mesh,
 		0,
 		gameInstance->texture->getTextureHandle()
 	);
@@ -404,7 +404,7 @@ void updateApplication(Application* _app, float _dt)
 
 	renderer().drawMesh(
 		gameInstance->node2->getWorldMatrix(),
-		*mesh,
+		gameInstance->mesh,
 		0,
 		gameInstance->texture->getTextureHandle()
 	);

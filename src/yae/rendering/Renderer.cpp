@@ -2,10 +2,10 @@
 
 #include <yae/Application.h>
 #include <yae/input.h>
-#include <yae/Mesh.h>
 #include <yae/string.h>
 #include <yae/math_3d.h>
-#include <yae/resources/FontResource.h>
+#include <yae/resources/FontFile.h>
+#include <yae/resources/Mesh.h>
 
 #include <GLFW/glfw3.h>
 #include <im3d/im3d.h>
@@ -395,12 +395,12 @@ void Renderer::resizeRenderTarget(RenderTarget* _renderTarget, u32 _width, u32 _
 	_resizeRenderTarget(*_renderTarget);
 }
 
-void Renderer::drawMesh(const Matrix4& _transform, const Mesh& _mesh, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
+void Renderer::drawMesh(const Matrix4& _transform, const Mesh* _mesh, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
 {
 	drawMesh(
 		_transform,
-		_mesh.vertices.data(), _mesh.vertices.size(),
-		_mesh.indices.data(), _mesh.indices.size(),
+		_mesh->getVertices().data(), _mesh->getVertices().size(),
+		_mesh->getIndices().data(), _mesh->getIndices().size(),
 		_shader,
 		_texture
 	);
@@ -439,7 +439,7 @@ void Renderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 
 }
 
 
-void Renderer::drawText(const Matrix4& _transform, const FontResource* _font, const char* _text)
+void Renderer::drawText(const Matrix4& _transform, const FontFile* _font, const char* _text)
 {
 	RenderScene* scene = _getCurrentScene();
 

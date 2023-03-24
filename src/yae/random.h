@@ -14,8 +14,8 @@ YAE_API void setSeed(RandomGenerator& _generator, u32 _seed);
 YAE_API float range01();
 YAE_API float range01(RandomGenerator& _generator);
 
-template <typename T> T range(T _min, T _max) { static_assert(false); }
-template <typename T> T range(RandomGenerator& _generator, T _min, T _max) { static_assert(false); }
+template <typename T> T range(T _min, T _max) { YAE_ASSERT_MSG(false, "type not implemented"); return T(); }
+template <typename T> T range(RandomGenerator& _generator, T _min, T _max) { YAE_ASSERT_MSG(false, "type not implemented"); return T(); }
 
 template <> YAE_API float range(float _min, float _max);
 template <> YAE_API float range(RandomGenerator& _generator, float _min, float _max);

@@ -2,9 +2,9 @@
 
 #include <yae/types.h>
 
-namespace serialization {
+namespace serialization_test {
 
 void testJsonSerializer();
 void testBinarySerializer();
 
-} // namespace serialization
+} // namespace serialization_test

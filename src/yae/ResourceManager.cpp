@@ -1,51 +1,103 @@
 #include "ResourceManager.h"
 
 #include <yae/string.h>
-
-#include <cstring>
+#include <yae/resource.h>
+#include <yae/resources/Resource.h>
 
 namespace yae {
 
-void ResourceManager2::registerMesh(const char* _name, Mesh* _mesh)
+
+ResourceManager::ResourceManager()
+	: m_resources(&defaultAllocator())
+	, m_resourcesByID(&defaultAllocator())
 {
-	MeshResource meshResource;
-
-	YAE_VERIFY(string::safeCopyToBuffer(meshResource.name, _name, countof(meshResource.name)) < countof(meshResource.name));
-
-	YAE_ASSERT(_mesh != nullptr);
-	meshResource.mesh = _mesh;
-
-	StringHash hash = StringHash(_name);
-	YAE_ASSERT(m_meshesByName.get(hash) == nullptr);
-	m_meshesByName.set(hash, meshResource);
-	m_meshes.push_back(meshResource);
 }
 
-void ResourceManager2::unregisterMesh(const char* _name)
+ResourceManager::~ResourceManager()
 {
-	StringHash hash = StringHash(_name);
-	MeshResource* meshResourcePtr = m_meshesByName.get(hash);
-	YAE_ASSERT(meshResourcePtr != nullptr);
-	for (auto it = m_meshes.begin(); it != m_meshes.end(); ++it)
+	flushResources();
+
+	YAE_ASSERT_MSG(m_resources.size() == 0, "Resources list must be empty when the manager gets destroyed");
+}
+
+void ResourceManager::registerResource(const char* _name, Resource* _resource)
+{
+	YAE_ASSERT(_resource != nullptr);
+	YAE_ASSERT(std::find(m_resources.begin(), m_resources.end(), _resource) == m_resources.end());
+
+	YAE_VERIFY(string::safeCopyToBuffer(_resource->m_name, _name, countof(_resource->m_name)) < countof(_resource->m_name));
+	StringHash id = StringHash(_resource->m_name);	
+	YAE_ASSERT(m_resourcesByID.get(id) == nullptr);
+
+	m_resources.push_back(_resource);
+	m_resourcesByID.set(id, _resource);
+
+	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"...", _resource->m_name);
+}
+
+void ResourceManager::unregisterResource(Resource* _resource)
+{
+	YAE_ASSERT(_resource != nullptr);
+
 	{
-		if (it->mesh == meshResourcePtr->mesh)
+		auto it = std::find(m_resources.begin(), m_resources.end(), _resource);
+		YAE_ASSERT(it != m_resources.end());
+		m_resources.erase(it);
+	}
+
+	{
+		StringHash id = StringHash(_resource->m_name);	
+		YAE_ASSERT(m_resourcesByID.get(id) != nullptr);
+		m_resourcesByID.remove(id);
+	}
+
+	YAE_VERBOSEF_CAT("resource", "Unregistered \"%s\"...", _resource->m_name);
+	_resource->m_name[0] = 0;
+}
+
+void ResourceManager::reloadResource(Resource* _resource)
+{
+	if (!_resource->isLoaded())
+		return;
+
+	_resource->_internalUnload();
+	_resource->_internalLoad();
+}
+
+Resource* ResourceManager::findResource(const char* _name) const
+{
+	StringHash id = StringHash(_name);
+	Resource*const* resourcePtr = m_resourcesByID.get(id);
+	if (resourcePtr == nullptr)
+		return nullptr;
+
+	return *resourcePtr;
+}
+
+void ResourceManager::flushResources()
+{
+	// Gather unused resources
+	DataArray<Resource*> toDeleteResources(&scratchAllocator());
+	for (Resource* resource : m_resources)
+	{
+		if (!resource->isLoaded())
 		{
-			m_meshes.erase(it);
-			break;
+			toDeleteResources.push_back(resource);
 		}
 	}
-	m_meshesByName.remove(hash);
+
+	// Unregister & delete
+	for (Resource* resource : toDeleteResources)
+	{
+		unregisterResource(resource);
+		defaultAllocator().destroy(resource);
+	}
+	toDeleteResources.clear();
 }
 
-Mesh* ResourceManager2::getMesh(const char* _name) const
+const DataArray<Resource*> ResourceManager::getResources() const
 {
-	const MeshResource* meshResourcePointer = m_meshesByName.get(StringHash(_name));
-	return meshResourcePointer != nullptr ? meshResourcePointer->mesh : nullptr;
-}
-
-const DataArray<MeshResource>& ResourceManager2::getMeshResources() const
-{
-	return m_meshes;
+	return m_resources;
 }
 
 } // namespace yae

@@ -1,4 +1,4 @@
-#include "math.h"
+#include "math_test.h"
 
 #include <yae/math_3d.h>
 #include <yae/random.h>
@@ -11,7 +11,7 @@
 
 using namespace yae;
 
-namespace math {
+namespace math_test {
 
 void testVectors()
 {
@@ -171,4 +171,4 @@ void testQuaternion()
     */
 }
 
-} // namespace math
+} // namespace math_test

@@ -17,8 +17,8 @@ struct DrawList;
 
 namespace yae {
 
-class FontResource;
-struct Mesh;
+class FontFile;
+class Mesh;
 class RenderScene;
 class RenderCamera;
 class RenderTarget;
@@ -108,7 +108,7 @@ public:
 	Vector2 getFrameBufferSize() const;
 	void notifyFrameBufferResized(int _width, int _height);
 
-	virtual bool createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) = 0;
+	virtual bool createTexture(const void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) = 0;
 	virtual void destroyTexture(TextureHandle& _inTextureHandle) = 0;
 
 	RenderTarget* createRenderTarget(bool _fullScreen = true, u32 _width = 0, u32 _height = 0);
@@ -121,9 +121,9 @@ public:
 	virtual bool createShaderProgram(ShaderHandle* _shaderHandles, u16 _shaderHandleCount, ShaderProgramHandle& _outShaderProgramHandle) = 0;
 	virtual void destroyShaderProgram(ShaderProgramHandle& _shaderProgramHandle) = 0;
 
-	void drawMesh(const Matrix4& _transform, const Mesh& _mesh, const ShaderProgramHandle& _shader, const TextureHandle& _texture);
+	void drawMesh(const Matrix4& _transform, const Mesh* _mesh, const ShaderProgramHandle& _shader, const TextureHandle& _texture);
 	void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const ShaderProgramHandle& _shader, const TextureHandle& _texture);
-	void drawText(const Matrix4& _transform, const FontResource* _font, const char* _text);
+	void drawText(const Matrix4& _transform, const FontFile* _font, const char* _text);
 
 	RenderScene* createScene(const char* _sceneName);
 	void destroyScene(RenderScene* _scene);

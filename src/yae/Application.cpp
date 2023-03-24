@@ -8,7 +8,8 @@
 #include <yae/string.h>
 #include <yae/input.h>
 #include <yae/math_3d.h>
-#include <yae/resources/FileResource.h>
+#include <yae/resource.h>
+#include <yae/resources/File.h>
 #include <yae/filesystem.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/JsonSerializer.h>
@@ -257,11 +258,11 @@ static bool serializeSettings(Serializer* _serializer, ApplicationSettings* _set
 void Application::loadSettings()
 {
 	String filePath = getSettingsFilePath(this);
-	FileResource* settingsFile = findOrCreateResource<FileResource>(filePath.c_str());
-	if (!settingsFile->useLoad())
+	File* settingsFile = resource::findOrCreateFile<File>(filePath.c_str());
+	if (!settingsFile->load())
 	{
 		YAE_ERRORF_CAT("application", "Failed to load settings file \"%s\"", filePath.c_str());
-		settingsFile->releaseUnuse();
+		settingsFile->release();
 		return;
 	}
 
@@ -269,10 +270,10 @@ void Application::loadSettings()
 	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
 	{
 		YAE_ERRORF_CAT("application", "Failed to parse json settings file \"%s\"", filePath.c_str());
-		settingsFile->releaseUnuse();
+		settingsFile->release();
 		return;	
 	}
-	settingsFile->releaseUnuse();
+	settingsFile->release();
 
 	ApplicationSettings settings;
 	serializer.beginRead();

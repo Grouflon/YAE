@@ -1,4 +1,4 @@
-#include "serialization.h"
+#include "serialization_test.h"
 
 #include <yae/serialization/JsonSerializer.h>
 #include <yae/serialization/BinarySerializer.h>
@@ -7,7 +7,7 @@
 
 using namespace yae;
 
-namespace serialization {
+namespace serialization_test {
 
 struct Nest
 {
@@ -158,4 +158,4 @@ void testBinarySerializer()
     allocator.deallocate(data);	
 }
 
-} // namespace serialization
+} // namespace serialization_test

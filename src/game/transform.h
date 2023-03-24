@@ -1,5 +1,7 @@
 #pragma once
 
+#include <game/game.h>
+
 #include <yae/containers/IDLookup.h>
 #include <yae/math_types.h>
 

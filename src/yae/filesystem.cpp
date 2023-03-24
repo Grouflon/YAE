@@ -306,4 +306,57 @@ const char* FileHandle::getPath() const
 	return m_path.c_str();
 }
 
+FileReader::FileReader(const char* _path, Allocator* _allocator)
+{
+	m_path = filesystem::normalizePath(_path);
+	m_allocator = _allocator;
+}
+
+FileReader::~FileReader()
+{
+	allocator().deallocate(m_content);
+	m_content = nullptr;
+}
+
+bool FileReader::load()
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_ASSERT(!m_isLoaded);
+	YAE_ASSERT(m_contentSize == 0);
+	YAE_ASSERT(m_content == nullptr);
+
+	FileHandle file(m_path.c_str());
+	if (!file.open(FileHandle::OPENMODE_READ))
+	{
+		YAE_ERRORF("failed to open file \"%s\".", m_path.c_str());
+		return false;
+	}
+
+	m_contentSize = file.getSize();
+	m_content = allocator().allocate(m_contentSize);
+	file.read(m_content, m_contentSize);
+	file.close();
+	
+	m_isLoaded = true;
+	return true;
+}
+
+u32 FileReader::getContentSize() const
+{
+	YAE_ASSERT(m_isLoaded);
+	return m_contentSize;
+}
+
+const void* FileReader::getContent() const
+{
+	YAE_ASSERT(m_isLoaded);
+	return m_content;
+}
+
+Allocator& FileReader::allocator() const
+{
+	return m_allocator ? *m_allocator : defaultAllocator();
+}
+
 } // namespace yae

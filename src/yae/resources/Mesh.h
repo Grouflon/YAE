@@ -1,24 +1,28 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/resource.h>
+#include <yae/resources/Resource.h>
 #include <yae/containers/Array.h>
 #include <yae/rendering/render_types.h>
 
-#include <mirror/mirror.h>
-
 namespace yae {
 
-class YAE_API MeshResource : public Resource
+class YAE_API Mesh : public Resource
 {
-	MIRROR_CLASS(MeshResource)
+	MIRROR_CLASS(Mesh)
 	(
 		MIRROR_PARENT(Resource)
 	);
 
 public:
-	MeshResource(const char* _path);
-	virtual ~MeshResource();
+	Mesh();
+	virtual ~Mesh();
+
+	void setVertices(const Vertex* _vertices, u32 _vertexCount);
+	const BaseArray<Vertex>& getVertices() const;
+
+	void setIndices(const u32* _indices, u32 _indexCount);
+	const BaseArray<u32>& getIndices() const;
 
 // private:
 	virtual void _doLoad() override;
@@ -26,12 +30,6 @@ public:
 
 	DataArray<Vertex> m_vertices;
 	DataArray<u32> m_indices;
-};
-
-template <>
-struct YAE_API ResourceIDGetter<MeshResource>
-{
-	static ResourceID GetId(const char* _path) { return ResourceID(_path); }
 };
 
 } // namespace yae

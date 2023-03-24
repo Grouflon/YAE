@@ -1,4 +1,4 @@
-#include "random.h"
+#include "random_test.h"
 
 #include <yae/RandomGenerator.h>
 #include <yae/random.h>
@@ -7,7 +7,7 @@
 
 using namespace yae;
 
-namespace random {
+namespace random_test {
 
 void testRandom()
 {

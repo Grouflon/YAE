@@ -6,27 +6,31 @@
 
 namespace yae {
 
-struct Mesh;
+class Resource;
 
-struct MeshResource
-{
-	char name[256] = {};
-	Mesh* mesh;
-};
-
-class YAE_API ResourceManager2
+class YAE_API ResourceManager
 {
 public:
-	ResourceManager2() {}
+	ResourceManager();
+	~ResourceManager();
 
-	void registerMesh(const char* _name, Mesh* _mesh);
-	void unregisterMesh(const char* _name);
-	Mesh* getMesh(const char* _name) const;
-	const DataArray<MeshResource>& getMeshResources() const;
+	void registerResource(const char* _name, Resource* _resource);
+	void unregisterResource(Resource* _resource);
 
-//private:
-	HashMap<StringHash, MeshResource> m_meshesByName;
-	DataArray<MeshResource> m_meshes;
+	void reloadResource(Resource* _resource);
+
+	void flushResources();
+
+	Resource* findResource(const char* _name) const;
+	template <typename T> T* findResource(const char* _name) const;
+
+	const DataArray<Resource*> getResources() const;
+
+private:
+	DataArray<Resource*> m_resources;
+	HashMap<StringHash, Resource*> m_resourcesByID;
 };
 
 } // namespace yae
+
+#include "ResourceManager.inl"

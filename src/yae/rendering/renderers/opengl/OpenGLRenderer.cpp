@@ -1,9 +1,10 @@
 #include "OpenGLRenderer.h"
 
 #include <yae/program.h>
-#include <yae/resources/ShaderResource.h>
-#include <yae/resources/FontResource.h>
-#include <yae/resources/FileResource.h>
+#include <yae/resources/ShaderFile.h>
+#include <yae/resources/FontFile.h>
+#include <yae/resources/File.h>
+#include <yae/resource.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -148,12 +149,15 @@ bool OpenGLRenderer::_init()
 
 	// Mesh shader
 	{
-		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.vert", ShaderType::VERTEX);
-		vertexShader->useLoad();
+		ShaderFile* vertexShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert");
+		vertexShader->setShaderType(ShaderType::VERTEX);
+		vertexShader->load();
 		YAE_ASSERT(vertexShader->isLoaded());
 
-		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/shader.frag", ShaderType::FRAGMENT);
-		fragmentShader->useLoad();
+		
+		ShaderFile* fragmentShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag");
+		fragmentShader->setShaderType(ShaderType::FRAGMENT);
+		fragmentShader->load();
 		YAE_ASSERT(fragmentShader->isLoaded());
 
 		ShaderHandle shaders[] =
@@ -167,18 +171,20 @@ bool OpenGLRenderer::_init()
 		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 1, "inColor"));
 		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 2, "inTexCoord"));
 
-		fragmentShader->releaseUnuse();
-		vertexShader->releaseUnuse();
+		fragmentShader->release();
+		vertexShader->release();
 	}
 
 	// Font shader
 	{
-		ShaderResource* vertexShader = findOrCreateResource<ShaderResource>("./data/shaders/font.vert", ShaderType::VERTEX);
-		vertexShader->useLoad();
+		ShaderFile* vertexShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/font.vert");
+		vertexShader->setShaderType(ShaderType::VERTEX);
+		vertexShader->load();
 		YAE_ASSERT(vertexShader->isLoaded());
 
-		ShaderResource* fragmentShader = findOrCreateResource<ShaderResource>("./data/shaders/font.frag", ShaderType::FRAGMENT);
-		fragmentShader->useLoad();
+		ShaderFile* fragmentShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/font.frag");
+		fragmentShader->setShaderType(ShaderType::FRAGMENT);
+		fragmentShader->load();
 		YAE_ASSERT(fragmentShader->isLoaded());
 
 		ShaderHandle shaders[] =
@@ -192,8 +198,8 @@ bool OpenGLRenderer::_init()
 		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 1, "inColor"));
 		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 2, "inTexCoord"));
 
-		fragmentShader->releaseUnuse();
-		vertexShader->releaseUnuse();
+		fragmentShader->release();
+		vertexShader->release();
 	}
 
 	// Quad
@@ -252,7 +258,7 @@ void OpenGLRenderer::waitIdle()
 
 }
 
-bool OpenGLRenderer::createTexture(void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
+bool OpenGLRenderer::createTexture(const void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle)
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -462,6 +468,9 @@ void OpenGLRenderer::_initRenderTarget(RenderTarget& _renderTarget)
 {
 	YAE_CAPTURE_FUNCTION();
 
+	YAE_ASSERT(_renderTarget.m_width != 0);
+	YAE_ASSERT(_renderTarget.m_height != 0);
+
 	GLuint textures[2];
 	YAE_GL_VERIFY(glGenTextures(2, textures));
 	_renderTarget.m_renderTexture = (TextureHandle)textures[0];
@@ -507,6 +516,9 @@ void OpenGLRenderer::_initRenderTarget(RenderTarget& _renderTarget)
 
 void OpenGLRenderer::_resizeRenderTarget(RenderTarget& _renderTarget)
 {
+	YAE_ASSERT(_renderTarget.m_width != 0);
+	YAE_ASSERT(_renderTarget.m_height != 0);
+
 	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, (GLuint)_renderTarget.m_renderTexture));
 	YAE_GL_VERIFY(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderTarget.m_width, _renderTarget.m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 
@@ -579,13 +591,14 @@ void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
 
 		if (_camera->renderTarget != nullptr)
 		{
-			YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, _camera->renderTarget->m_frameBuffer)); 
+			YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, _camera->renderTarget->m_frameBuffer));
 		}
 		else
 		{
 			YAE_GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
 
 		}
+		YAE_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
 	    glViewport(0, 0, viewportSize.x, viewportSize.y);
 	    glScissor(0, 0, viewportSize.x, viewportSize.y);
@@ -657,8 +670,8 @@ bool OpenGLRenderer::_initIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	FileResource* im3dShaderFile = findOrCreateResource<FileResource>("./data/shaders/im3d.glsl");
-	im3dShaderFile->useLoad();
+	File* im3dShaderFile = resource::findOrCreateFile<File>("./data/shaders/im3d.glsl");
+	im3dShaderFile->load();
 	YAE_ASSERT(im3dShaderFile->isLoaded());
 
 	String shaderSource(&scratchAllocator());
@@ -723,7 +736,7 @@ bool OpenGLRenderer::_initIm3d()
 		destroyShader(fs);
 		destroyShader(vs);
 	}
-	im3dShaderFile->releaseUnuse();
+	im3dShaderFile->release();
 
 	YAE_GL_VERIFY(glGenBuffers(1, &m_im3dVertexBuffer));;
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_im3dVertexArray));

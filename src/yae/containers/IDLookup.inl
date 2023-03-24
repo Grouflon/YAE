@@ -120,7 +120,7 @@ void IndexedPool<T>::clear()
 	m_data.clear();
 	for (u32 index = 0; index < m_indices.size(); ++index)
 	{
-		Index& i : m_indices[index];
+		Index& i = m_indices[index];
 		if (i.dataIndex != INVALID_INDEX)
 		{
 			i.dataIndex = INVALID_INDEX;

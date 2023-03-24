@@ -2,8 +2,8 @@
 
 #include <yae/types.h>
 
-namespace random {
+namespace random_test {
 
 void testRandom();
 
-} // namespace random
+} // namespace random_test
