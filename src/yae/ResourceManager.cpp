@@ -99,15 +99,17 @@ void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* 
 
 	YAE_ASSERT(m_fileWatchers.get(id) == nullptr);
 
+	ResourceManager* rm = &resourceManager();
 	auto fileWatch = defaultAllocator().create<filewatch::FileWatch<std::string>>(
 		_filePath,
-		[_resource](const std::string& _path, const filewatch::Event _change_type)
+		[_resource, rm](const std::string& _path, const filewatch::Event _change_type)
 		{
 			if (_change_type == filewatch::Event::modified)
 			{
-				resourceManager().m_resourcesToReloadMutex.lock();
-				resourceManager().m_resourcesToReload.push_back(_resource);
-				resourceManager().m_resourcesToReloadMutex.unlock();
+				rm->m_resourcesToReloadMutex.lock();
+				rm->m_resourcesToReload.push_back(_resource);
+				rm->m_resourcesToReloadMutex.unlock();
+				YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _path.c_str());
 			}
 		}
 	);
@@ -128,12 +130,61 @@ void ResourceManager::stopReloadOnFileChanged(const char* _filePath, Resource* _
 void ResourceManager::reloadChangedResources()
 {
 	m_resourcesToReloadMutex.lock();
-	for (Resource* resource : m_resourcesToReload)
+	_processReloadDependencies();
+	DataArray<Resource*> resourcesToReload(m_resourcesToReload, &scratchAllocator());
+	m_resourcesToReload.clear();
+	m_resourcesToReloadMutex.unlock();
+	
+	for (Resource* resource : resourcesToReload)
 	{
 		resource->reload();
 	}
-	m_resourcesToReload.clear();
-	m_resourcesToReloadMutex.unlock();
+}
+
+void ResourceManager::addDependency(Resource* _dependencyResource, Resource* _dependentResource)
+{
+	YAE_ASSERT(_dependencyResource != nullptr);
+	YAE_ASSERT(_dependentResource != nullptr);
+
+	DataArray<Resource*>* dependentResourcesPtr = m_dependencies.get(_dependencyResource);
+	if (dependentResourcesPtr == nullptr)
+	{
+		dependentResourcesPtr = &m_dependencies.set(_dependencyResource, DataArray<Resource*>());
+	}
+	YAE_ASSERT(dependentResourcesPtr != nullptr);
+	dependentResourcesPtr->push_back(_dependentResource);
+}
+
+void ResourceManager::removeDependency(Resource* _dependencyResource, Resource* _dependentResource)
+{
+	YAE_ASSERT(_dependencyResource != nullptr);
+	YAE_ASSERT(_dependentResource != nullptr);
+
+	DataArray<Resource*>* dependentResourcesPtr = m_dependencies.get(_dependencyResource);
+	YAE_ASSERT(dependentResourcesPtr != nullptr);
+	auto it = dependentResourcesPtr->find(_dependentResource);
+	YAE_ASSERT(it != dependentResourcesPtr->end());
+	dependentResourcesPtr->erase(it);
+}
+
+void ResourceManager::_processReloadDependencies()
+{
+	for (u32 i = 0; i < m_resourcesToReload.size(); ++i)
+	{
+		Resource* resource = m_resourcesToReload[i];
+		
+		DataArray<Resource*>* dependentResourcesPtr = m_dependencies.get(resource);
+		if (dependentResourcesPtr == nullptr)
+			continue;
+		
+		for (Resource* dependentResource : *dependentResourcesPtr)
+		{
+			if (m_resourcesToReload.find(dependentResource) == nullptr)
+			{
+				m_resourcesToReload.push_back(dependentResource);
+			}
+		}
+	}
 }
 
 } // namespace yae

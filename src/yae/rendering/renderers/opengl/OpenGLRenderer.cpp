@@ -147,61 +147,6 @@ bool OpenGLRenderer::_init()
 
 	YAE_GL_VERIFY(glBindVertexArray(0));
 
-	// Mesh shader
-	{
-		ShaderFile* vertexShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert");
-		vertexShader->setShaderType(ShaderType::VERTEX);
-		vertexShader->load();
-		YAE_ASSERT(vertexShader->isLoaded());
-
-		
-		ShaderFile* fragmentShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag");
-		fragmentShader->setShaderType(ShaderType::FRAGMENT);
-		fragmentShader->load();
-		YAE_ASSERT(fragmentShader->isLoaded());
-
-		ShaderHandle shaders[] =
-		{
-			vertexShader->getShaderHandle(),
-			fragmentShader->getShaderHandle()
-		};
-		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_shader));
-
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 0, "inPosition"));
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 1, "inColor"));
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_shader, 2, "inTexCoord"));
-
-		fragmentShader->release();
-		vertexShader->release();
-	}
-
-	// Font shader
-	{
-		ShaderFile* vertexShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/font.vert");
-		vertexShader->setShaderType(ShaderType::VERTEX);
-		vertexShader->load();
-		YAE_ASSERT(vertexShader->isLoaded());
-
-		ShaderFile* fragmentShader = resource::findOrCreateFile<ShaderFile>("./data/shaders/font.frag");
-		fragmentShader->setShaderType(ShaderType::FRAGMENT);
-		fragmentShader->load();
-		YAE_ASSERT(fragmentShader->isLoaded());
-
-		ShaderHandle shaders[] =
-		{
-			vertexShader->getShaderHandle(),
-			fragmentShader->getShaderHandle()
-		};
-		YAE_VERIFY(createShaderProgram(shaders, countof(shaders), m_fontShader));
-
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 0, "inPosition"));
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 1, "inColor"));
-		YAE_GL_VERIFY(glBindAttribLocation((GLuint)m_fontShader, 2, "inTexCoord"));
-
-		fragmentShader->release();
-		vertexShader->release();
-	}
-
 	// Quad
 	{
 		YAE_GL_VERIFY(glGenVertexArrays(1, &m_quadVertexArray));
@@ -237,12 +182,6 @@ void OpenGLRenderer::_shutdown()
 	m_quadVertexBuffer = 0;
 	glDeleteVertexArrays(1, &m_quadVertexArray);
 	m_quadVertexArray = 0;
-
-	destroyShaderProgram(m_fontShader);
-	m_fontShader = 0;
-
-	destroyShaderProgram(m_shader);
-	m_shader = 0;
 
 	GLuint buffers[2] = { m_vertexBufferObject, m_indexBufferObject};
 	glDeleteBuffers(2, buffers);
@@ -420,6 +359,10 @@ bool OpenGLRenderer::createShaderProgram(ShaderHandle* _shaderHandles, u16 _shad
         YAE_GL_VERIFY(glGetProgramInfoLog(programId, logLength, NULL, (GLchar*)buf.data()));
     	YAE_ERRORF("Shader program linking result:\n%s", buf.c_str());
     }
+
+    YAE_GL_VERIFY(glBindAttribLocation(programId, 0, "inPosition"));
+	YAE_GL_VERIFY(glBindAttribLocation(programId, 1, "inColor"));
+	YAE_GL_VERIFY(glBindAttribLocation(programId, 2, "inTexCoord"));
 
     return (GLboolean)status == GL_TRUE;
 }
@@ -611,6 +554,9 @@ void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
 		YAE_CAPTURE_SCOPE("draw command pass");
 
 		GLuint shader = (GLuint)pair.key;
+		if (shader == 0)
+			continue;
+
 		YAE_GL_VERIFY(glUseProgram(shader));
 
 		GLint viewProjLocation = glGetUniformLocation((GLuint)shader, "viewProj");

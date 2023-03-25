@@ -226,11 +226,11 @@ typename HashMap<Key, T>::FindResult HashMap<Key, T>::_find(Key _key) const
 	result.previousDataIndex = END_OF_LIST;
 	result.dataIndex = END_OF_LIST;
 
-	u32 hashSize = m_hash.size();
+	u64 hashSize = u64(m_hash.size());
 	if (hashSize == 0)
 		return result;
 
-	result.hashIndex = _key % hashSize;
+	result.hashIndex = size_t(_key) % hashSize;
 	result.dataIndex = m_hash[result.hashIndex];
 	while (result.dataIndex != END_OF_LIST)
 	{

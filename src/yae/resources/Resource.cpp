@@ -36,7 +36,7 @@ void Resource::release()
 
 void Resource::reload()
 {
-	if (!isLoaded())
+	if (m_loadCount == 0)
 		return;
 
 	_internalUnload();

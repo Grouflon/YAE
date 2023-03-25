@@ -8,8 +8,11 @@
 #include <yae/program.h>
 #include <yae/rendering/Renderer.h>
 #include <yae/ResourceManager.h>
+#include <yae/resource.h>
 #include <yae/resources/Mesh.h>
 #include <yae/resources/Resource.h>
+#include <yae/resources/ShaderFile.h>
+#include <yae/resources/ShaderProgram.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/Serializer.h>
 #include <yae/string.h>
@@ -36,6 +39,8 @@ struct EditorInstance
 	bool showMirrorDebugWindow = false;
 	bool showRendererDebugWindow = false;
 	bool showDemoWindow = false;
+
+	ShaderProgram* meshEditorShader = nullptr;
 
 	// resource inspector
 	DataArray<MeshInspector*> meshInspectors;
@@ -173,6 +178,33 @@ void beforeInitApplication(yae::Application* _application)
 	_application->setUserData("editor", editorInstance);
 }
 
+void afterInitApplication(yae::Application* _application)
+{
+	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
+
+	Shader* shaders[] =
+	{
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert"),
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag")
+	};
+	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
+	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
+	if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::FRAGMENT);
+
+	editorInstance->meshEditorShader = resource::findOrCreate<ShaderProgram>("meshEditorShader");
+	editorInstance->meshEditorShader->setShaderStages(shaders, countof(shaders));
+	editorInstance->meshEditorShader->load();
+	YAE_ASSERT(editorInstance->meshEditorShader->isLoaded());
+}
+
+void beforeShutdownApplication(yae::Application* _application)
+{
+	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
+
+	editorInstance->meshEditorShader->release();
+	editorInstance->meshEditorShader = nullptr;
+}
+
 void afterShutdownApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
@@ -294,7 +326,7 @@ void updateApplication(yae::Application* _application, float _dt)
 					}
 				Im3d::End();
 
-				renderer().drawMesh(Matrix4::IDENTITY, mesh, 0, 0);
+				renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->meshEditorShader, nullptr);
     		}
     		renderer().popScene();
 

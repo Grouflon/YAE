@@ -29,8 +29,12 @@ public:
 	void startReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void stopReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void reloadChangedResources();
+	void addDependency(Resource* _dependencyResource, Resource* _dependentResource);
+	void removeDependency(Resource* _dependencyResource, Resource* _dependentResource);
 
 //private:
+	void _processReloadDependencies();
+
 	DataArray<Resource*> m_resources;
 	HashMap<StringHash, Resource*> m_resourcesByID;
 
@@ -38,6 +42,8 @@ public:
 
 	std::mutex m_resourcesToReloadMutex;
 	DataArray<Resource*> m_resourcesToReload;
+
+	HashMap<Resource*, DataArray<Resource*>> m_dependencies;
 };
 
 } // namespace yae

@@ -11,11 +11,13 @@
 #include <yae/Module.h>
 #include <yae/program.h>
 #include <yae/rendering/Renderer.h>
-#include <yae/ResourceManager.h>
 #include <yae/resource.h>
+#include <yae/ResourceManager.h>
 #include <yae/resources/File.h>
-#include <yae/resources/MeshFile.h>
 #include <yae/resources/FontFile.h>
+#include <yae/resources/MeshFile.h>
+#include <yae/resources/ShaderFile.h>
+#include <yae/resources/ShaderProgram.h>
 #include <yae/resources/TextureFile.h>
 #include <yae/serialization/BinarySerializer.h>
 #include <yae/serialization/JsonSerializer.h>
@@ -78,6 +80,7 @@ public:
 	MeshFile* mesh = nullptr;
 	TextureFile* texture = nullptr;
 	FontFile* font = nullptr;
+	ShaderProgram* meshShader = nullptr;
 
 	NodeID node1;
 	NodeID node2;
@@ -143,6 +146,20 @@ void afterInitApplication(Application* _app)
 	gameInstance->font->load();
 	YAE_ASSERT(gameInstance->font->isLoaded());
 
+	Shader* shaders[] =
+	{
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert"),
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag")
+	};
+	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
+	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
+	if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::FRAGMENT);
+
+	gameInstance->meshShader = resource::findOrCreate<ShaderProgram>("meshShader");
+	gameInstance->meshShader->setShaderStages(shaders, countof(shaders));
+	gameInstance->meshShader->load();
+	YAE_ASSERT(gameInstance->meshShader->isLoaded());
+
 	SpatialSystem* spatialSystem = defaultAllocator().create<SpatialSystem>();
 	YAE_ASSERT(gameInstance != nullptr);
 	app().setUserData("spatialSystem", spatialSystem);
@@ -170,6 +187,7 @@ void beforeShutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
+	gameInstance->meshShader->release();
 	gameInstance->texture->release();
 	gameInstance->font->release();
 	gameInstance->mesh->release();
@@ -380,16 +398,16 @@ void updateApplication(Application* _app, float _dt)
 	renderer().drawMesh(
 		gameInstance->mesh1Transform,
 		gameInstance->mesh,
-		0,
-		gameInstance->texture->getTextureHandle()
+		gameInstance->meshShader,
+		gameInstance->texture
 	);
 
 	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh2Transform,
 		gameInstance->mesh,
-		0,
-		gameInstance->texture->getTextureHandle()
+		gameInstance->meshShader,
+		gameInstance->texture
 	);
 
 	float fontScale = 0.005f;
@@ -405,8 +423,8 @@ void updateApplication(Application* _app, float _dt)
 	renderer().drawMesh(
 		gameInstance->node2->getWorldMatrix(),
 		gameInstance->mesh,
-		0,
-		gameInstance->texture->getTextureHandle()
+		gameInstance->meshShader,
+		gameInstance->texture
 	);
 
 	for (NodeID node : spatialSystem().getRoots())

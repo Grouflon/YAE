@@ -2,10 +2,14 @@
 
 #include <yae/Application.h>
 #include <yae/input.h>
-#include <yae/string.h>
 #include <yae/math_3d.h>
+#include <yae/resource.h>
 #include <yae/resources/FontFile.h>
 #include <yae/resources/Mesh.h>
+#include <yae/resources/ShaderFile.h>
+#include <yae/resources/ShaderProgram.h>
+#include <yae/resources/Texture.h>
+#include <yae/string.h>
 
 #include <GLFW/glfw3.h>
 #include <im3d/im3d.h>
@@ -132,12 +136,29 @@ bool Renderer::init(GLFWwindow* _window)
 	if (!_initIm3d())
 		return false;
 
+	Shader* shaders[] =
+	{
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/font.vert"),
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/font.frag")
+	};
+	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
+	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
+	if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::FRAGMENT);
+
+	m_fontShader = resource::findOrCreate<ShaderProgram>("fontShader");
+	m_fontShader->setShaderStages(shaders, countof(shaders));
+	m_fontShader->load();
+	YAE_ASSERT(m_fontShader->isLoaded());	
+
 	return true;
 }
 
 void Renderer::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
+
+	m_fontShader->release();
+	m_fontShader = nullptr;
 
 	_shutdownImGui();
 
@@ -395,24 +416,24 @@ void Renderer::resizeRenderTarget(RenderTarget* _renderTarget, u32 _width, u32 _
 	_resizeRenderTarget(*_renderTarget);
 }
 
-void Renderer::drawMesh(const Matrix4& _transform, const Mesh* _mesh, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
+void Renderer::drawMesh(const Matrix4& _transform, const Mesh* _mesh, const ShaderProgram* _shaderProgram, const Texture* _texture)
 {
+	YAE_ASSERT(_mesh != nullptr);
+
 	drawMesh(
 		_transform,
 		_mesh->getVertices().data(), _mesh->getVertices().size(),
 		_mesh->getIndices().data(), _mesh->getIndices().size(),
-		_shader,
-		_texture
+		_shaderProgram != nullptr ? _shaderProgram->getShaderProgramHandle() : 0,
+		_texture != nullptr ? _texture->getTextureHandle() : 0
 	);
 }
-
 
 void Renderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
 {
 	RenderScene* scene = _getCurrentScene();
 
-	//u32 shader = (u32)_shader;
-	u32 shader = (u32)m_shader;
+	u32 shader = (u32)_shader;
 	DataArray<DrawCommand>* commandArray = scene->m_drawCommands.get(shader);
 	if (commandArray == nullptr)
 	{
@@ -443,7 +464,7 @@ void Renderer::drawText(const Matrix4& _transform, const FontFile* _font, const 
 {
 	RenderScene* scene = _getCurrentScene();
 
-	u32 shader = (u32)m_fontShader;
+	u32 shader = m_fontShader->getShaderProgramHandle();
 	DataArray<DrawCommand>* commandArray = scene->m_drawCommands.get(shader);
 	if (commandArray == nullptr)
 	{
