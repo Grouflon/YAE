@@ -19,6 +19,7 @@ namespace yae {
 
 class FontFile;
 class Mesh;
+class Shader;
 class ShaderProgram;
 class Texture;
 class RenderScene;
@@ -27,6 +28,7 @@ class RenderTarget;
 
 struct YAE_API DrawCommand
 {
+	PrimitiveMode primitiveMode;
 	Matrix4 transform;
 	u32 indexOffset;
 	u32 elementCount;
@@ -124,7 +126,7 @@ public:
 	virtual void destroyShaderProgram(ShaderProgramHandle& _shaderProgramHandle) = 0;
 
 	void drawMesh(const Matrix4& _transform, const Mesh* _mesh, const ShaderProgram* _shaderProgram, const Texture* _texture);
-	void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const ShaderProgramHandle& _shader, const TextureHandle& _texture);
+	void drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, PrimitiveMode _primitiveMode, const ShaderProgramHandle& _shader, const TextureHandle& _texture);
 	void drawText(const Matrix4& _transform, const FontFile* _font, const char* _text);
 
 	RenderScene* createScene(const char* _sceneName);
@@ -167,6 +169,7 @@ public:
 	Im3d::Context* m_emptyIm3dContext = nullptr;
 
 	ShaderProgram* m_fontShader = nullptr;
+	Mesh* m_quad = nullptr;
 
 	DataArray<Vertex> m_vertices;
 	DataArray<u32> m_indices;

@@ -40,7 +40,8 @@ struct EditorInstance
 	bool showRendererDebugWindow = false;
 	bool showDemoWindow = false;
 
-	ShaderProgram* meshEditorShader = nullptr;
+	ShaderProgram* wireframeShader = nullptr;
+	ShaderProgram* normalsShader = nullptr;
 
 	// resource inspector
 	DataArray<MeshInspector*> meshInspectors;
@@ -182,27 +183,53 @@ void afterInitApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
 
-	Shader* shaders[] =
 	{
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert"),
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag")
-	};
-	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
-	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
-	if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::FRAGMENT);
+		Shader* shaders[] =
+		{
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.vert"),
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.geom"),
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.frag")
+		};
+		// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
+		if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
+		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
+		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
 
-	editorInstance->meshEditorShader = resource::findOrCreate<ShaderProgram>("meshEditorShader");
-	editorInstance->meshEditorShader->setShaderStages(shaders, countof(shaders));
-	editorInstance->meshEditorShader->load();
-	YAE_ASSERT(editorInstance->meshEditorShader->isLoaded());
+		editorInstance->wireframeShader = resource::findOrCreate<ShaderProgram>("wireframeShader");
+		editorInstance->wireframeShader->setShaderStages(shaders, countof(shaders));
+		editorInstance->wireframeShader->load();
+		YAE_ASSERT(editorInstance->wireframeShader->isLoaded());
+	}
+
+	{
+		Shader* shaders[] =
+		{
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.vert"),
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.geom"),
+			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.frag")
+		};
+		// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
+		if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
+		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
+		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
+
+		editorInstance->normalsShader = resource::findOrCreate<ShaderProgram>("normalsShader");
+		editorInstance->normalsShader->setShaderStages(shaders, countof(shaders));
+		editorInstance->normalsShader->setPrimitiveMode(PrimitiveMode::POINTS);
+		editorInstance->normalsShader->load();
+		YAE_ASSERT(editorInstance->normalsShader->isLoaded());
+	}
 }
 
 void beforeShutdownApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
 
-	editorInstance->meshEditorShader->release();
-	editorInstance->meshEditorShader = nullptr;
+	editorInstance->wireframeShader->release();
+	editorInstance->wireframeShader = nullptr;
+
+	editorInstance->normalsShader->release();
+	editorInstance->normalsShader = nullptr;
 }
 
 void afterShutdownApplication(yae::Application* _application)
@@ -299,7 +326,7 @@ void updateApplication(yae::Application* _application, float _dt)
     		YAE_ASSERT(mesh != nullptr);
 
     		RenderCamera* camera = renderer().getCamera(meshInspector->mesh->getName());
-    		Vector3 cameraArm = Vector3::FORWARD * -4.f + Vector3::RIGHT * -4.f + Vector3::UP * 2.f; 
+    		Vector3 cameraArm = Vector3::FORWARD * -2.f + Vector3::RIGHT * -2.f + Vector3::UP * 1.f; 
 			camera->position = Quaternion::FromAngleAxis(app().getTime() * PI * 0.2f, Vector3::UP) * cameraArm;
 			Matrix4 cameraTransform = math::inverse(Matrix4::FromLookAt(camera->position, Vector3::ZERO, -Vector3::UP));
 			camera->rotation = Quaternion::FromMatrix4(cameraTransform);
@@ -326,11 +353,13 @@ void updateApplication(yae::Application* _application, float _dt)
 					}
 				Im3d::End();
 
-				renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->meshEditorShader, nullptr);
+				renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->wireframeShader, nullptr);
+				//renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->normalsShader, nullptr);
     		}
     		renderer().popScene();
 
     		String name(string::format("Mesh: %s", meshInspector->mesh->getName()), &scratchAllocator());
+    		ImGui::SetNextWindowSize(ImVec2(50.f, 50.f), ImGuiCond_FirstUseEver);
     		if (ImGui::Begin(name.c_str(), &meshInspector->opened))
     		{
     			ImVec2 windowSize = ImGui::GetContentRegionAvail();

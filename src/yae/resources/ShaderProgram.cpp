@@ -31,6 +31,18 @@ const DataArray<Shader*>& ShaderProgram::getShaderStages()
 	return m_shaderStages;
 }
 
+void ShaderProgram::setPrimitiveMode(PrimitiveMode _primitiveMode)
+{
+	YAE_ASSERT(m_shaderProgramHandle == 0);
+
+	m_primitiveMode = _primitiveMode;
+}
+
+PrimitiveMode ShaderProgram::getPrimitiveMode() const
+{
+	return m_primitiveMode;
+}
+
 ShaderProgramHandle ShaderProgram::getShaderProgramHandle() const
 {
 	return m_shaderProgramHandle;

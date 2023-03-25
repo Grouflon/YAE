@@ -2,9 +2,6 @@
 
 #include <yae/containers/Array.h>
 
-#include <vulkan/vulkan.h>
-#include <glm/vec3.hpp>
-#include <glm/vec2.hpp>
 
 #ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
 	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
@@ -14,10 +11,14 @@
 	#define YAE_IMPLEMENTS_RENDERER_VULKAN 0
 #endif
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
+#include <vulkan/vulkan.h>
+
 #define VK_VERIFY(_exp) if ((_exp) != VK_SUCCESS) { YAE_ERROR_CAT("vulkan", "Failed Vulkan call: "#_exp); YAE_ASSERT(false); }
 
 VK_DEFINE_HANDLE(VmaAllocator);
 VK_DEFINE_HANDLE(VmaAllocation);
+#endif
 
 namespace yae {
 
@@ -27,6 +28,7 @@ enum class RendererType : u8
 	OpenGL
 };
 
+#if YAE_IMPLEMENTS_RENDERER_VULKAN
 const u32 INVALID_QUEUE = ~0u;
 
 struct QueueFamilyIndices
@@ -57,6 +59,7 @@ struct SwapChainSupportDetails
 		return !formats.empty() && !presentModes.empty();
 	}
 };
+#endif
 
 /*
 struct TextureHandle
@@ -93,14 +96,15 @@ typedef u32 ShaderProgramHandle;
 typedef u32 FrameHandle;
 
 struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
+	Vector3 pos;
+	Vector2 texCoord;
+	Vector3 normal;
+	Vector3 color;
 
 	Vertex() {}
-	Vertex(const glm::vec3 _pos, const glm::vec3& _color, const glm::vec2& _texCoord) : pos(_pos), color(_color), texCoord(_texCoord) {}
+	Vertex(const Vector3& _pos, const Vector2& _texCoord, const Vector3& _normal, const Vector3& _color) : pos(_pos), texCoord(_texCoord), normal(_normal), color(_color) {}
 	bool operator==(const Vertex& other) const {
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+		return pos == other.pos && texCoord == other.texCoord && normal == other.normal && color == other.color ;
 	}
 };
 
@@ -110,6 +114,15 @@ enum class ShaderType : u8
 	VERTEX,
 	GEOMETRY,
 	FRAGMENT,
+};
+
+enum class PrimitiveMode : u8
+{
+	POINTS = 0,
+	LINE_STRIP,
+	LINE_LOOP,
+	TRIANGLES,
+	TRIANGLE_STRIP
 };
 
 typedef u32 FrameBufferHandle;

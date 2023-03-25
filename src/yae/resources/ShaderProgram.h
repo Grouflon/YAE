@@ -23,6 +23,9 @@ public:
 	void setShaderStages(Shader** _shaders, u32 _shaderCount);
 	const DataArray<Shader*>& getShaderStages();
 
+	void setPrimitiveMode(PrimitiveMode _primitiveMode);
+	PrimitiveMode getPrimitiveMode() const;
+
 	ShaderProgramHandle getShaderProgramHandle() const;
 
 // private:
@@ -31,6 +34,7 @@ public:
 
 	DataArray<Shader*> m_shaderStages;
 	ShaderProgramHandle m_shaderProgramHandle = 0;
+	PrimitiveMode m_primitiveMode = PrimitiveMode::TRIANGLES;
 };
 
 } // namespace yae

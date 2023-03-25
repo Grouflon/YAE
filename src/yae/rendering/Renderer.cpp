@@ -136,6 +136,7 @@ bool Renderer::init(GLFWwindow* _window)
 	if (!_initIm3d())
 		return false;
 
+	// Shaders
 	Shader* shaders[] =
 	{
 		resource::findOrCreateFile<ShaderFile>("./data/shaders/font.vert"),
@@ -148,7 +149,27 @@ bool Renderer::init(GLFWwindow* _window)
 	m_fontShader = resource::findOrCreate<ShaderProgram>("fontShader");
 	m_fontShader->setShaderStages(shaders, countof(shaders));
 	m_fontShader->load();
-	YAE_ASSERT(m_fontShader->isLoaded());	
+	YAE_ASSERT(m_fontShader->isLoaded());
+
+	// Quad
+	{
+		m_quad = resource::findOrCreate<Mesh>("quad");
+		Vertex vertices[] = {
+			Vertex(Vector3(-1.0f, -1.0f, 0.f), Vector2(0.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
+			Vertex(Vector3(1.0f, -1.0f, 0.f), Vector2(1.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
+			Vertex(Vector3(-1.0f, 1.0f, 0.f), Vector2(0.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
+			Vertex(Vector3(1.0f, 1.0f, 0.f), Vector2(1.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE)
+		};
+		u32 indices[] = {
+			0, 1, 2,
+			2, 1, 3
+		};
+		m_quad->setVertices(vertices, countof(vertices));
+		m_quad->setIndices(indices, countof(indices));
+		m_quad->load();
+	}
+
+
 
 	return true;
 }
@@ -156,6 +177,9 @@ bool Renderer::init(GLFWwindow* _window)
 void Renderer::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
+
+	m_quad->release();
+	m_quad = nullptr;
 
 	m_fontShader->release();
 	m_fontShader = nullptr;
@@ -424,12 +448,13 @@ void Renderer::drawMesh(const Matrix4& _transform, const Mesh* _mesh, const Shad
 		_transform,
 		_mesh->getVertices().data(), _mesh->getVertices().size(),
 		_mesh->getIndices().data(), _mesh->getIndices().size(),
+		_shaderProgram != nullptr ? _shaderProgram->getPrimitiveMode() : PrimitiveMode::TRIANGLES,
 		_shaderProgram != nullptr ? _shaderProgram->getShaderProgramHandle() : 0,
 		_texture != nullptr ? _texture->getTextureHandle() : 0
 	);
 }
 
-void Renderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
+void Renderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 _verticesCount, const u32* _indices, u32 _indicesCount, PrimitiveMode _primitiveMode, const ShaderProgramHandle& _shader, const TextureHandle& _texture)
 {
 	RenderScene* scene = _getCurrentScene();
 
@@ -444,6 +469,7 @@ void Renderer::drawMesh(const Matrix4& _transform, const Vertex* _vertices, u32 
 	u32 startIndex = m_indices.size();
 
 	DrawCommand command;
+	command.primitiveMode = _primitiveMode;
 	command.transform = _transform;
 	command.indexOffset = startIndex;
 	command.elementCount = _indicesCount;
@@ -481,7 +507,7 @@ void Renderer::drawText(const Matrix4& _transform, const FontFile* _font, const 
 	float xPos = 0.f;
 	float yPos = 0.f;
 	Vertex vertices[4];
-	glm::vec3 _color(1.f, 1.f, 1.f);
+	Vector3 _color(1.f, 1.f, 1.f);
 	vertices[0].color = _color;
 	vertices[1].color = _color;
 	vertices[2].color = _color;
@@ -506,14 +532,18 @@ void Renderer::drawText(const Matrix4& _transform, const FontFile* _font, const 
 			1
 		);
 
-		vertices[0].pos = glm::vec3(quad.x0, quad.y0, 0.f);
-		vertices[1].pos = glm::vec3(quad.x1, quad.y0, 0.f);
-		vertices[2].pos = glm::vec3(quad.x1, quad.y1, 0.f);
-		vertices[3].pos = glm::vec3(quad.x0, quad.y1, 0.f);
-		vertices[0].texCoord = glm::vec2(quad.s0, quad.t0);
-		vertices[1].texCoord = glm::vec2(quad.s1, quad.t0);
-		vertices[2].texCoord = glm::vec2(quad.s1, quad.t1);
-		vertices[3].texCoord = glm::vec2(quad.s0, quad.t1);
+		vertices[0].pos = Vector3(-quad.x0, -quad.y0, 0.f);
+		vertices[1].pos = Vector3(-quad.x1, -quad.y0, 0.f);
+		vertices[2].pos = Vector3(-quad.x1, -quad.y1, 0.f);
+		vertices[3].pos = Vector3(-quad.x0, -quad.y1, 0.f);
+		vertices[0].texCoord = Vector2(quad.s0, quad.t0);
+		vertices[1].texCoord = Vector2(quad.s1, quad.t0);
+		vertices[2].texCoord = Vector2(quad.s1, quad.t1);
+		vertices[3].texCoord = Vector2(quad.s0, quad.t1);
+		vertices[0].normal = Vector3(0.f, 0.f, 1.f);
+		vertices[1].normal = Vector3(0.f, 0.f, 1.f);
+		vertices[2].normal = Vector3(0.f, 0.f, 1.f);
+		vertices[3].normal = Vector3(0.f, 0.f, 1.f);
 		memcpy(m_vertices.data() + verticesStart + (i * 4), vertices, sizeof(*vertices) * 4);
 
 		for (u32 j = 0; j < 6; ++j)
@@ -524,6 +554,7 @@ void Renderer::drawText(const Matrix4& _transform, const FontFile* _font, const 
 	}
 
 	DrawCommand command;
+	command.primitiveMode = PrimitiveMode::TRIANGLES;
 	command.transform = _transform;
 	command.indexOffset = indicesStart;
 	command.elementCount = textLength * 6;

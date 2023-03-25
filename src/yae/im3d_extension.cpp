@@ -15,7 +15,7 @@ void DrawRotation(const yae::Quaternion& _q, float _radius)
     Im3d::BeginLines();
     	Im3d::SetColor(Im3d::Color_Red);
     	Im3d::Vertex(0.f, 0.f, 0.f);
-    	Im3d::Vertex(forward.x, forward.y, forward.z);
+    	Im3d::Vertex(right.x, right.y, right.z);
     Im3d::End();
     Im3d::BeginLines();
     	Im3d::SetColor(Im3d::Color_Green);
@@ -25,7 +25,7 @@ void DrawRotation(const yae::Quaternion& _q, float _radius)
     Im3d::BeginLines();
     	Im3d::SetColor(Im3d::Color_Blue);
     	Im3d::Vertex(0.f, 0.f, 0.f);
-    	Im3d::Vertex(right.x, right.y, right.z);
+    	Im3d::Vertex(forward.x, forward.y, forward.z);
     Im3d::End();
 }
 

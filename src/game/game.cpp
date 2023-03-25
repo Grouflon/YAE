@@ -129,6 +129,7 @@ void afterInitApplication(Application* _app)
 	gameInstance->mesh1Transform = Matrix4::FromRotation(Quaternion::FromEuler(PI*.5f, PI*-.25f, 0.f));
 	gameInstance->mesh1Transform[3][0] = 0.f;
 	gameInstance->mesh1Transform[3][1] = .5f;
+	gameInstance->mesh1Transform[3][2] = -1.5f;
 
 	gameInstance->mesh2Transform[3][0] = 1.f;
 	gameInstance->mesh2Transform[3][1] = -1.f;
@@ -148,8 +149,8 @@ void afterInitApplication(Application* _app)
 
 	Shader* shaders[] =
 	{
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.vert"),
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/shader.frag")
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/mesh.vert"),
+		resource::findOrCreateFile<ShaderFile>("./data/shaders/mesh.frag")
 	};
 	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
 	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
@@ -413,7 +414,7 @@ void updateApplication(Application* _app, float _dt)
 	float fontScale = 0.005f;
 	gameInstance->fontTransform = Matrix4::IDENTITY;
 	gameInstance->fontTransform = math::scale(gameInstance->fontTransform, Vector3::ONE * fontScale);
-	gameInstance->fontTransform = math::translate(gameInstance->fontTransform, Vector3(210.f, 20.f, 0.f));
+	//sgameInstance->fontTransform = math::translate(gameInstance->fontTransform, Vector3(210.f, 20.f, 0.f));
 	renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 

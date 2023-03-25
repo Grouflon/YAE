@@ -76,6 +76,12 @@ void MeshFile::_doLoad()
 					1.f - reader.GetAttrib().texcoords[2 * index.texcoord_index + 1]
 				};
 
+				v.normal = {
+					reader.GetAttrib().normals[3 * index.normal_index + 0],
+					reader.GetAttrib().normals[3 * index.normal_index + 1],
+					reader.GetAttrib().normals[3 * index.normal_index + 2],
+				};
+
 				v.color = {1.f, 1.f, 1.f};
 
 				u32 vertexHash = hash::hash32(&v, sizeof(Vertex));

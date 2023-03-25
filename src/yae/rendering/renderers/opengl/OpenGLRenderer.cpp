@@ -44,6 +44,19 @@ const char* glErrorToString(GLint _errorCode)
 	}
 }
 
+GLuint primitiveModeToGlPrimitiveMode(yae::PrimitiveMode _primitiveMode)
+{
+	switch (_primitiveMode)
+	{
+	case yae::PrimitiveMode::POINTS: return GL_POINTS;
+	case yae::PrimitiveMode::LINE_STRIP: return GL_LINE_STRIP;
+	case yae::PrimitiveMode::LINE_LOOP: return GL_LINE_LOOP;
+	case yae::PrimitiveMode::TRIANGLES: return GL_TRIANGLES;
+	case yae::PrimitiveMode::TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
+	default: return GL_POINTS;
+	}
+}
+
 void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity, GLsizei _length, const GLchar* _msg, const void* _data)
 {
 	if (_id == 0x20071) return; // Message about buffer usage hints when calling glBufferData
@@ -136,42 +149,18 @@ bool OpenGLRenderer::_init()
 
 	int maxVertexAttribs;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-	YAE_ASSERT(maxVertexAttribs >= 3);
+	YAE_ASSERT(maxVertexAttribs >= 4);
 
 	YAE_GL_VERIFY(glEnableVertexAttribArray(0));
 	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
 	YAE_GL_VERIFY(glEnableVertexAttribArray(2));
-	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0));
-	YAE_GL_VERIFY(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3)));
-	YAE_GL_VERIFY(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*6)));
+	YAE_GL_VERIFY(glEnableVertexAttribArray(3));
+	YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)0)); // Vertex
+	YAE_GL_VERIFY(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*3))); // TexCoord
+	YAE_GL_VERIFY(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*5))); // Normal
+	YAE_GL_VERIFY(glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)(sizeof(float)*8))); // Color
 
 	YAE_GL_VERIFY(glBindVertexArray(0));
-
-	// Quad
-	{
-		YAE_GL_VERIFY(glGenVertexArrays(1, &m_quadVertexArray));
-		YAE_GL_VERIFY(glBindVertexArray(m_quadVertexArray));
-		static const GLfloat g_quad_vertex_buffer_data[] = {
-			// vertex 				// uv
-			-1.0f, -1.0f, 0.0f,		0.0f, 0.0f,
-			1.0f, -1.0f, 0.0f,		1.0f, 0.0f,
-			-1.0f,  1.0f, 0.0f,		0.0f, 1.0f,
-			-1.0f,  1.0f, 0.0f,		0.0f, 1.0f,
-			1.0f, -1.0f, 0.0f,		1.0f, 0.0f,
-			1.0f,  1.0f, 0.0f,		1.0f, 1.0f,
-		};
-
-		YAE_GL_VERIFY(glGenBuffers(1, &m_quadVertexBuffer));
-		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_quadVertexBuffer));
-		YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW));
-
-		YAE_GL_VERIFY(glEnableVertexAttribArray(0));
-		YAE_GL_VERIFY(glEnableVertexAttribArray(1));
-		YAE_GL_VERIFY(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)0));
-		YAE_GL_VERIFY(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*5, (const GLvoid*)(sizeof(float)*3)));
-
-		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	}
 
 	return true;
 }
@@ -360,9 +349,14 @@ bool OpenGLRenderer::createShaderProgram(ShaderHandle* _shaderHandles, u16 _shad
     	YAE_ERRORF("Shader program linking result:\n%s", buf.c_str());
     }
 
+	YAE_GL_VERIFY(glBindVertexArray(m_vao)); // It fixes the issue of location not being right at draw time, but I'm really sure we need to do that here. I should definitely read about Vertex Arrays
+
     YAE_GL_VERIFY(glBindAttribLocation(programId, 0, "inPosition"));
-	YAE_GL_VERIFY(glBindAttribLocation(programId, 1, "inColor"));
-	YAE_GL_VERIFY(glBindAttribLocation(programId, 2, "inTexCoord"));
+	YAE_GL_VERIFY(glBindAttribLocation(programId, 1, "inTexCoord"));
+	YAE_GL_VERIFY(glBindAttribLocation(programId, 2, "inNormal"));
+	YAE_GL_VERIFY(glBindAttribLocation(programId, 3, "inColor"));
+
+	YAE_GL_VERIFY(glBindVertexArray(0));
 
     return (GLboolean)status == GL_TRUE;
 }
@@ -588,7 +582,7 @@ void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
 
 			void* offset = (void*)(intptr_t)(cmd.indexOffset * sizeof(*m_indices.data()));
     		YAE_GL_VERIFY(glDrawElements(
-    			GL_TRIANGLES, 
+    			primitiveModeToGlPrimitiveMode(cmd.primitiveMode), 
     			cmd.elementCount, 
     			GL_UNSIGNED_INT, 
     			offset
