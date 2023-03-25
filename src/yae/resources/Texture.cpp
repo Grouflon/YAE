@@ -19,7 +19,7 @@ Texture::~Texture()
 
 void Texture::setPixelData(const void* _data, u32 _width, u32 _height, u32 _channelCount)
 {
-	YAE_ASSERT(!isLoaded());
+	YAE_ASSERT(m_textureHandle == 0);
 	m_pixelData = _data;
 	m_width = _width;
 	m_height = _height;

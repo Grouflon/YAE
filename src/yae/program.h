@@ -39,7 +39,6 @@ public:
 
 	// Services getters
 	Application& currentApplication();
-	ResourceManager& resourceManager();
 	Logger& logger();
 	Profiler& profiler();
 
@@ -66,7 +65,6 @@ public:
 	String _getModuleSymbolsPath(const char* _moduleName) const;
 
 	Logger* m_logger = nullptr;
-	ResourceManager* m_resourceManager = nullptr;
 	Profiler* m_profiler = nullptr;
 
 	Array<Application*> m_applications;

@@ -2,6 +2,7 @@
 
 #include <yae/filesystem.h>
 #include <yae/rendering/Renderer.h>
+#include <yae/ResourceManager.h>
 
 #include <stb/stb_image.h>
 
@@ -50,12 +51,16 @@ void TextureFile::_doLoad()
 	}
 	setPixelData(pixels, width, height, channelCount);
 	Texture::_doLoad();
+
+	resourceManager().startReloadOnFileChanged(m_path.c_str(), this);
 }
 
 
 void TextureFile::_doUnload()
 {
 	YAE_CAPTURE_FUNCTION();
+
+	resourceManager().stopReloadOnFileChanged(m_path.c_str(), this);
 
 	Texture::_doUnload();
 

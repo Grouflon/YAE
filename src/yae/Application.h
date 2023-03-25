@@ -32,6 +32,7 @@ public:
 
 	InputSystem& input() const;
 	Renderer& renderer() const;
+	ResourceManager& resourceManager() const;
 
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
@@ -55,6 +56,7 @@ public:
 	u32 m_baseWidth = 0;
 	u32 m_baseHeight = 0;
 
+	ResourceManager* m_resourceManager = nullptr;
 	InputSystem* m_inputSystem = nullptr;
 	Renderer* m_renderer = nullptr;
 	ImGuiContext* m_imguiContext = nullptr;

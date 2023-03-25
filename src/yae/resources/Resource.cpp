@@ -34,6 +34,15 @@ void Resource::release()
 	}
 }
 
+void Resource::reload()
+{
+	if (!isLoaded())
+		return;
+
+	_internalUnload();
+	_internalLoad();
+}
+
 void Resource::_internalLoad()
 {
 	YAE_VERBOSEF_CAT("resource", "Loading \"%s\"...", getName());

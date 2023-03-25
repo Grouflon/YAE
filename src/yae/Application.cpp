@@ -61,6 +61,8 @@ void Application::init(char** _args, int _argCount)
 {
 	YAE_CAPTURE_FUNCTION();
 
+	m_resourceManager = defaultAllocator().create<ResourceManager>();
+
 	// Init Renderer
 #if YAE_PLATFORM_WINDOWS
 	m_renderer = defaultAllocator().create<OpenGLRenderer>();
@@ -145,6 +147,10 @@ void Application::shutdown()
 	glfwDestroyWindow(m_window);
 	m_window = nullptr;
 	YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
+
+	m_resourceManager->flushResources();
+	defaultAllocator().destroy(m_resourceManager);
+	m_resourceManager = nullptr;
 }
 
 bool Application::doFrame()
@@ -191,6 +197,9 @@ bool Application::doFrame()
 		m_saveSettingsRequested = false;
 	}
 
+	// Reload changed resources
+	m_resourceManager->reloadChangedResources();
+
 	return true;
 }
 
@@ -214,6 +223,12 @@ Renderer& Application::renderer() const
 {
 	YAE_ASSERT(m_renderer != nullptr);
 	return *m_renderer;
+}
+
+ResourceManager& Application::resourceManager() const
+{
+	YAE_ASSERT(m_resourceManager != nullptr);
+	return *m_resourceManager;
 }
 
 void* Application::getUserData(const char* _name) const

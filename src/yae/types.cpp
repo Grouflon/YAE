@@ -52,7 +52,7 @@ Logger& logger()
 
 ResourceManager& resourceManager()
 {
-	return program().resourceManager();
+	return app().resourceManager();
 }
 
 Application& app()

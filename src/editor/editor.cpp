@@ -238,7 +238,7 @@ void updateApplication(yae::Application* _application, float _dt)
     {
     	if (ImGui::Begin("Resources", &editorInstance->showResources, ImGuiWindowFlags_AlwaysAutoResize))
     	{
-    		ResourceManager& rm = program().resourceManager();
+    		ResourceManager& rm = resourceManager();
     		for (Resource* resource : rm.getResources())
     		{
 	            if (ImGui::Selectable(resource->getName(), false))

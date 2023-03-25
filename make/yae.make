@@ -100,6 +100,7 @@ endif
 %/imgui_impl_vulkan.o: CPPFLAGS += -Wno-unused-function
 %/im3d.o: CPPFLAGS += -Wno-unused-variable -Wno-unused-function
 %/Vma_impl.o: CPPFLAGS += -Wno-deprecated-copy
+%/ResourceManager.o: CPPFLAGS += -Wno-missing-field-initializers
 
 BIN = $(BINDIR)/yae$(TARGETEXT)
 

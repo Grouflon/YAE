@@ -36,6 +36,8 @@ public:
 	bool load();
 	void release();
 
+	void reload();
+
 	bool isLoaded() const { return m_loadCount > 0 && m_errorCount == 0; } // @TODO warning as errors option ?
 
 	const Array<ResourceLog>& getLogs() const { return m_logs; }

@@ -4,6 +4,8 @@
 #include <yae/resource.h>
 #include <yae/resources/Resource.h>
 
+#include <FileWatch/FileWatch.hpp>
+
 namespace yae {
 
 
@@ -55,15 +57,6 @@ void ResourceManager::unregisterResource(Resource* _resource)
 	_resource->m_name[0] = 0;
 }
 
-void ResourceManager::reloadResource(Resource* _resource)
-{
-	if (!_resource->isLoaded())
-		return;
-
-	_resource->_internalUnload();
-	_resource->_internalLoad();
-}
-
 Resource* ResourceManager::findResource(const char* _name) const
 {
 	StringHash id = StringHash(_name);
@@ -98,6 +91,49 @@ void ResourceManager::flushResources()
 const DataArray<Resource*> ResourceManager::getResources() const
 {
 	return m_resources;
+}
+
+void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* _resource)
+{
+	StringHash id(_filePath);
+
+	YAE_ASSERT(m_fileWatchers.get(id) == nullptr);
+
+	auto fileWatch = defaultAllocator().create<filewatch::FileWatch<std::string>>(
+		_filePath,
+		[_resource](const std::string& _path, const filewatch::Event _change_type)
+		{
+			if (_change_type == filewatch::Event::modified)
+			{
+				resourceManager().m_resourcesToReloadMutex.lock();
+				resourceManager().m_resourcesToReload.push_back(_resource);
+				resourceManager().m_resourcesToReloadMutex.unlock();
+			}
+		}
+	);
+	m_fileWatchers.set(id, fileWatch);
+}
+
+void ResourceManager::stopReloadOnFileChanged(const char* _filePath, Resource* _resource)
+{
+	StringHash id(_filePath);
+
+	auto* watcherPtr = (filewatch::FileWatch<std::string>**)m_fileWatchers.get(id);
+	YAE_ASSERT(watcherPtr != nullptr);
+
+	defaultAllocator().destroy(*watcherPtr);
+	m_fileWatchers.remove(id);
+}
+
+void ResourceManager::reloadChangedResources()
+{
+	m_resourcesToReloadMutex.lock();
+	for (Resource* resource : m_resourcesToReload)
+	{
+		resource->reload();
+	}
+	m_resourcesToReload.clear();
+	m_resourcesToReloadMutex.unlock();
 }
 
 } // namespace yae

@@ -10,9 +10,6 @@
 #include <yae/Module.h>
 #include <yae/serialization/serialization.h>
 #include <yae/serialization/JsonSerializer.h>
-#include <yae/resource.h>
-#include <yae/resources/File.h>
-#include <yae/ResourceManager.h>
 
 #if YAE_PLATFORM_WEB
 #include <emscripten.h>
@@ -196,8 +193,6 @@ void Program::init(char** _args, int _argCount)
 		}
 	}
 
-	m_resourceManager = defaultAllocator().create<ResourceManager>();
-
 	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
 	{
 		platform::getWindowSize(consoleWindowHandle, &m_previousConsoleWindowWidth, &m_previousConsoleWindowHeight);
@@ -210,10 +205,6 @@ void Program::init(char** _args, int _argCount)
 void Program::shutdown()
 {
 	YAE_ASSERT(s_programInstance == this);
-
-	m_resourceManager->flushResources();
-	defaultAllocator().destroy(m_resourceManager);
-	m_resourceManager = nullptr;
 
 	for (int i = m_modules.size() - 1; i >= 0; --i)
 	{
@@ -400,12 +391,6 @@ Application& Program::currentApplication()
 	return *m_currentApplication;
 }
 
-ResourceManager& Program::resourceManager()
-{
-	YAE_ASSERT(m_resourceManager != nullptr);
-	return *m_resourceManager;
-}
-
 Logger& Program::logger()
 {
 	YAE_ASSERT(m_logger != nullptr);
@@ -431,22 +416,19 @@ static bool serializeSettings(Serializer* _serializer, ProgramSettings* _setting
 void Program::loadSettings()
 {
 	String filePath = getSettingsFilePath();
-	File* settingsFile = resource::findOrCreateFile<File>(filePath.c_str());
-	if (!settingsFile->load())
+	FileReader reader(filePath.c_str());
+	if (!reader.load())
 	{
 		YAE_ERRORF_CAT("program", "Failed to load settings file \"%s\"", filePath.c_str());
-		settingsFile->release();
 		return;
 	}
 
 	JsonSerializer serializer(&scratchAllocator());
-	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
+	if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
 	{
 		YAE_ERRORF_CAT("program", "Failed to parse json settings file \"%s\"", filePath.c_str());
-		settingsFile->release();
 		return;	
 	}
-	settingsFile->release();
 
 	ProgramSettings settings;
 	serializer.beginRead();
@@ -542,7 +524,6 @@ bool Program::_doFrame()
 	// Hot Reload Game API
 	if (m_hotReloadEnabled)
 	{
-
 		DataArray<Module*> modulesToReload(&scratchAllocator());
 		for (Module* module : m_modules)
 		{
