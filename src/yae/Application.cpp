@@ -21,8 +21,8 @@
 #include <yae/rendering/renderers/opengl/OpenGLRenderer.h>
 #endif
 
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <GLFW/glfw3.h>
+#include <imgui/backends/imgui_impl_sdl.h>
+#include <yae/yae_sdl.h>
 
 #define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)
 
@@ -73,23 +73,13 @@ void Application::init(char** _args, int _argCount)
 	m_renderer = defaultAllocator().create<OpenGLRenderer>();
 #endif
 
-	// Init Window
-	glfwDefaultWindowHints();
+	u32 windowFlags = 0;
+	windowFlags |= m_renderer->getWindowFlags();
 	m_renderer->hintWindow();
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	m_window = SDL_CreateWindow(m_name.c_str(), 0, 0, m_baseWidth, m_baseHeight, windowFlags);
+	YAE_ASSERT(m_window != nullptr);
 
-	m_window = glfwCreateWindow(m_baseWidth, m_baseHeight, m_name.c_str(), nullptr, nullptr);
-	glfwSetWindowUserPointer(m_window, this);
-
-	YAE_ASSERT(m_window);
-	// Setup callbacks
-	glfwSetWindowPosCallback(m_window, &Application::_glfw_windowPosCallback);
-	glfwSetFramebufferSizeCallback(m_window, &Application::_glfw_framebufferSizeCallback);
-	glfwSetKeyCallback(m_window, &Application::_glfw_keyCallback);
-	glfwSetMouseButtonCallback(m_window, &Application::_glfw_mouseButtonCallback);
-	glfwSetScrollCallback(m_window, &Application::_glfw_scrollCallback);
-
-	YAE_VERBOSE_CAT("glfw", "Created glfw window");
+	YAE_VERBOSE_CAT("application", "Created window");
 
 	// Init Input System
 	m_inputSystem = defaultAllocator().create<InputSystem>();
@@ -106,12 +96,12 @@ void Application::init(char** _args, int _argCount)
 	{
 		case RendererType::Vulkan: 
 		{
-			YAE_VERIFY(ImGui_ImplGlfw_InitForVulkan(m_window, true));
+			YAE_VERIFY(ImGui_ImplSDL2_InitForVulkan(m_window));
 		}
 		break;
 		case RendererType::OpenGL:
 		{
-			YAE_VERIFY(ImGui_ImplGlfw_InitForOpenGL(m_window, true));
+			YAE_VERIFY(ImGui_ImplSDL2_InitForOpenGL(m_window, nullptr)); // context is not used in current imgui code
 		}
 		break;
 	}
@@ -137,7 +127,7 @@ void Application::shutdown()
 	defaultAllocator().destroy(m_renderer);
 	m_renderer = nullptr;
 
-	ImGui_ImplGlfw_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
 	ImGui::SetCurrentContext(nullptr);
 	ImGui::DestroyContext(m_imguiContext);
 	m_imguiContext = nullptr;
@@ -146,9 +136,9 @@ void Application::shutdown()
 	defaultAllocator().destroy(m_inputSystem);
 	m_inputSystem = nullptr;
 
-	glfwDestroyWindow(m_window);
+	SDL_DestroyWindow(m_window);
 	m_window = nullptr;
-	YAE_VERBOSE_CAT("glfw", "Destroyed glfw window");
+	YAE_VERBOSE_CAT("application", "Destroyed window");
 
 	m_resourceManager->flushResources();
 	defaultAllocator().destroy(m_resourceManager);
@@ -164,18 +154,59 @@ bool Application::doFrame()
 	Time frameTime = m_clock.reset();
 	m_dt = frameTime.asSeconds();
 	m_time += m_dt;
-
-	if (glfwWindowShouldClose(m_window))
-		return false;
-
+	
 	{
 		YAE_CAPTURE_SCOPE("beginFrame");
 
-		//glfwPollEvents();
-		m_inputSystem->update();
+		m_inputSystem->beginFrame();
+
+		// Events
+		{
+			SDL_Event event;
+		    while (SDL_PollEvent(&event))
+		    {
+		    	switch (event.type)
+		    	{
+		    		case SDL_QUIT:
+		    		{
+		    			requestExit();
+		    		}
+		    		break;
+
+		    		case SDL_WINDOWEVENT:
+		    		{
+		    			switch (event.window.event)
+		    			{
+		    				case SDL_WINDOWEVENT_MOVED:
+		    				{
+		    					// event->window.data1 > x
+		    					// event->window.data2 > y
+		    					_requestSaveSettings();
+		    				}
+		    				break;
+
+		    				case SDL_WINDOWEVENT_RESIZED:
+		    				{
+		    					m_renderer->notifyFrameBufferResized(event.window.data1, event.window.data2);
+								_requestSaveSettings();
+		    				}
+		    				break;
+		    			}
+
+		    		}
+		    		break;
+
+		    		default:
+		    		break;
+		    	}
+
+		    	ImGui_ImplSDL2_ProcessEvent(&event);
+		    	m_inputSystem->processEvent(event);
+		    }
+		}
 
 		m_renderer->beginFrame();
-		ImGui_ImplGlfw_NewFrame();
+		ImGui_ImplSDL2_NewFrame(m_window);
 		ImGui::NewFrame();
 	}
 
@@ -202,12 +233,17 @@ bool Application::doFrame()
 	// Reload changed resources
 	m_resourceManager->reloadChangedResources();
 
-	return true;
+	return isRunning();
 }
 
 void Application::requestExit()
 {
-	glfwSetWindowShouldClose(m_window, true);
+	m_isRunning = false;
+}
+
+bool Application::isRunning() const
+{
+	return m_isRunning;
 }
 
 const char* Application::getName() const
@@ -300,13 +336,12 @@ void Application::loadSettings()
 
 	if (settings.windowWidth > 0 && settings.windowHeight > 0)
 	{
-		glfwSetWindowSize(m_window, settings.windowWidth, settings.windowHeight);
-		m_renderer->notifyFrameBufferResized(settings.windowWidth, settings.windowHeight); // @TODO(remi): This should be notified automatically. Maybe we should wrap this call
+		setWindowSize(settings.windowWidth, settings.windowHeight);
 	}
 	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
 	if (settings.windowX != -1 && settings.windowY != -1)
 	{
-		glfwSetWindowPos(m_window, settings.windowX, settings.windowY);
+		setWindowPosition(settings.windowX, settings.windowY);
 	}
 
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
@@ -317,8 +352,8 @@ void Application::saveSettings()
 {
 #if YAE_USE_SETTINGS_FILE
 	ApplicationSettings settings;
-	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
-	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
+	getWindowSize(&settings.windowWidth, &settings.windowHeight);
+	getWindowPosition(&settings.windowX, &settings.windowY);
 
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
@@ -353,37 +388,53 @@ float Application::getTime() const
 	return m_time;
 }
 
-void Application::_glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y)
+void Application::setWindowSize(i32 _width, i32 _height)
 {
-	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-
-	application->_requestSaveSettings();
+	YAE_ASSERT(m_window != nullptr);
+	SDL_SetWindowSize(m_window, _width, _height);
+	m_renderer->notifyFrameBufferResized(_width, _height);
 }
 
-void Application::_glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height)
+void Application::setWindowSize(const Vector2& _size)
 {
-	Application* application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-	application->m_renderer->notifyFrameBufferResized(_width, _height);
-
-	application->_requestSaveSettings();
+	setWindowSize(_size.x, _size.y);
 }
 
-void Application::_glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
+void Application::getWindowSize(i32* _outWidth, i32* _outHeight) const
 {
-	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-	Application->m_inputSystem->notifyKeyEvent(_key, _scancode, _action, _mods);
+	YAE_ASSERT(m_window != nullptr);
+	SDL_GetWindowSize(m_window, _outWidth, _outHeight);
 }
 
-void Application::_glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods)
+Vector2 Application::getWindowSize() const
 {
-	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-	Application->m_inputSystem->notifyMouseButtonEvent(_button, _action, _mods);
+	i32 w, h;
+	getWindowSize(&w, &h);
+	return Vector2(w, h);
 }
 
-void Application::_glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset)
+void Application::setWindowPosition(i32 _x, i32 _y)
 {
-	Application* Application = reinterpret_cast<class Application*>(glfwGetWindowUserPointer(_window));
-	Application->m_inputSystem->notifyMouseScrollEvent(_xOffset, _yOffset);
+	YAE_ASSERT(m_window != nullptr);
+	SDL_SetWindowPosition(m_window, _x, _y);
+}
+
+void Application::setWindowPosition(const Vector2& _position)
+{
+	setWindowPosition(_position.x, _position.y);
+}
+
+void Application::getWindowPosition(i32* _outX, i32* _outY) const
+{
+	YAE_ASSERT(m_window != nullptr);
+	SDL_GetWindowPosition(m_window, _outX, _outY);
+}
+
+Vector2 Application::getWindowPosition() const
+{
+	i32 x, y;
+	getWindowSize(&x, &y);
+	return Vector2(x, y);
 }
 
 void Application::_requestSaveSettings()

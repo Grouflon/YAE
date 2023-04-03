@@ -42,7 +42,7 @@ INCLUDEDIRS := \
 	extern/ \
 	extern/mirror/ \
 	extern/glm/ \
-	extern/GLFW/include/ \
+	extern/SDL/include/ \
 	extern/imgui/ \
 	extern/im3d/ \
 	extern/glm/ \
@@ -125,7 +125,7 @@ DEFINES += \
 	YAE_PLATFORM_WEB \
 
 LDFLAGS += \
-	-s USE_GLFW=3 \
+	-s USE_SDL=2 \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
 	-gsource-map \
@@ -137,3 +137,5 @@ endif
 
 OBJS :=
 DEPS :=
+
+POSTLINK += 

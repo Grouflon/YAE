@@ -14,7 +14,8 @@ class YAE_API OpenGLRenderer : public Renderer
 public:
 	virtual RendererType getType() const override { return RendererType::OpenGL; }
 
-	virtual void hintWindow() override;
+	virtual void hintWindow() const override;
+	virtual u32 getWindowFlags() const override;
 
 	virtual void waitIdle() override;
 
@@ -50,6 +51,8 @@ public:
 	virtual void _renderCamera(const RenderCamera* _camera) override;
 	virtual void _endRender() override;
 	virtual void _endFrame() override;
+
+	void* m_glContext = nullptr;
 
 	u32 m_vao = 0;
 	u32 m_vertexBufferObject = 0;

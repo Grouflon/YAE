@@ -5,7 +5,7 @@
 #include <yae/math_types.h>
 #include <yae/containers/HashMap.h>
 
-struct GLFWwindow;
+struct SDL_Window;
 struct ImGuiContext;
 
 namespace yae {
@@ -27,6 +27,7 @@ public:
 	void run();
 
 	void requestExit();
+	bool isRunning() const;
 
 	const char* getName() const;
 
@@ -43,25 +44,31 @@ public:
 	float getDeltaTime() const;
 	float getTime() const;
 
+	void setWindowSize(i32 _width, i32 _height);
+	void setWindowSize(const Vector2& _size);
+	void getWindowSize(i32* _outWidth, i32* _outHeight) const;
+	Vector2 getWindowSize() const;
+
+	void setWindowPosition(i32 _x, i32 _y);
+	void setWindowPosition(const Vector2& _position);
+	void getWindowPosition(i32* _outX, i32* _outY) const;
+	Vector2 getWindowPosition() const;
+
 //private:
-	static void _glfw_windowPosCallback(GLFWwindow* _window, int _x, int _y);
-	static void _glfw_framebufferSizeCallback(GLFWwindow* _window, int _width, int _height);
-	static void _glfw_keyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods);
-	static void _glfw_mouseButtonCallback(GLFWwindow* _window, int _button, int _action, int _mods);
-	static void _glfw_scrollCallback(GLFWwindow* _window, double _xOffset, double _yOffset);
 
 	void _requestSaveSettings();
 
 	String m_name;
 	u32 m_baseWidth = 0;
 	u32 m_baseHeight = 0;
+	bool m_isRunning = true;
 
 	ResourceManager* m_resourceManager = nullptr;
 	InputSystem* m_inputSystem = nullptr;
 	Renderer* m_renderer = nullptr;
 	ImGuiContext* m_imguiContext = nullptr;
 
-	GLFWwindow* m_window = nullptr;
+	SDL_Window* m_window = nullptr;
 
 	Clock m_clock;
 	float m_dt = 0.f;

@@ -218,25 +218,19 @@ void updateApplication(Application* _app, float _dt)
 	renderer().pushScene("game");
 
 	// EXIT PROGRAM
-	if (input().isKeyDown(GLFW_KEY_ESCAPE))
+	if (input().isKeyDown(SDL_SCANCODE_ESCAPE))
 	{
 		app().requestExit();
 	}
 
-	// RELOAD SHADERS
-	/*if (input().isCtrlDown() && input().wasKeyJustPressed(GLFW_KEY_Q))
-	{
-		renderer().reloadIm3dShaders();
-	}*/
-
 	// MOVE CAMERA
-	bool fpsModeEnabled = input().isMouseButtonDown(1);
+	bool fpsModeEnabled = input().isMouseButtonDown(SDL_BUTTON_RIGHT);
 	if (fpsModeEnabled != gameInstance->fpsModeEnabled)
 	{
 		gameInstance->fpsModeEnabled = fpsModeEnabled;
 		if (fpsModeEnabled)
 		{
-			input().setCursorMode(CURSORMODE_DISABLED);
+			input().setCursorMode(CURSORMODE_LOCKED);
 		}
 		else
 		{
@@ -266,19 +260,19 @@ void updateApplication(Application* _app, float _dt)
 
 		Vector3 inputRate = Vector3::ZERO;
 
-		if (input().isKeyDown(GLFW_KEY_D))
+		if (input().isKeyDown(SDL_SCANCODE_D))
 		{
 			inputRate += right;
 		}
-		if (input().isKeyDown(GLFW_KEY_A))
+		if (input().isKeyDown(SDL_SCANCODE_A))
 		{
 			inputRate += -right;
 		}
-		if (input().isKeyDown(GLFW_KEY_W))
+		if (input().isKeyDown(SDL_SCANCODE_W))
 		{
 			inputRate += forward;
 		}
-		if (input().isKeyDown(GLFW_KEY_S))
+		if (input().isKeyDown(SDL_SCANCODE_S))
 		{
 			inputRate += -forward;
 		}

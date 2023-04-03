@@ -6,7 +6,6 @@
 #include <yae/resources/File.h>
 #include <yae/string.h>
 
-#include <GLFW/glfw3.h>
 // this is helpful: https://github.com/0xc0dec/demos
 
 namespace yae {

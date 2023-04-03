@@ -11,9 +11,9 @@
 #include <yae/resources/Texture.h>
 #include <yae/string.h>
 
-#include <GLFW/glfw3.h>
 #include <im3d/im3d.h>
 #include <imgui/imgui.h>
+#include <yae/yae_sdl.h>
 
 namespace yae {
 
@@ -119,7 +119,7 @@ void RenderCamera::unproject(const Vector2& _screenPosition, Vector3& _outRayOri
 	math::unproject(_screenPosition, view, projection, Vector4(0.f, 0.f, viewportSize.x, viewportSize.y), _outRayOrigin, _outRayDirection);
 }
 
-bool Renderer::init(GLFWwindow* _window)
+bool Renderer::init(SDL_Window* _window)
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -273,9 +273,9 @@ void Renderer::beginFrame()
 		//ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
 		//ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
 
-		ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = inputEnabled && input().isKeyDown(GLFW_KEY_1);
-		ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = inputEnabled && input().isKeyDown(GLFW_KEY_2);
-		ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = inputEnabled && input().isKeyDown(GLFW_KEY_3);
+		ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = inputEnabled && input().isKeyDown(SDL_SCANCODE_1);
+		ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = inputEnabled && input().isKeyDown(SDL_SCANCODE_2);
+		ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = inputEnabled && input().isKeyDown(SDL_SCANCODE_3);
 
 
 		// Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
@@ -375,10 +375,9 @@ void Renderer::endFrame()
 
 Vector2 Renderer::getFrameBufferSize() const 
 {
-    int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-
-    return Vector2(width, height);
+	SDL_Surface* surface = SDL_GetWindowSurface(m_window);
+	YAE_ASSERT(surface != nullptr);
+    return Vector2(surface->w, surface->h);
 }
 
 void Renderer::notifyFrameBufferResized(int _width, int _height)

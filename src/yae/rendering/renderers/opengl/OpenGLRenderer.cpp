@@ -6,17 +6,20 @@
 #include <yae/resources/File.h>
 #include <yae/resource.h>
 
+#define GL_GLEXT_PROTOTYPES
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#define GL_GLEXT_PROTOTYPES
 #define EGL_EGLEXT_PROTOTYPES
+#include <SDL_opengl.h>
+#include <SDL_opengl_glext.h>
 #else
 #include <GL/gl3w.h>
 #endif
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <im3d/im3d.h>
 
-#include <GLFW/glfw3.h>
+#include <yae/yae_sdl.h>
 
 #if YAE_PLATFORM_WEB == 0
 const int OPENGL_VERSION_MAJOR = 4;
@@ -75,24 +78,42 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 
 namespace yae {
 
-void OpenGLRenderer::hintWindow()
+
+void OpenGLRenderer::hintWindow() const
 {
-#if YAE_OPENGL_ES
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#if YAE_OPENGL_ES == 0
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	#if YAE_DEBUG 
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+	#endif
 #else
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #endif
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, OPENGL_VERSION_MAJOR);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPENGL_VERSION_MINOR);
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_VERSION_MAJOR);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, OPENGL_VERSION_MINOR);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+}
 
-	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+
+u32 OpenGLRenderer::getWindowFlags() const
+{
+	return SDL_WINDOW_OPENGL;
 }
 
 bool OpenGLRenderer::_init()
 {	
-	glfwMakeContextCurrent(m_window);
-    glfwSwapInterval(1); // Enable vsync
+	m_glContext = SDL_GL_CreateContext(m_window);
+	YAE_LOGF("%s", SDL_GetError());
+	YAE_ASSERT(m_glContext != nullptr);
+	YAE_SDL_VERIFY(SDL_GL_MakeCurrent(m_window, m_glContext));
+
+	if (SDL_GL_SetSwapInterval(-1) < 0)
+	{
+		YAE_VERBOSE_CAT("renderer", "Adaptative VSync not suported, falling back to normal vsync");
+		YAE_SDL_VERIFY(SDL_GL_SetSwapInterval(1));
+	}
 
     /*
     YAE_LOGF("GL_ARB_gl_spirv: %d", glfwExtensionSupported("GL_ARB_gl_spirv"));
@@ -181,6 +202,9 @@ void OpenGLRenderer::_shutdown()
 
 	glDeleteVertexArrays(1, &m_vao);
 	m_vao = 0;
+
+	SDL_GL_DeleteContext(m_glContext);
+	m_glContext = nullptr;
 }
 
 void OpenGLRenderer::waitIdle()
@@ -601,7 +625,7 @@ void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
 
 void OpenGLRenderer::_endRender()
 {
-	glfwSwapBuffers(m_window);	
+	SDL_GL_SwapWindow(m_window);
 }
 
 void OpenGLRenderer::_endFrame()

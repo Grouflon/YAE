@@ -6,7 +6,7 @@
 #include <yae/containers/HashMap.h>
 
 
-typedef struct GLFWwindow GLFWwindow;
+struct SDL_Window;
 struct ImGuiContext;
 
 namespace Im3d
@@ -96,14 +96,15 @@ class YAE_API Renderer
 public:
 	virtual ~Renderer() {}
 
-	bool init(GLFWwindow* _window);
+	bool init(SDL_Window* _window);
 	void shutdown();
 
 	virtual void waitIdle() = 0;
 
 	virtual RendererType getType() const = 0;
 
-	virtual void hintWindow() {}
+	virtual void hintWindow() const {}
+	virtual u32 getWindowFlags() const { return 0; }
 
 	void beginFrame();
   	void render();
@@ -165,7 +166,7 @@ public:
 
 	RenderScene* _getCurrentScene() const;
 
-	GLFWwindow* m_window = nullptr;
+	SDL_Window* m_window = nullptr;
 	Im3d::Context* m_emptyIm3dContext = nullptr;
 
 	ShaderProgram* m_fontShader = nullptr;

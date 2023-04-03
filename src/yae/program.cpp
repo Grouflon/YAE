@@ -19,16 +19,11 @@
 #define YAE_MODULE_EXTENSION "dll"
 #endif
 
-#include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
+#include <yae/yae_sdl.h>
 
 
 // anonymous functions
-
-void GLFWErrorCallback(int _error, const char* _description)
-{
-    YAE_ERRORF_CAT("glfw", "Glfw Error 0x%04x: %s", _error, _description);
-}
 
 void* ImGuiMemAlloc(size_t _size, void* _userData)
 {
@@ -165,14 +160,10 @@ void Program::init(char** _args, int _argCount)
 	YAE_LOGF("settings directory: %s",  getSettingsDirectory());
 	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
 
-	// Init GLFW
+	// SDL Init
 	{
-		YAE_CAPTURE_SCOPE("glfwInit");
-	    glfwSetErrorCallback(&GLFWErrorCallback);
-
-		int result = glfwInit();
-		YAE_ASSERT(result == GLFW_TRUE);
-		YAE_VERBOSE_CAT("glfw", "Initialized glfw");
+		u32 flags = SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_GAMECONTROLLER;
+		YAE_SDL_VERIFY(SDL_Init(flags));
 	}
 
 	// Init ImGui
@@ -217,12 +208,9 @@ void Program::shutdown()
 		ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
 	}
 
-	// glfw shutdown
+	// SDL shutdown
 	{
-		YAE_CAPTURE_SCOPE("glfwTerminate");
-
-		glfwTerminate();
-		YAE_VERBOSE_CAT("glfw", "Terminated glfw");	
+		SDL_Quit();
 	}
 
 	defaultAllocator().destroy(m_profiler);

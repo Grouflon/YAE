@@ -14,6 +14,8 @@ LINK.o = @$(LD) $(LDFLAGS) $(LDLIBS) $(patsubst %,-L%,$(LIBDIRS)) $(patsubst %,-
 PRECOMPILE = $(CREATE_TARGET_DIRECTORY)
 # postcompile step
 POSTCOMPILE = @move /y $(subst /,\,$(DEPDIR)/$*.Td) $(subst /,\,$(DEPDIR)/$*.d) >nul 2>&1
+# postcompile step
+POSTLINK += 
 # delete directory function
 delete_directory = @(rd /s /q $(1) >nul 2>&1 & exit 0) && if exist $(1) (rd /s /q $(1) >nul 2>&1)  # windows will sometimes fail to remove the folder the first time so we are always doing it twice in a row
 
@@ -28,10 +30,11 @@ clean:
 	$(call delete_directory,$(subst /,\,$(BINDIR)))
 
 
-$(BIN): $(OBJS)
+$(BIN): $(OBJS) $(COPY)
 	$(info Linking $(BIN) ...)
 	$(CREATE_TARGET_DIRECTORY)
 	$(LINK.o) $^
+	$(POSTLINK)
 
 $(OBJDIR)/%.o: %.c
 $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d

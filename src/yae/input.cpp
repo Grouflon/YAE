@@ -2,12 +2,14 @@
 
 #include <yae/math.h>
 
-#define YAE_GAMEPAD_SUPPORTED (YAE_PLATFORM_WEB == 0)
+#include <yae/yae_sdl.h>
+
+//#define YAE_GAMEPAD_SUPPORTED (YAE_PLATFORM_WEB == 0)
+#define YAE_GAMEPAD_SUPPORTED 1
 
 namespace yae {
 
-
-void InputSystem::init(GLFWwindow* _window)
+void InputSystem::init(SDL_Window* _window)
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -29,7 +31,7 @@ void InputSystem::init(GLFWwindow* _window)
 	YAE_VERBOSE_CAT("input", "Initialized Input System");
 }
 
-void InputSystem::update()
+void InputSystem::beginFrame()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -41,29 +43,58 @@ void InputSystem::update()
 	{
 		m_mouseButtonStates[i].changesCount = 0;
 	}
+	m_mouseXAxis.delta = 0.f;
+	m_mouseYAxis.delta = 0.f;
 	m_mouseScrollDelta = Vector2::ZERO;
+}
 
-	glfwPollEvents();
-
-	// Mouse
+void InputSystem::processEvent(SDL_Event& _event)
+{
+	switch(_event.type)
 	{
-		double mouseXPosition, mouseYPosition;
-		glfwGetCursorPos(m_window, &mouseXPosition, &mouseYPosition);
-		if (math::isFinite(mouseXPosition) && math::isFinite(mouseYPosition))
+		case SDL_KEYDOWN:
+		case SDL_KEYUP:
 		{
-			m_mouseXAxis.delta = float(mouseXPosition) - m_mouseXAxis.value;
-			m_mouseXAxis.value = float(mouseXPosition);
-
-			m_mouseYAxis.delta = float(mouseYPosition) - m_mouseYAxis.value;
-			m_mouseYAxis.value = float(mouseYPosition);
+			notifyKeyEvent(
+				_event.key.keysym.scancode,
+				_event.key.state,
+				_event.key.keysym.mod
+			);
 		}
-	}
-	
+		break;
 
-#if YAE_GAMEPAD_SUPPORTED
+		case SDL_MOUSEMOTION:
+		{
+			notifyMouseMotionEvent(_event.motion.x, _event.motion.xrel, _event.motion.y, _event.motion.yrel);
+		}
+		break;
+
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		{
+			notifyMouseButtonEvent(_event.button.button, _event.button.state, 0);
+		}
+		break;
+
+		case SDL_MOUSEWHEEL:
+		{
+			notifyMouseScrollEvent(_event.wheel.x, _event.wheel.y);
+		}
+		break;
+
+		JOYSTICKS!!
+	}
+}
+
+void InputSystem::update()
+{
+	YAE_CAPTURE_FUNCTION();
+
+#if 0
 	// Gamepads
 	//  Connections / disconnections
 	// @NOTE(2021/04/24|remi): Gamepads mapping is really erratic in terms of Id inside GLFW, that's why we put an indirection between GLFW and our api
+	
 	GLFWgamepadstate glfwGamepadState;
 	{
 		for (size_t i = 0; i < countof(m_glfwGamepadToGamepad); ++i)
@@ -228,39 +259,39 @@ float InputSystem::getGamepadAxisDelta(int _gamepadId, int _axis) const
 
 bool InputSystem::isCtrlDown() const
 {
-	return m_keyStates[GLFW_KEY_LEFT_CONTROL].down || m_keyStates[GLFW_KEY_RIGHT_CONTROL].down;
+	return m_keyStates[SDL_SCANCODE_LCTRL].down || m_keyStates[SDL_SCANCODE_RCTRL].down;
 }
 
 
 bool InputSystem::isShiftDown() const
 {
-	return m_keyStates[GLFW_KEY_LEFT_SHIFT].down || m_keyStates[GLFW_KEY_RIGHT_SHIFT].down;
+	return m_keyStates[SDL_SCANCODE_LSHIFT].down || m_keyStates[SDL_SCANCODE_RSHIFT].down;
 }
 
 
 bool InputSystem::isAltDown() const
 {
-	return m_keyStates[GLFW_KEY_LEFT_ALT].down || m_keyStates[GLFW_KEY_RIGHT_ALT].down;
+	return m_keyStates[SDL_SCANCODE_LALT].down || m_keyStates[SDL_SCANCODE_RALT].down;
 }
 
 
-void InputSystem::notifyKeyEvent(int _key, int _scancode, int _action, int _mods)
+void InputSystem::notifyKeyEvent(int _scancode, int _action, int _mods)
 {
-	YAE_ASSERT(_key >= 0 && size_t(_key) < countof(m_keyStates));
+	YAE_ASSERT(_scancode >= 0 && size_t(_scancode) < countof(m_keyStates));
 
-	KeyState& keyState = m_keyStates[_key];
+	KeyState& keyState = m_keyStates[_scancode];
 	++keyState.changesCount;
 
-	if (_action == GLFW_PRESS)
+	if (_action == SDL_PRESSED)
 	{
         keyState.down = true;
 	}
-    else if (_action == GLFW_RELEASE)
+    else if (_action == SDL_RELEASED)
     {
         keyState.down = false;
     }
 
-	YAE_VERBOSEF_CAT("input", "key event: %d, %d, %d, %d", _key, _scancode, _action, _mods);
+	YAE_VERBOSEF_CAT("input", "key event: %d, %d, %d", _scancode, _action, _mods);
 }
 
 
@@ -315,11 +346,11 @@ void InputSystem::notifyMouseButtonEvent(int _button, int _action, int _mods)
 	KeyState& buttonState = m_mouseButtonStates[_button];
 	++buttonState.changesCount;
 
-	if (_action == GLFW_PRESS)
+	if (_action == SDL_PRESSED)
 	{
         buttonState.down = true;
 	}
-    else if (_action == GLFW_RELEASE)
+    else if (_action == SDL_RELEASED)
     {
         buttonState.down = false;
     }
@@ -335,38 +366,48 @@ void InputSystem::notifyMouseScrollEvent(double _xOffset, double _yOffset)
 	YAE_VERBOSEF_CAT("input", "mouse scroll event: %.2f, %.2f", _xOffset, _yOffset);
 }
 
-
-int cursorModeToGlfwCursorMode(CursorMode _mode)
+void InputSystem::notifyMouseMotionEvent(int _x, int _xDelta, int _y, int _yDelta)
 {
-	switch(_mode)
-	{
-		case CURSORMODE_HIDDEN: return GLFW_CURSOR_HIDDEN;
-		case CURSORMODE_DISABLED: return GLFW_CURSOR_DISABLED;
-		default: return GLFW_CURSOR_NORMAL;
-	}
+	m_mouseXAxis.delta += _xDelta;
+	m_mouseXAxis.value = _x;
+	m_mouseYAxis.delta += _yDelta;
+	m_mouseYAxis.value = _y;
+
+	YAE_VERBOSEF_CAT("input", "mouse motion event: pos:%d,%d / movement:%d,%d", _x, _y, _xDelta, _yDelta);
 }
-
-
-CursorMode glfwCursorModeToCursorMode(int _mode)
-{
-	switch(_mode)
-	{
-		case GLFW_CURSOR_HIDDEN: return CURSORMODE_HIDDEN;
-		case GLFW_CURSOR_DISABLED: return CURSORMODE_DISABLED;
-		default: return CURSORMODE_NORMAL;
-	}
-}
-
 
 CursorMode InputSystem::getCursorMode() const
 {
-	return glfwCursorModeToCursorMode(glfwGetInputMode(m_window, GLFW_CURSOR));
+	return m_cursorMode;
 }
 
 
 void InputSystem::setCursorMode(CursorMode _mode)
 {
-	glfwSetInputMode(m_window, GLFW_CURSOR, cursorModeToGlfwCursorMode(_mode));
+	m_cursorMode = _mode;
+	switch(m_cursorMode)
+	{
+		case CURSORMODE_NORMAL:
+		{
+			YAE_SDL_VERIFY(SDL_SetRelativeMouseMode(SDL_FALSE));
+			YAE_SDL_VERIFY(SDL_ShowCursor(SDL_ENABLE));
+		}
+		break;
+
+		case CURSORMODE_HIDDEN:
+		{
+			YAE_SDL_VERIFY(SDL_SetRelativeMouseMode(SDL_FALSE));
+			YAE_SDL_VERIFY(SDL_ShowCursor(SDL_DISABLE));
+		}
+		break;
+
+		case CURSORMODE_LOCKED:
+		{
+			YAE_SDL_VERIFY(SDL_SetRelativeMouseMode(SDL_TRUE));
+			YAE_SDL_VERIFY(SDL_ShowCursor(SDL_DISABLE));
+		}
+		break;
+	}
 }
 
 } // namespace yae

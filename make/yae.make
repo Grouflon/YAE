@@ -5,7 +5,8 @@ SRCS += src/yae/MirrorImplementation.cpp
 SRCS += $(call rwildcard,src/yae,*.cpp)
 SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/platforms,*.cpp), $(SRCS)))
 SRCS += $(wildcard extern/imgui/*.cpp)
-SRCS += extern/imgui/backends/imgui_impl_glfw.cpp
+#SRCS += extern/imgui/backends/imgui_impl_glfw.cpp
+SRCS += extern/imgui/backends/imgui_impl_sdl.cpp
 SRCS := $(subst \,/,$(filter-out $(call rwildcard,src/yae/rendering/renderers,*.cpp), $(SRCS)))
 SRCS += $(wildcard extern/im3d/*.cpp)
 SRCS += extern/imgui/backends/imgui_impl_opengl3.cpp
@@ -28,6 +29,7 @@ ifeq ($(PLATFORM), Win64)
 
 	LIBDIRS += \
 		extern/GLFW/lib/$(PLATFORM) \
+		extern/SDL/lib/$(PLATFORM) \
 		extern/dbghelp/lib/x64/ \
 
 	INCLUDEDIRS += \
@@ -35,7 +37,7 @@ ifeq ($(PLATFORM), Win64)
 		extern/gl3w/include \
 
 	LIBS += \
-		glfw3 \
+		SDL2 \
 		dbghelp \
 
 	LDFLAGS += \
@@ -47,6 +49,10 @@ ifeq ($(PLATFORM), Win64)
 		GL3W_API=__declspec(dllexport) \
 		YAE_API=__declspec(dllexport) \
 		_MT _DLL \
+
+	POSTLINK += \
+		@echo F|@xcopy /y /s $(subst /,\,extern/SDL/lib/$(PLATFORM)/SDL2.dll) $(subst /,\,$(BINDIR)/SDL2.dll)
+
 
 endif
 ifeq ($(PLATFORM), Web)
