@@ -41,7 +41,11 @@ inline float mod(float _a, float _b);
 inline float positiveMod(float _a, float _b);
 
 inline bool isZero(float _value, float _threshold = SMALL_NUMBER);
+inline bool isNan(float _value);
+inline bool isFinite(float _value);
 inline bool isZero(double _value, double _threshold = SMALL_NUMBER);
+inline bool isNan(double _value);
+inline bool isFinite(double _value);
 
 template <typename T>
 inline bool isEqual(const T& _a, const T& _b, float _threshold = SMALL_NUMBER)

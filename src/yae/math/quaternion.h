@@ -9,6 +9,8 @@ namespace math {
 template <>
 inline bool isEqual(const Quaternion& _a, const Quaternion& _b, float _threshold);
 inline bool isIdentical(const Quaternion& _a, const Quaternion& _b, float _threshold = SMALL_NUMBER);
+inline bool isNan(const Quaternion& _q);
+inline bool isFinite(const Quaternion& _q);
 
 inline const float* data(const Quaternion& _q);
 inline float* data(Quaternion& _q);

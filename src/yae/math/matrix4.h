@@ -5,6 +5,9 @@
 namespace yae {
 namespace math {
 
+inline bool isNan(const Matrix4& _m);
+inline bool isFinite(const Matrix4& _m);
+
 inline const float* data(const Matrix4& _m);
 inline float* data(Matrix4& _m);
 

@@ -10,6 +10,16 @@ bool isZero(const Vector4& _v, float _threshold)
 	return isZero(_v.x, _threshold) && isZero(_v.y, _threshold) && isZero(_v.z, _threshold) && isZero(_v.w, _threshold);
 }
 
+bool isNan(const Vector4& _v)
+{
+	return isNan(_v.x) || isNan(_v.y) || isNan(_v.z) || isNan(_v.w);
+}
+
+bool isFinite(const Vector4& _v)
+{
+	return isFinite(_v.x) || isFinite(_v.y) || isFinite(_v.z) || isFinite(_v.w);
+}
+
 const float* data(const Vector4& _v)
 {
 	return (const float*)&_v;

@@ -7,6 +7,26 @@
 namespace yae {
 namespace math {
 
+bool isNan(const Matrix4& _m)
+{
+	for (u32 i = 0; i < 16; ++i)
+	{
+		if (isNan(data(_m)[i]))
+			return true;
+	}
+	return false;
+}
+
+bool isFinite(const Matrix4& _m)
+{
+	for (u32 i = 0; i < 16; ++i)
+	{
+		if (isFinite(data(_m)[i]))
+			return true;
+	}
+	return false;
+}
+
 const float* data(const Matrix4& _m)
 {
 	return (const float*)&_m;

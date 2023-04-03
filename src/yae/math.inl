@@ -55,9 +55,29 @@ bool isZero(float _value, float _threshold)
 	return abs(_value) <= _threshold;
 }
 
+bool isNan(float _value)
+{
+	return std::isnan(_value);
+}
+
+bool isFinite(float _value)
+{
+	return std::isfinite(_value);
+}
+
 bool isZero(double _value, double _threshold)
 {
 	return abs(_value) <= _threshold;
+}
+
+bool isNan(double _value)
+{
+	return std::isnan(_value);
+}
+
+bool isFinite(double _value)
+{
+	return std::isfinite(_value);
 }
 
 } // namespace math

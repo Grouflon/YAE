@@ -6,6 +6,8 @@ namespace yae {
 namespace math {
 
 inline bool isZero(const Vector2& _v, float _threshold = SMALL_NUMBER);
+inline bool isNan(const Vector2& _v);
+inline bool isFinite(const Vector2& _v);
 
 inline const float* data(const Vector2& _v);
 inline float* data(Vector2& _v);

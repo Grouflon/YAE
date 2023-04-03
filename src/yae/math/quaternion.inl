@@ -25,6 +25,16 @@ bool isIdentical(const Quaternion& _a, const Quaternion& _b, float _threshold)
 		isEqual(dot(normalizedA, normalizedB * -1.f), 1.f, _threshold);
 }
 
+bool isNan(const Quaternion& _q)
+{
+	return isNan(_q.x) || isNan(_q.y) || isNan(_q.z) || isNan(_q.w);
+}
+
+bool isFinite(const Quaternion& _q)
+{
+	return isFinite(_q.x) || isFinite(_q.y) || isFinite(_q.z) || isFinite(_q.w);
+}
+
 const float* data(const Quaternion& _q)
 {
 	return (const float*)&_q;
