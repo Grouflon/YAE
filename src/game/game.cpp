@@ -249,13 +249,19 @@ void updateApplication(Application* _app, float _dt)
 		// ROTATION
 		float rotationSpeed = .2f;
 		Vector2 rotationInputRate = -input().getMouseDelta();
+		YAE_ASSERT(math::isFinite(rotationInputRate));
 		gameInstance->yaw = math::mod(gameInstance->yaw + rotationInputRate.x * rotationSpeed * -1.f, 360.f);
 		gameInstance->pitch = math::clamp(gameInstance->pitch + rotationInputRate.y * rotationSpeed * -1.f, -90.f, 90.f);
 		gameCamera->rotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
+		YAE_ASSERT(math::isFinite(gameInstance->yaw));
+		YAE_ASSERT(math::isFinite(gameInstance->pitch));
+		YAE_ASSERT(math::isFinite(gameCamera->rotation));
 
 		// TRANSLATION
 		Vector3 forward = math::forward(gameCamera->rotation);
 		Vector3 right = math::right(gameCamera->rotation);
+		YAE_ASSERT(math::isFinite(forward));
+		YAE_ASSERT(math::isFinite(right));
 		//Vector3 up = math::up(gameCamera->rotation);
 
 		Vector3 inputRate = Vector3::ZERO;

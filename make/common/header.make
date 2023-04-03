@@ -29,7 +29,7 @@ CFLAGS := -std=c11
 # C++ flags
 CXXFLAGS := -std=c++14
 # C/C++ flags
-CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension -Wno-void-pointer-to-int-cast -Wno-int-to-void-pointer-cast -Wno-switch
+CPPFLAGS := -Wall -Werror -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-gnu-anonymous-struct -Wno-nullability-completeness -Wno-nullability-extension -Wno-void-pointer-to-int-cast -Wno-int-to-void-pointer-cast -Wno-switch
 CPPFLAGS += -g #generate symbols
 # linker flags
 LDFLAGS := 

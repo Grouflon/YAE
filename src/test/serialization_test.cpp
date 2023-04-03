@@ -14,6 +14,15 @@ struct Nest
 	bool a;
 	bool b;
 	float c;
+
+    bool operator==(const Nest& _rhs) const
+    {
+        return
+            a == _rhs.a &&
+            b == _rhs.b &&
+            c == _rhs.c
+        ;
+    }    
 };
 struct Sfouf
 {
@@ -30,7 +39,7 @@ struct Sfouf
     		b == _rhs.b &&
     		array == _rhs.array &&
     		c == _rhs.c &&
-    		memcmp(&nest, &_rhs.nest, sizeof(nest)) == 0
+            nest == _rhs.nest
     	;
     }
 };
@@ -125,6 +134,29 @@ void testJsonSerializer()
     serializer.beginRead();
     serializeSfouf(serializer, sfoufRead);
     serializer.endRead();
+
+    auto printSfouf = [](const Sfouf& _s)
+    {
+        YAE_LOGF("a: %d", _s.a);
+        YAE_LOGF("b: %f", _s.b);
+        YAE_LOGF("array: %d", _s.array.size());
+        for (auto& child : _s.array)
+        {
+            YAE_LOGF("\tarray: %d", child.size());
+            for (u8 a : child)
+            {
+                YAE_LOGF("\t\t%d", a);
+            }
+        }
+        YAE_LOGF("c: %d", _s.c);
+        YAE_LOGF("nest.a: %d", _s.nest.a);
+        YAE_LOGF("nest.b: %d", _s.nest.b);
+        YAE_LOGF("nest.c: %f", _s.nest.c);
+        YAE_LOG("");
+    };
+
+    //printSfouf(sfoufWrite);
+    //printSfouf(sfoufRead);
 
     TEST(sfoufWrite == sfoufRead);
 

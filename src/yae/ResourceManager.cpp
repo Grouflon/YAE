@@ -4,7 +4,11 @@
 #include <yae/resource.h>
 #include <yae/resources/Resource.h>
 
+#define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
+
+#if YAE_FILEWATCH_ENABLED
 #include <FileWatch/FileWatch.hpp>
+#endif
 
 namespace yae {
 
@@ -95,6 +99,7 @@ const DataArray<Resource*> ResourceManager::getResources() const
 
 void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
+#if YAE_FILEWATCH_ENABLED
 	StringHash id(_filePath);
 
 	YAE_ASSERT(m_fileWatchers.get(id) == nullptr);
@@ -114,10 +119,12 @@ void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* 
 		}
 	);
 	m_fileWatchers.set(id, fileWatch);
+#endif
 }
 
 void ResourceManager::stopReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
+#if YAE_FILEWATCH_ENABLED
 	StringHash id(_filePath);
 
 	auto* watcherPtr = (filewatch::FileWatch<std::string>**)m_fileWatchers.get(id);
@@ -125,6 +132,7 @@ void ResourceManager::stopReloadOnFileChanged(const char* _filePath, Resource* _
 
 	defaultAllocator().destroy(*watcherPtr);
 	m_fileWatchers.remove(id);
+#endif
 }
 
 void ResourceManager::reloadChangedResources()

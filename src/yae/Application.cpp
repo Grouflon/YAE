@@ -24,6 +24,8 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <GLFW/glfw3.h>
 
+#define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)
+
 namespace yae {
 
 struct ApplicationSettings
@@ -272,6 +274,7 @@ static bool serializeSettings(Serializer* _serializer, ApplicationSettings* _set
 
 void Application::loadSettings()
 {
+#if YAE_USE_SETTINGS_FILE
 	String filePath = getSettingsFilePath(this);
 	File* settingsFile = resource::findOrCreateFile<File>(filePath.c_str());
 	if (!settingsFile->load())
@@ -307,10 +310,12 @@ void Application::loadSettings()
 	}
 
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
+#endif
 }
 
 void Application::saveSettings()
 {
+#if YAE_USE_SETTINGS_FILE
 	ApplicationSettings settings;
 	glfwGetWindowSize(m_window, &settings.windowWidth, &settings.windowHeight);
 	glfwGetWindowPos(m_window, &settings.windowX, &settings.windowY);
@@ -335,6 +340,7 @@ void Application::saveSettings()
 	file.close();
 
 	YAE_VERBOSEF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
+#endif
 }
 
 float Application::getDeltaTime() const

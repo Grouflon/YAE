@@ -30,6 +30,8 @@ const char* OPENGL_SHADER_VERSION = "#version 300 es";
 #define YAE_OPENGL_ES 1
 #endif
 
+#define YAE_RENDER_IM3D (YAE_OPENGL_ES == 0)
+
 
 const char* glErrorToString(GLint _errorCode)
 {
@@ -610,6 +612,7 @@ bool OpenGLRenderer::_initIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if YAE_RENDER_IM3D
 	File* im3dShaderFile = resource::findOrCreateFile<File>("./data/shaders/im3d.glsl");
 	im3dShaderFile->load();
 	YAE_ASSERT(im3dShaderFile->isLoaded());
@@ -687,6 +690,7 @@ bool OpenGLRenderer::_initIm3d()
 	YAE_GL_VERIFY(glEnableVertexAttribArray(1));
 	YAE_GL_VERIFY(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
 	YAE_GL_VERIFY(glBindVertexArray(0));
+#endif
 
 	return true;
 }
@@ -695,6 +699,7 @@ void OpenGLRenderer::_shutdownIm3d()
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if YAE_RENDER_IM3D
 	YAE_GL_VERIFY(glDeleteVertexArrays(1, &m_im3dVertexArray));
 	YAE_GL_VERIFY(glDeleteBuffers(1, &m_im3dVertexBuffer));
 
@@ -706,12 +711,14 @@ void OpenGLRenderer::_shutdownIm3d()
 
 	destroyShaderProgram(m_im3dShaderTriangles);
 	m_im3dShaderPoints = 0;
+#endif
 }
 
 void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 {
 	YAE_CAPTURE_FUNCTION();
 
+#if YAE_RENDER_IM3D
 	const Vector2 viewportSize = getFrameBufferSize();
 	const Matrix4 viewProj = _camera->computeViewProjectionMatrix();
 
@@ -764,6 +771,7 @@ void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 		YAE_GL_VERIFY(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)&viewProj));
 		YAE_GL_VERIFY(glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
 	}
+#endif
 }
 
 } // namespace yae

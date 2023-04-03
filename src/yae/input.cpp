@@ -1,5 +1,7 @@
 #include "input.h"
 
+#include <yae/math.h>
+
 #define YAE_GAMEPAD_SUPPORTED (YAE_PLATFORM_WEB == 0)
 
 namespace yae {
@@ -47,11 +49,14 @@ void InputSystem::update()
 	{
 		double mouseXPosition, mouseYPosition;
 		glfwGetCursorPos(m_window, &mouseXPosition, &mouseYPosition);
-		m_mouseXAxis.delta = float(mouseXPosition) - m_mouseXAxis.value;
-		m_mouseXAxis.value = float(mouseXPosition);
+		if (math::isFinite(mouseXPosition) && math::isFinite(mouseYPosition))
+		{
+			m_mouseXAxis.delta = float(mouseXPosition) - m_mouseXAxis.value;
+			m_mouseXAxis.value = float(mouseXPosition);
 
-		m_mouseYAxis.delta = float(mouseYPosition) - m_mouseYAxis.value;
-		m_mouseYAxis.value = float(mouseYPosition);
+			m_mouseYAxis.delta = float(mouseYPosition) - m_mouseYAxis.value;
+			m_mouseYAxis.value = float(mouseYPosition);
+		}
 	}
 	
 

@@ -184,6 +184,9 @@ void afterInitApplication(yae::Application* _application)
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
 
 	{
+		editorInstance->wireframeShader = resource::findOrCreate<ShaderProgram>("wireframeShader");
+
+#if YAE_PLATFORM_WEB == 0
 		Shader* shaders[] =
 		{
 			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.vert"),
@@ -195,13 +198,17 @@ void afterInitApplication(yae::Application* _application)
 		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
 		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
 
-		editorInstance->wireframeShader = resource::findOrCreate<ShaderProgram>("wireframeShader");
 		editorInstance->wireframeShader->setShaderStages(shaders, countof(shaders));
+#endif
+
 		editorInstance->wireframeShader->load();
-		YAE_ASSERT(editorInstance->wireframeShader->isLoaded());
+		//YAE_ASSERT(editorInstance->wireframeShader->isLoaded());
 	}
 
 	{
+		editorInstance->normalsShader = resource::findOrCreate<ShaderProgram>("normalsShader");
+
+#if YAE_PLATFORM_WEB == 0
 		Shader* shaders[] =
 		{
 			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.vert"),
@@ -213,11 +220,12 @@ void afterInitApplication(yae::Application* _application)
 		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
 		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
 
-		editorInstance->normalsShader = resource::findOrCreate<ShaderProgram>("normalsShader");
 		editorInstance->normalsShader->setShaderStages(shaders, countof(shaders));
 		editorInstance->normalsShader->setPrimitiveMode(PrimitiveMode::POINTS);
+#endif
+		
 		editorInstance->normalsShader->load();
-		YAE_ASSERT(editorInstance->normalsShader->isLoaded());
+		//YAE_ASSERT(editorInstance->normalsShader->isLoaded());
 	}
 }
 

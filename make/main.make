@@ -26,7 +26,7 @@ LDFLAGS += \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s ASSERTIONS=1 \
 	--preload-file ./data \
-	--preload-file $(BINDIR)/game.wasm@/ \
+	--preload-file $(BINDIR)@/ \
 	--use-preload-plugins \
 	$(BINDIR)/yae.wasm \
 	--emrun \
@@ -34,5 +34,13 @@ LDFLAGS += \
 endif
 
 BIN = $(BINDIR)/main$(TARGETEXT)
+
+ifeq ($(PLATFORM), Web)
+# relink when any of those changes so that the program takes the modification (all files are embedded in the program)
+$(BIN): $(BINDIR)/yae.wasm
+$(BIN): $(BINDIR)/test.wasm
+$(BIN): $(BINDIR)/editor.wasm
+$(BIN): $(BINDIR)/game.wasm
+endif
 
 -include make/common/footer.make
