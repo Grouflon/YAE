@@ -6,7 +6,7 @@
 #include <yae/time.h>
 #include <yae/memory.h>
 #include <yae/string.h>
-#include <yae/input.h>
+#include <yae/InputSystem.h>
 #include <yae/math_3d.h>
 #include <yae/resource.h>
 #include <yae/resources/File.h>
@@ -161,10 +161,13 @@ bool Application::doFrame()
 		m_inputSystem->beginFrame();
 
 		// Events
+		// @TODO: This won't work for several applications. We need to escalate that to program and dispatch events by window
 		{
 			SDL_Event event;
 		    while (SDL_PollEvent(&event))
 		    {
+		    	YAE_VERBOSEF_CAT("SDL", "SDL event -> type=0x%04x time=%d", event.type, event.common.timestamp);
+
 		    	switch (event.type)
 		    	{
 		    		case SDL_QUIT:

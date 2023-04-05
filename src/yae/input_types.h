@@ -1,0 +1,90 @@
+#pragma once
+
+#include <yae/types.h>
+
+namespace yae {
+
+//NOTE: not using enum classes here cause it makes the compiler constantly whine about int conversions, and we do it all the time
+enum GamepadID
+{
+	GAMEPAD_INVALID = -2,
+	GAMEPAD_ANY = -1,
+	GAMEPAD_0 = 0,
+	GAMEPAD_1,
+	GAMEPAD_2,
+	GAMEPAD_3,
+	GAMEPAD_4,
+	GAMEPAD_5,
+	GAMEPAD_6,
+	GAMEPAD_7,
+	GAMEPAD_8,
+	GAMEPAD_9,
+	GAMEPAD_10,
+	GAMEPAD_11,
+	GAMEPAD_12,
+	GAMEPAD_13,
+	GAMEPAD_14,
+	GAMEPAD_15,
+	GAMEPAD_COUNT
+};
+
+enum GamepadButton
+{
+	GAMEPADBUTTON_INVALID = -2,
+	GAMEPADBUTTON_ANY = -1,
+    GAMEPADBUTTON_BOTTOM = 0,
+    GAMEPADBUTTON_RIGHT,
+    GAMEPADBUTTON_LEFT,
+    GAMEPADBUTTON_TOP,
+    GAMEPADBUTTON_BACK,
+    GAMEPADBUTTON_GUIDE,
+    GAMEPADBUTTON_START,
+    GAMEPADBUTTON_LEFTSTICK,
+    GAMEPADBUTTON_RIGHTSTICK,
+    GAMEPADBUTTON_LEFTSHOULDER,
+    GAMEPADBUTTON_RIGHTSHOULDER,
+    GAMEPADBUTTON_DPAD_UP,
+    GAMEPADBUTTON_DPAD_DOWN,
+    GAMEPADBUTTON_DPAD_LEFT,
+    GAMEPADBUTTON_DPAD_RIGHT,
+    GAMEPADBUTTON_MISC1,    /* Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button */
+    GAMEPADBUTTON_PADDLE1,  /* Xbox Elite paddle P1 */
+    GAMEPADBUTTON_PADDLE2,  /* Xbox Elite paddle P3 */
+    GAMEPADBUTTON_PADDLE3,  /* Xbox Elite paddle P2 */
+    GAMEPADBUTTON_PADDLE4,  /* Xbox Elite paddle P4 */
+    GAMEPADBUTTON_TOUCHPAD, /* PS4/PS5 touchpad button */
+    GAMEPADBUTTON_COUNT
+};
+
+enum GamepadAxis
+{
+    GAMEPADAXIS_INVALID = -2,
+    GAMEPADAXIS_LEFTX = 0,
+    GAMEPADAXIS_LEFTY,
+    GAMEPADAXIS_RIGHTX,
+    GAMEPADAXIS_RIGHTY,
+    GAMEPADAXIS_LEFTTRIGGER,
+    GAMEPADAXIS_RIGHTTRIGGER,
+    GAMEPADAXIS_COUNT
+};
+
+enum MouseButton
+{
+	MOUSEBUTTON_INVALID = -2,
+	MOUSEBUTTON_ANY = -1,
+	MOUSEBUTTON_LEFT = 0,
+	MOUSEBUTTON_MIDDLE,
+	MOUSEBUTTON_RIGHT,
+	MOUSEBUTTON_X1,
+	MOUSEBUTTON_X2,
+	MOUSEBUTTON_COUNT
+};
+
+enum class CursorMode : u8
+{
+	NORMAL,
+	HIDDEN,
+	LOCKED
+};
+
+} // namespace yae

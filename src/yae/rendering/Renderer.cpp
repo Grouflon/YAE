@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
 #include <yae/Application.h>
-#include <yae/input.h>
+#include <yae/InputSystem.h>
 #include <yae/math_3d.h>
 #include <yae/resource.h>
 #include <yae/resources/FontFile.h>

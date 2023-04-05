@@ -5,7 +5,7 @@
 #include <yae/filesystem.h>
 #include <yae/im3d_extension.h>
 #include <yae/imgui_extension.h>
-#include <yae/input.h>
+#include <yae/InputSystem.h>
 #include <yae/math_3d.h>
 #include <yae/math_types.h>
 #include <yae/Module.h>
@@ -224,17 +224,17 @@ void updateApplication(Application* _app, float _dt)
 	}
 
 	// MOVE CAMERA
-	bool fpsModeEnabled = input().isMouseButtonDown(SDL_BUTTON_RIGHT);
+	bool fpsModeEnabled = input().isMouseButtonDown(MOUSEBUTTON_RIGHT);
 	if (fpsModeEnabled != gameInstance->fpsModeEnabled)
 	{
 		gameInstance->fpsModeEnabled = fpsModeEnabled;
 		if (fpsModeEnabled)
 		{
-			input().setCursorMode(CURSORMODE_LOCKED);
+			input().setCursorMode(CursorMode::LOCKED);
 		}
 		else
 		{
-			input().setCursorMode(CURSORMODE_NORMAL);
+			input().setCursorMode(CursorMode::NORMAL);
 		}
 	}
 
