@@ -19,6 +19,16 @@ String format(const char* _fmt, Args ..._args)
     return result;
 }
 
+template<typename ... Args>
+size_t format(char* _dest, size_t _destSize, const char* _fmt, Args ..._args)
+{
+    YAE_ASSERT(_fmt != nullptr);
+    size_t size = snprintf(nullptr, 0, _fmt, _args...);
+    YAE_ASSERT(size > 0);
+
+    return snprintf(_dest, _destSize < (size+1) ? _destSize : size+1, _fmt, _args...);
+}
+
 size_t safeCopyToBuffer(char* _destination, const char* _source, size_t _destinationSize);
 
 } // namespace string
