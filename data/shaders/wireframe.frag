@@ -16,7 +16,7 @@ out vec4 outColor;
 
 void main()
 {
-	vec3 ambient = vec3(0.0, 0.0, 0.1);
+	vec3 ambient = vec3(0.5, 0.5, 0.55);
 	vec3 diffuse = vec3(1.0, 0.99, 0.95);
 	vec3 lightDirection = normalize(vec3(0.0, -0.5, -1.0));
 

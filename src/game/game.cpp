@@ -78,7 +78,9 @@ public:
 	Matrix4 fontTransform = Matrix4::IDENTITY;
 
 	MeshFile* mesh = nullptr;
+	MeshFile* ladybugMesh = nullptr;
 	TextureFile* texture = nullptr;
+	TextureFile* ladybugTexture = nullptr;
 	FontFile* font = nullptr;
 	ShaderProgram* meshShader = nullptr;
 
@@ -126,7 +128,7 @@ void afterInitApplication(Application* _app)
 
 	//app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
-	gameInstance->mesh1Transform = Matrix4::FromRotation(Quaternion::FromEuler(PI*.5f, PI*-.25f, 0.f));
+	//gameInstance->mesh1Transform = Matrix4::FromRotation(Quaternion::FromEuler(PI*.5f, PI*-.25f, 0.f));
 	gameInstance->mesh1Transform[3][0] = 0.f;
 	gameInstance->mesh1Transform[3][1] = .5f;
 	gameInstance->mesh1Transform[3][2] = -1.5f;
@@ -138,9 +140,18 @@ void afterInitApplication(Application* _app)
 	gameInstance->mesh->load();
 	YAE_ASSERT(gameInstance->mesh->isLoaded());
 
+	gameInstance->ladybugMesh = resource::findOrCreateFile<MeshFile>("./data/models/ladybug.obj");
+	gameInstance->ladybugMesh->load();
+	YAE_ASSERT(gameInstance->ladybugMesh->isLoaded());
+
 	gameInstance->texture = resource::findOrCreateFile<TextureFile>("./data/textures/viking_room.png");
 	gameInstance->texture->load();
 	YAE_ASSERT(gameInstance->texture->isLoaded());
+
+	gameInstance->ladybugTexture = resource::findOrCreateFile<TextureFile>("./data/textures/ladybug_palette.png");
+	gameInstance->ladybugTexture->setFilter(TEXTUREFILTER_NEAREST);
+	gameInstance->ladybugTexture->load();
+	YAE_ASSERT(gameInstance->ladybugTexture->isLoaded());
 
 	gameInstance->font = resource::findOrCreateFile<FontFile>("data/fonts/Roboto-Regular.ttf");
 	gameInstance->font->setSize(64);
@@ -190,8 +201,10 @@ void beforeShutdownApplication(Application* _app)
 
 	gameInstance->meshShader->release();
 	gameInstance->texture->release();
+	gameInstance->ladybugTexture->release();
 	gameInstance->font->release();
 	gameInstance->mesh->release();
+	gameInstance->ladybugMesh->release();
 
 	spatialSystem().destroyNode(gameInstance->node2);
 	spatialSystem().destroyNode(gameInstance->node1);
@@ -393,45 +406,54 @@ void updateApplication(Application* _app, float _dt)
 	);
 	*/
 
+	// renderer().drawMesh(
+	// 	Matrix4::IDENTITY,
+	// 	gameInstance->ladybugMesh,
+	// 	gameInstance->meshShader,
+	// 	gameInstance->ladybugTexture
+	// );
+
 	ImGui::Text("mesh1:");
 	imgui_matrix4((float*)&gameInstance->mesh1Transform);
+	Im3d::PushLayerId(IM3D_DRAWONTOP_LAYER);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	renderer().drawMesh(
 		gameInstance->mesh1Transform,
-		gameInstance->mesh,
+		gameInstance->ladybugMesh,
 		gameInstance->meshShader,
-		gameInstance->texture
+		gameInstance->ladybugTexture
 	);
+	Im3d::PopLayerId();
 
-	if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
-	renderer().drawMesh(
-		gameInstance->mesh2Transform,
-		gameInstance->mesh,
-		gameInstance->meshShader,
-		gameInstance->texture
-	);
+	// if (Im3d::Gizmo("mesh2", (float*)&gameInstance->mesh2Transform)) {}
+	// renderer().drawMesh(
+	// 	gameInstance->mesh2Transform,
+	// 	gameInstance->mesh,
+	// 	gameInstance->meshShader,
+	// 	gameInstance->texture
+	// );
 
 	float fontScale = 0.005f;
 	gameInstance->fontTransform = Matrix4::IDENTITY;
 	gameInstance->fontTransform = math::scale(gameInstance->fontTransform, Vector3::ONE * fontScale);
 	//sgameInstance->fontTransform = math::translate(gameInstance->fontTransform, Vector3(210.f, 20.f, 0.f));
-	renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
+	// renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
 	ImGui::Text("node %lld:", gameInstance->node2.id);
 	imgui_matrix4(math::data(gameInstance->node2->getWorldMatrix()));
 
-	renderer().drawMesh(
-		gameInstance->node2->getWorldMatrix(),
-		gameInstance->mesh,
-		gameInstance->meshShader,
-		gameInstance->texture
-	);
+	// renderer().drawMesh(
+	// 	gameInstance->node2->getWorldMatrix(),
+	// 	gameInstance->mesh,
+	// 	gameInstance->meshShader,
+	// 	gameInstance->texture
+	// );
 
-	for (NodeID node : spatialSystem().getRoots())
-	{
-		drawNode(node);
-	}
+	// for (NodeID node : spatialSystem().getRoots())
+	// {
+	// 	drawNode(node);
+	// }
 
 	renderer().popScene();
 }
