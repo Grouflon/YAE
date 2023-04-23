@@ -71,7 +71,7 @@ class GameInstance
 public:
 	float pitch = 0.f;
 	float yaw = 0.f;
-	float cameraPosition[3] = {};
+	Vector3 cameraPosition = Vector3::ZERO;
 	bool fpsModeEnabled = false;
 	Matrix4 mesh1Transform = Matrix4::IDENTITY;
 	Matrix4 mesh2Transform = Matrix4::IDENTITY;
@@ -187,7 +187,7 @@ void afterInitApplication(Application* _app)
 	gameCamera->fov = 45.f;
 	gameCamera->nearPlane = .1f;
 	gameCamera->farPlane = 100.f;
-	gameCamera->position = Vector3(gameInstance->cameraPosition[0], gameInstance->cameraPosition[1], gameInstance->cameraPosition[2]);
+	gameCamera->position = gameInstance->cameraPosition;
 	gameCamera->rotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
 	gameCamera->clearColor = Vector4(.5f, .5f, .5f, 1.f);
 
@@ -293,9 +293,7 @@ void updateApplication(Application* _app, float _dt)
 		float linearSpeed = 2.f;
 		inputRate = math::safeNormalize(inputRate);
 		gameCamera->position += inputRate * linearSpeed * _dt;
-		gameInstance->cameraPosition[0] = gameCamera->position.x;
-		gameInstance->cameraPosition[1] = gameCamera->position.y;
-		gameInstance->cameraPosition[2] = gameCamera->position.z;
+		gameInstance->cameraPosition = gameCamera->position;
 
 		if (!math::isZero(inputRate) || !math::isZero(rotationInputRate))
 		{
@@ -306,9 +304,7 @@ void updateApplication(Application* _app, float _dt)
 	ImGui::Text("camera:");
 	if (ImGui::DragVector3("position", gameCamera->position, .05f))
 	{
-		gameInstance->cameraPosition[0] = gameCamera->position.x;
-		gameInstance->cameraPosition[1] = gameCamera->position.y;
-		gameInstance->cameraPosition[2] = gameCamera->position.z;
+		gameInstance->cameraPosition = gameCamera->position;
 	}
 	if (ImGui::DragRotation("rotation", gameCamera->rotation))
 	{
