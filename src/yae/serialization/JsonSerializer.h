@@ -36,6 +36,7 @@ public:
 	virtual bool serialize(i64& _value, const char* _id = nullptr) override;
 	virtual bool serialize(float& _value, const char* _id = nullptr) override;
 	virtual bool serialize(double& _value, const char* _id = nullptr) override;
+	virtual bool serialize(String& _value, const char* _key = nullptr) override;
 
 	// @NOTE: ce truc de size c'est pas très clair. Il faut passer la taille totale au début de l'écriture, et on peut pas vérifier que le même nombre d'éléments est écrit ou bien déduire carrément le nombre d'éléments à la fin de l'écriture...
 	// Pour faire autrement il faudrait écrire du code relatif au tableau dans toutes les fonctions de serialization, ou bien avoir une API spéçifique pour serialiser des tableaux. Les deux solutions sont bof

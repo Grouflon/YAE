@@ -38,6 +38,7 @@ public:
 	virtual bool serialize(i64& _value, const char* _key = nullptr) = 0;
 	virtual bool serialize(float& _value, const char* _key = nullptr) = 0;
 	virtual bool serialize(double& _value, const char* _key = nullptr) = 0;
+	virtual bool serialize(String& _value, const char* _key = nullptr) = 0;
 
 	virtual bool beginSerializeArray(u32& _size, const char* _key = nullptr) = 0;
 	virtual bool endSerializeArray() = 0;

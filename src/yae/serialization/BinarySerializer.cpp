@@ -178,6 +178,22 @@ bool BinarySerializer::serialize(double& _value, const char* _id)
 	return _serializeData(&_value, sizeof(_value), _id);
 }
 
+bool BinarySerializer::serialize(String& _value, const char* _id)
+{
+	YAE_ASSERT(m_mode != SerializationMode::NONE);
+
+	_processId(_id);
+
+	u32 stringSize = _value.size();
+	if (!serialize(stringSize))
+		return false;
+
+	if (m_mode == SerializationMode::READ)
+		_value.resize(stringSize);
+
+	return _serializeDataRaw(_value.data(), sizeof(char) * stringSize);
+}
+
 bool BinarySerializer::beginSerializeArray(u32& _size, const char* _id)
 {
 	YAE_ASSERT(m_mode != SerializationMode::NONE);

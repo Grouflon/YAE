@@ -31,6 +31,7 @@ struct Sfouf
     yae::Array<yae::Array<u8>> array;
     bool c;
     Nest nest;
+    String str;
 
     bool operator==(const Sfouf& _rhs) const
     {
@@ -39,7 +40,8 @@ struct Sfouf
     		b == _rhs.b &&
     		array == _rhs.array &&
     		c == _rhs.c &&
-            nest == _rhs.nest
+            nest == _rhs.nest &&
+            str == _rhs.str;
     	;
     }
 };
@@ -52,7 +54,8 @@ void serializeSfouf(yae::Serializer& _serializer, Sfouf& _sfouf)
     	{
         	TEST(_serializer.serialize(_sfouf.a, "a"));
 	        TEST(_serializer.serialize(_sfouf.b, "b"));
-        	TEST(_serializer.serialize(_sfouf.c, "c"));
+            TEST(_serializer.serialize(_sfouf.c, "c"));
+        	TEST(_serializer.serialize(_sfouf.str, "str"));
     	}
 
         u32 arraySize = _sfouf.array.size();
@@ -88,7 +91,8 @@ void serializeSfouf(yae::Serializer& _serializer, Sfouf& _sfouf)
     	{
         	TEST(_serializer.serialize(_sfouf.c, "c"));
         	TEST(_serializer.serialize(_sfouf.a, "a"));
-	        TEST(_serializer.serialize(_sfouf.b, "b"));
+            TEST(_serializer.serialize(_sfouf.b, "b"));
+	        TEST(_serializer.serialize(_sfouf.str, "str"));
     	}
     }
     TEST(_serializer.endSerializeObject());
@@ -111,6 +115,7 @@ void initSfouf(Sfouf& _sfouf)
     _sfouf.nest.a = true;
     _sfouf.nest.b = false;
     _sfouf.nest.c = 7.2f;
+    _sfouf.str = "bonjour";
 }
 
 void testJsonSerializer()
@@ -152,6 +157,7 @@ void testJsonSerializer()
         YAE_LOGF("nest.a: %d", _s.nest.a);
         YAE_LOGF("nest.b: %d", _s.nest.b);
         YAE_LOGF("nest.c: %f", _s.nest.c);
+        YAE_LOGF("str: %s", _s.str.c_str());
         YAE_LOG("");
     };
 

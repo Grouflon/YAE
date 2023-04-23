@@ -668,6 +668,33 @@ bool JsonSerializer::serialize(double& _value, const char* _id)
 	return true;
 }
 
+bool JsonSerializer::serialize(String& _value, const char* _id)
+{
+	json_value_s* value;
+	if (!_selectNextValue(_id, &value))
+	{
+		return false;
+	}
+	YAE_ASSERT(value);
+
+	if (getMode() == SerializationMode::WRITE)
+	{
+		jsonHelpers::allocateStringPayload(m_allocator, value, _value.data());
+	}
+	else if (getMode() == SerializationMode::READ)
+	{
+		json_string_s* string = json_value_as_string(value);
+		if (string == nullptr)
+		{
+			m_lastError = "Current value is not a string type";
+			return false;
+		}
+		_value.resize(string->string_size);
+		memcpy(_value.data(), string->string, sizeof(char)*string->string_size);
+	}
+	return true;
+}
+
 bool JsonSerializer::beginSerializeArray(u32& _size, const char* _id)
 {
 	json_value_s* value;
@@ -879,247 +906,5 @@ bool JsonSerializer::_selectNextValue(const char* _id, json_value_s** _outValue)
 	}
 	return true;
 }
-
-/*
-void JsonSerializer::_write(void* _data, const mirror::TypeDesc* _type)
-{
-	json_value_s* value = m_valueStack.top();
-	switch (_type->getType())
-	{
-		case mirror::Type_Class:
-		{
-			const Class* clss = reinterpret_cast<const mirror::Class*>(_type);
-			json_object_s* object = jsonHelpers::allocateObjectPayload(m_allocator, value);
-			std::vector<ClassMember*> members;
-			clss->getMembers(members, true);
-			json_object_element_s* currentElement = object->start;
-			for (ClassMember* member : members)
-			{
-				currentElement = jsonHelpers::allocateObjectElement(m_allocator, object, member->getName(), currentElement);
-				currentElement->value = jsonHelpers::allocateValue(m_allocator);
-				m_valueStack.push(currentElement->value);
-				void* elementData = member->getInstanceMemberPointer(_data);
-				_write(elementData, member->getType());
-				m_valueStack.pop();
-			}
-		}
-		break;
-		case mirror::Type_bool:
-		{	
-			bool* ptr = (bool*)_data;
-			jsonHelpers::allocateBoolPayload(m_allocator, value, *ptr);
-		}
-		break;
-		case mirror::Type_char:
-		{
-			char* ptr = (char*)_data;
-			char str[] = { *ptr, 0 };
-			jsonHelpers::allocateStringPayload(m_allocator, value, str);
-		}
-		break;
-		case mirror::Type_int8:
-		{
-			i8* ptr = (i8*)_data;
-			i64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_int16:
-		{
-			i16* ptr = (i16*)_data;
-			i64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_int32:
-		{
-			i32* ptr = (i32*)_data;
-			i64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_int64:
-		{
-			i64* ptr = (i64*)_data;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, *ptr);
-		}
-		break;
-		case mirror::Type_uint8:
-		{
-			u8* ptr = (u8*)_data;
-			u64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_uint16:
-		{
-			u16* ptr = (u16*)_data;
-			u64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_uint32:
-		{
-			u32* ptr = (u32*)_data;
-			u64 n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_uint64:
-		{
-			u64* ptr = (u64*)_data;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, *ptr);
-		}
-		break;
-		case mirror::Type_float:
-		{
-			float* ptr = (float*)_data;
-			double n = *ptr;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, n);
-		}
-		break;
-		case mirror::Type_double:
-		{
-			double* ptr = (double*)_data;
-			jsonHelpers::allocateNumberPayload(m_allocator, value, *ptr);
-		}
-		break;
-		case mirror::Type_Enum:
-		case mirror::Type_FixedSizeArray:
-		default:
-			YAE_ASSERT_MSG(false, "Not implemented");
-		break;
-	}
-}
-
-void JsonSerializer::_read(void* _data, const mirror::TypeDesc* _type)
-{
-	json_value_s* value = m_valueStack.top();
-	switch (_type->getType())
-	{
-	case mirror::Type_Class:
-	{
-		const Class* clss = reinterpret_cast<const mirror::Class*>(_type);
-		json_object_s* object = json_value_as_object(value);
-		YAE_ASSERT(object != nullptr);
-
-		json_object_element_s* element = object->start;
-		while (element != nullptr)
-		{
-			const ClassMember* member = clss->findMemberByName(element->name->string, true);
-			if (member)
-			{
-				void* memberData = member->getInstanceMemberPointer(_data);
-				m_valueStack.push(element->value);
-				_read(memberData, member->getType());
-				m_valueStack.pop();
-			}
-			element = element->next;
-		}
-	}
-	break;
-	case mirror::Type_bool:
-	{
-		YAE_ASSERT(value->type == json_type_true || value->type == json_type_false);
-		bool* ptr = (bool*)(_data);
-		*ptr = json_value_is_true(value);
-	}
-	break;
-	case mirror::Type_char:
-	{
-		json_string_s* str = json_value_as_string(value);
-		YAE_ASSERT(str && str->string_size == 1);
-		char* ptr = (char*)(_data);
-		*ptr = *str->string;
-	}
-	break;
-	case mirror::Type_int8:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		i8* ptr = (i8*)(_data);
-		*ptr = i8(atoi(number->number));
-	}
-	break;
-	case mirror::Type_int16:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		i16* ptr = (i16*)(_data);
-		*ptr = i16(atoi(number->number));
-	}
-	break;
-	case mirror::Type_int32:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		i32* ptr = (i32*)(_data);
-		*ptr = i32(atol(number->number));
-	}
-	break;
-	case mirror::Type_int64:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		i64* ptr = (i64*)(_data);
-		*ptr = i64(atoll(number->number));
-	}
-	break;
-	case mirror::Type_uint8:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		u8* ptr = (u8*)(_data);
-		*ptr = u8(atoi(number->number));
-	}
-	break;
-	case mirror::Type_uint16:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		u16* ptr = (u16*)(_data);
-		*ptr = u16(atoi(number->number));
-	}
-	break;
-	case mirror::Type_uint32:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		u32* ptr = (u32*)(_data);
-		*ptr = u32(atol(number->number));
-	}
-	break;
-	case mirror::Type_uint64:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		u64* ptr = (u64*)(_data);
-		*ptr = u64(atoll(number->number));
-	}
-	break;
-	case mirror::Type_float:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		float* ptr = (float*)(_data);
-		*ptr = float(atof(number->number));
-	}
-	break;
-	case mirror::Type_double:
-	{
-		json_number_s* number = json_value_as_number(value);
-		YAE_ASSERT(number != nullptr);
-		double* ptr = (double*)(_data);
-		*ptr = double(atof(number->number));
-	}
-	break;
-	case mirror::Type_Enum:
-	case mirror::Type_FixedSizeArray:
-	default:
-		YAE_ASSERT_MSG(false, "Not implemented");
-		break;
-	}
-}
-*/
 
 } // namespace yae
