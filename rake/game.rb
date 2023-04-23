@@ -35,6 +35,7 @@ def settings()
 	_settings
 end
 
+task :link => ["yae:build"]
 define_module_tasks(settings())
 
 end # namespace game

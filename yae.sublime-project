@@ -52,11 +52,6 @@
 					"shell_cmd": "msbuild yaeApplication.sln -t:build -p:Configuration=Release;Platform=Win64",
 				},*/
 				{
-					"name" : "rake test",
-					"shell_cmd" : "rake main:build PLATFORM=Web CONFIG=Debug"
-				},
-				
-				{
 					"name" : "clean Win64",
 					"shell_cmd" : "rake clean PLATFORM=Win64 CONFIG=Debug && rake clean PLATFORM=Win64 CONFIG=DebugOptimized && rake clean PLATFORM=Win64 CONFIG=Release"
 				},

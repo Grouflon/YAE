@@ -39,7 +39,6 @@ def default_settings()
 
 		"-g ", #generate symbols
 	]
-	#dep_flags = "-MT %{target} -MD -MP -MF %{dep}" # flags required for dependency generation; passed to compilers
 	dep_flags = "-MD -MF %{dep}" # flags required for dependency generation; passed to compilers
 	linker_flags = [
 		"-g ", #generate symbols
