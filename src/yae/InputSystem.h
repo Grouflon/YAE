@@ -16,7 +16,7 @@ class YAE_API InputSystem
 public:
 	void init(SDL_Window* _window);
 	void beginFrame();
-	void processEvent(SDL_Event& _event);
+	void processEvent(const SDL_Event& _event);
 	void update();
 	void shutdown();
 

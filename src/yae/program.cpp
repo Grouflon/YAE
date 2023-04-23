@@ -499,6 +499,72 @@ bool Program::_doFrame()
 
 	YAE_CAPTURE_START("frame");
 
+	{
+		auto getWindowId = [](const SDL_Event& _event)
+		{
+			switch(_event.type)
+			{
+			case SDL_WINDOWEVENT:
+				return _event.window.windowID;
+
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+				return _event.key.windowID;
+
+			case SDL_TEXTEDITING:
+				return _event.edit.windowID;
+
+			case SDL_TEXTEDITING_EXT:
+				return _event.editExt.windowID;
+
+			case SDL_TEXTINPUT:
+				return _event.text.windowID;
+
+			case SDL_MOUSEMOTION:
+				return _event.motion.windowID;
+
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+				return _event.button.windowID;
+
+			case SDL_MOUSEWHEEL:
+				return _event.wheel.windowID;
+
+			case SDL_FINGERMOTION:
+			case SDL_FINGERDOWN:
+			case SDL_FINGERUP:
+				return _event.tfinger.windowID;
+
+			case SDL_DROPBEGIN:
+			case SDL_DROPFILE:
+			case SDL_DROPTEXT:
+			case SDL_DROPCOMPLETE:
+				return _event.drop.windowID;
+
+			case SDL_USEREVENT:
+				return _event.user.windowID;
+
+			default:
+				return ~0u;
+			}
+		};
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			YAE_VERBOSEF_CAT("SDL", "SDL event -> type=0x%04x time=%d", event.type, event.common.timestamp);
+
+			u32 windowId = getWindowId(event);
+			for (Application* application : m_applications)
+			{
+				if (windowId == ~0u || windowId == SDL_GetWindowID(application->m_window))
+				{
+					application->pushEvent(event);
+				}
+			}
+		}
+	}
+
 	bool shouldContinue = false;
 	for (Application* application : m_applications)
 	{
@@ -509,7 +575,7 @@ bool Program::_doFrame()
 	}
 	m_currentApplication = nullptr;
 
-	// Hot Reload Game API
+	// Hot Reload Modules
 	if (m_hotReloadEnabled)
 	{
 		DataArray<Module*> modulesToReload(&scratchAllocator());

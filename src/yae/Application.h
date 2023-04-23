@@ -5,6 +5,8 @@
 #include <yae/math_types.h>
 #include <yae/containers/HashMap.h>
 
+#include <SDL_events.h>
+
 struct SDL_Window;
 struct ImGuiContext;
 
@@ -22,6 +24,7 @@ public:
 
 	void init(char** _args, int _argCount);
 	void shutdown();
+	void pushEvent(const SDL_Event& _event);
 	bool doFrame();
 
 	void run();
@@ -69,6 +72,7 @@ public:
 	ImGuiContext* m_imguiContext = nullptr;
 
 	SDL_Window* m_window = nullptr;
+	DataArray<SDL_Event> m_events;
 
 	Clock m_clock;
 	float m_dt = 0.f;

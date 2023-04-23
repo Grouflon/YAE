@@ -44,7 +44,7 @@ void InputSystem::beginFrame()
 	m_mouseScrollDelta = Vector2::ZERO;
 }
 
-void InputSystem::processEvent(SDL_Event& _event)
+void InputSystem::processEvent(const SDL_Event& _event)
 {
 	switch(_event.type)
 	{

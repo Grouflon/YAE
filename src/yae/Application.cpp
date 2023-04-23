@@ -145,6 +145,11 @@ void Application::shutdown()
 	m_resourceManager = nullptr;
 }
 
+void Application::pushEvent(const SDL_Event& _event)
+{
+	m_events.push_back(_event);
+}
+
 bool Application::doFrame()
 {
 	YAE_CAPTURE_FUNCTION();
@@ -161,13 +166,9 @@ bool Application::doFrame()
 		m_inputSystem->beginFrame();
 
 		// Events
-		// @TODO: This won't work for several applications. We need to escalate that to program and dispatch events by window
 		{
-			SDL_Event event;
-		    while (SDL_PollEvent(&event))
+			for (const SDL_Event& event : m_events)
 		    {
-		    	YAE_VERBOSEF_CAT("SDL", "SDL event -> type=0x%04x time=%d", event.type, event.common.timestamp);
-
 		    	switch (event.type)
 		    	{
 		    		case SDL_QUIT:
@@ -206,6 +207,7 @@ bool Application::doFrame()
 		    	ImGui_ImplSDL2_ProcessEvent(&event);
 		    	m_inputSystem->processEvent(event);
 		    }
+		    m_events.clear();
 		}
 
 		m_renderer->beginFrame();
