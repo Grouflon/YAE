@@ -3,6 +3,7 @@
 #include <yae/filesystem.h>
 #include <yae/hash.h>
 #include <yae/containers/HashMap.h>
+#include <yae/ResourceManager.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
@@ -39,6 +40,8 @@ void MeshFile::_doLoad()
 
 	YAE_ASSERT(m_vertices.size() == 0);
 	YAE_ASSERT(m_indices.size() == 0);
+
+	resourceManager().startReloadOnFileChanged(m_path.c_str(), this);
 
 	tinyobj::ObjReader reader;
 	{
@@ -108,6 +111,8 @@ void MeshFile::_doUnload()
 
 	m_vertices.resize(0);
 	m_indices.resize(0);
+
+	resourceManager().stopReloadOnFileChanged(m_path.c_str(), this);
 }
 
 } // namespace yae
