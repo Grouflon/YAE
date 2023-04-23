@@ -72,6 +72,17 @@ struct TextureHandle
 */
 typedef u32 TextureHandle;
 
+enum TextureFilter
+{
+	TEXTUREFILTER_LINEAR,
+	TEXTUREFILTER_NEAREST,
+};
+
+struct YAE_API TextureParameters
+{
+	TextureFilter filter = TEXTUREFILTER_LINEAR;
+};
+
 /*
 struct MeshHandle
 {

@@ -62,6 +62,16 @@ GLuint primitiveModeToGlPrimitiveMode(yae::PrimitiveMode _primitiveMode)
 	}
 }
 
+GLuint textureFilterToGlTextureFilter(yae::TextureFilter _textureFilter)
+{
+	switch (_textureFilter)
+	{
+	case yae::TEXTUREFILTER_LINEAR: return GL_LINEAR;
+	case yae::TEXTUREFILTER_NEAREST: return GL_NEAREST;
+	default: return GL_LINEAR;
+	}
+}
+
 void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity, GLsizei _length, const GLchar* _msg, const void* _data)
 {
 	if (_id == 0x20071) return; // Message about buffer usage hints when calling glBufferData
@@ -256,8 +266,6 @@ bool OpenGLRenderer::createTexture(const void* _data, int _width, int _height, i
 	GLuint textureId;
     YAE_GL_VERIFY(glGenTextures(1, &textureId));
     YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, textureId));
-    YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
     YAE_GL_VERIFY(glTexImage2D(
     	GL_TEXTURE_2D,    // target
     	0,                // level
@@ -272,6 +280,17 @@ bool OpenGLRenderer::createTexture(const void* _data, int _width, int _height, i
 
 	_outTextureHandle = textureId;
 	return true;
+}
+
+void OpenGLRenderer::applyTextureParameters(TextureHandle& _inTextureHandle, const TextureParameters& _parameters)
+{
+	YAE_CAPTURE_FUNCTION();
+
+	YAE_GL_VERIFY(glBindTexture(GL_TEXTURE_2D, _inTextureHandle));
+
+	GLuint textureFilter = textureFilterToGlTextureFilter(_parameters.filter);
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, textureFilter));
+	YAE_GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, textureFilter));
 }
 
 void OpenGLRenderer::destroyTexture(TextureHandle& _inTextureHandle)
@@ -752,19 +771,12 @@ void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 	YAE_GL_VERIFY(glBlendEquation(GL_FUNC_ADD));
 	YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	YAE_GL_VERIFY(glEnable(GL_PROGRAM_POINT_SIZE));
-		
-	for (u32 i = 0; i < Im3d::GetDrawListCount(); ++i)
+
+	auto drawLayer = [&, viewportSize, viewProj](const Im3d::DrawList& _drawList)
 	{
-		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
- 
-		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
-		{
-		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
-		}
-	
 		GLenum prim;
 		GLuint sh;
-		switch (drawList.m_primType)
+		switch (_drawList.m_primType)
 		{
 			case Im3d::DrawPrimitive_Points:
 				prim = GL_POINTS;
@@ -788,12 +800,34 @@ void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 	
 		YAE_GL_VERIFY(glBindVertexArray(m_im3dVertexArray));
 		YAE_GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, m_im3dVertexBuffer));
-		YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)drawList.m_vertexData, GL_STREAM_DRAW));
+		YAE_GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)_drawList.m_vertexData, GL_STREAM_DRAW));
 	
 		YAE_GL_VERIFY(glUseProgram(sh));
 		YAE_GL_VERIFY(glUniform2f(glGetUniformLocation(sh, "uViewport"), viewportSize.x, viewportSize.y));
 		YAE_GL_VERIFY(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)&viewProj));
-		YAE_GL_VERIFY(glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
+		YAE_GL_VERIFY(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
+	};
+		
+	DataArray<u32> alwaysFrontLayers(&scratchAllocator());
+	for (u32 i = 0; i < Im3d::GetDrawListCount(); ++i)
+	{
+		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
+ 
+		if (drawList.m_layerId == IM3D_DRAWONTOP_LAYER)
+		{
+			alwaysFrontLayers.push_back(i);
+			continue;
+		}
+	
+		drawLayer(drawList);
+	}
+
+	YAE_GL_VERIFY(glDisable(GL_DEPTH_TEST));
+	for (u32 i : alwaysFrontLayers)
+	{
+		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
+
+		drawLayer(drawList);
 	}
 #endif
 }

@@ -31,6 +31,18 @@ const void* Texture::getPixelData() const
 	return m_pixelData;
 }
 
+void Texture::setFilter(TextureFilter _filter)
+{
+	YAE_ASSERT(m_textureHandle == 0);
+
+	m_parameters.filter = _filter;
+}
+
+TextureFilter Texture::getFilter() const
+{
+	return m_parameters.filter;
+}
+
 u32 Texture::getWidth() const
 {
 	return m_width;
@@ -58,12 +70,13 @@ void Texture::_doLoad()
 
 	YAE_ASSERT(m_pixelData != nullptr);
 	bool result = renderer().createTexture(m_pixelData, m_width, m_height, m_channelCount, m_textureHandle);
-
 	if (!result)
 	{
 		_log(RESOURCELOGTYPE_ERROR, "Failed to create texture.");
 		return;
 	}
+
+	renderer().applyTextureParameters(m_textureHandle, m_parameters);
 
 	YAE_VERBOSEF_CAT("resource", "Succesfully loaded texture \"%s\".", getName());
 	return;

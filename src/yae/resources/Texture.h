@@ -19,8 +19,11 @@ public:
 	virtual ~Texture();
 
 	void setPixelData(const void* _data, u32 _width, u32 _height, u32 _channelCount);
-
 	const void* getPixelData() const;
+
+	void setFilter(TextureFilter _filter);
+	TextureFilter getFilter() const;
+
 	u32 getWidth() const;
 	u32 getHeight() const;
 	u32 getChannelCount() const;
@@ -36,6 +39,7 @@ public:
 	u32 m_height = 0;
 	u32 m_channelCount = 0;
 	TextureHandle m_textureHandle;
+	TextureParameters m_parameters;
 };
 
 } // namespace yae

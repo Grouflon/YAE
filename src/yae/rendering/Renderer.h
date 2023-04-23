@@ -114,6 +114,7 @@ public:
 	void notifyFrameBufferResized(int _width, int _height);
 
 	virtual bool createTexture(const void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) = 0;
+	virtual void applyTextureParameters(TextureHandle& _inTextureHandle, const TextureParameters& _parameters) = 0;
 	virtual void destroyTexture(TextureHandle& _inTextureHandle) = 0;
 
 	RenderTarget* createRenderTarget(bool _fullScreen = true, u32 _width = 0, u32 _height = 0);

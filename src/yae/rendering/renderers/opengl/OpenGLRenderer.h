@@ -20,6 +20,7 @@ public:
 	virtual void waitIdle() override;
 
 	virtual bool createTexture(const void* _data, int _width, int _height, int _channels, TextureHandle& _outTextureHandle) override;
+	virtual void applyTextureParameters(TextureHandle& _inTextureHandle, const TextureParameters& _parameters) override;
 	virtual void destroyTexture(TextureHandle& _inTextureHandle) override;
 
 	virtual bool createShader(ShaderType _type, const char* _source, size_t _sourceSize, ShaderHandle& _outShaderHandle) override;
