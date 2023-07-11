@@ -128,7 +128,9 @@ void String::shrink()
 	}
 	else if (m_length > 0)
 	{
-		m_buffer = (char*)m_allocator->reallocate(m_buffer, m_length + 1);
+		size_t newCapacity = m_length + 1;
+		m_buffer = (char*)m_allocator->reallocate(m_buffer, newCapacity);
+		m_bufferSize = newCapacity;
 	}
 }
 
@@ -285,6 +287,7 @@ String& String::operator+=(const String& _str)
 
 char& String::operator[](size_t _pos)
 {
+	YAE_ASSERT(_pos >= 0);
 	YAE_ASSERT(_pos < m_length);
 	return m_buffer[_pos];
 }
@@ -292,6 +295,7 @@ char& String::operator[](size_t _pos)
 
 const char& String::operator[](size_t _pos) const
 {
+	YAE_ASSERT(_pos >= 0);
 	YAE_ASSERT(_pos < m_length);
 	return m_buffer[_pos];
 }

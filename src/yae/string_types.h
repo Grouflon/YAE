@@ -14,7 +14,7 @@ public:
 	static const size_t INVALID_POS;
 
 	String(Allocator* _allocator = nullptr);
-String(const char* _str, Allocator* _allocator = nullptr);
+	String(const char* _str, Allocator* _allocator = nullptr);
 	String(const String& _str, Allocator* _allocator = nullptr);
 	~String();
 
