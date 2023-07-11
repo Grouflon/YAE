@@ -11,7 +11,9 @@ class YAE_API TextureFile : public Texture
 {
 	MIRROR_CLASS(TextureFile)
 	(
-		MIRROR_PARENT(Texture)
+		MIRROR_PARENT(Texture);
+
+		MIRROR_MEMBER(m_path)();
 	);
 
 public:

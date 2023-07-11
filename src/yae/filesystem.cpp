@@ -354,6 +354,11 @@ const void* FileReader::getContent() const
 	return m_content;
 }
 
+const char* FileReader::getPath() const
+{
+	return m_path.c_str();
+}
+
 Allocator& FileReader::allocator() const
 {
 	return m_allocator ? *m_allocator : defaultAllocator();

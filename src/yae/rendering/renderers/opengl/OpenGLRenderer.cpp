@@ -1,5 +1,6 @@
 #include "OpenGLRenderer.h"
 
+#include <yae/filesystem.h>
 #include <yae/program.h>
 #include <yae/resources/ShaderFile.h>
 #include <yae/resources/FontFile.h>
@@ -66,8 +67,8 @@ GLuint textureFilterToGlTextureFilter(yae::TextureFilter _textureFilter)
 {
 	switch (_textureFilter)
 	{
-	case yae::TEXTUREFILTER_LINEAR: return GL_LINEAR;
-	case yae::TEXTUREFILTER_NEAREST: return GL_NEAREST;
+	case yae::TextureFilter::LINEAR: return GL_LINEAR;
+	case yae::TextureFilter::NEAREST: return GL_NEAREST;
 	default: return GL_LINEAR;
 	}
 }
@@ -336,6 +337,7 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
     }
     else
     {
+    	glDeleteShader(shaderId);
     	YAE_ERROR("Failed to compile shader.");
     }
 
@@ -656,13 +658,16 @@ bool OpenGLRenderer::_initIm3d()
 	YAE_CAPTURE_FUNCTION();
 
 #if YAE_RENDER_IM3D
-	File* im3dShaderFile = resource::findOrCreateFile<File>("./data/shaders/im3d.glsl");
-	im3dShaderFile->load();
-	YAE_ASSERT(im3dShaderFile->isLoaded());
+	FileReader shaderReader("./data/shaders/im3d.glsl", &scratchAllocator());
+	if (!shaderReader.load())
+	{
+		YAE_ERRORF_CAT("im3d", "Failed to open shader file \"%s\".", shaderReader.getPath());
+		return false;
+	}
 
 	String shaderSource(&scratchAllocator());
-	shaderSource.resize(im3dShaderFile->getContentSize());
-	memcpy(shaderSource.data(), im3dShaderFile->getContent(), im3dShaderFile->getContentSize());
+	shaderSource.resize(shaderReader.getContentSize());
+	memcpy(shaderSource.data(), shaderReader.getContent(), shaderReader.getContentSize());
 
 	// Points
 	{
@@ -722,7 +727,6 @@ bool OpenGLRenderer::_initIm3d()
 		destroyShader(fs);
 		destroyShader(vs);
 	}
-	im3dShaderFile->release();
 
 	YAE_GL_VERIFY(glGenBuffers(1, &m_im3dVertexBuffer));;
 	YAE_GL_VERIFY(glGenVertexArrays(1, &m_im3dVertexArray));

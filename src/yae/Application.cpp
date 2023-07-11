@@ -317,22 +317,19 @@ void Application::loadSettings()
 {
 #if YAE_USE_SETTINGS_FILE
 	String filePath = getSettingsFilePath(this);
-	File* settingsFile = resource::findOrCreateFile<File>(filePath.c_str());
-	if (!settingsFile->load())
+	FileReader reader(filePath.c_str(), &scratchAllocator());
+	if (!reader.load())
 	{
 		YAE_ERRORF_CAT("application", "Failed to load settings file \"%s\"", filePath.c_str());
-		settingsFile->release();
 		return;
 	}
 
 	JsonSerializer serializer(&scratchAllocator());
-	if (!serializer.parseSourceData(settingsFile->getContent(), settingsFile->getContentSize()))
+	if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
 	{
 		YAE_ERRORF_CAT("application", "Failed to parse json settings file \"%s\"", filePath.c_str());
-		settingsFile->release();
 		return;	
 	}
-	settingsFile->release();
 
 	ApplicationSettings settings;
 	serializer.beginRead();

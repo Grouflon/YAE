@@ -113,6 +113,7 @@ class Profiler;
 class Renderer;
 class InputSystem;
 class Serializer;
+class Resource;
 
 YAE_API Program& program();
 YAE_API Allocator& defaultAllocator();

@@ -34,6 +34,75 @@
 
 using namespace yae;
 
+void saveResourceToFile(const Resource* _resource, const char* _path)
+{
+	mirror::Class* resourceType = _resource->getClass();
+
+	JsonSerializer serializer(&scratchAllocator());
+	serializer.beginWrite();
+	YAE_VERIFY(serializer.beginSerializeObject());
+	String resourceTypeStr = String(resourceType->getName(), &scratchAllocator());
+	YAE_VERIFY(serializer.serialize(resourceTypeStr, "type"));
+	YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, const_cast<Resource*>(_resource), resourceType));
+	YAE_VERIFY(serializer.endSerializeObject());
+	serializer.endWrite();
+
+	FileHandle file(_path);
+	if (!file.open(FileHandle::OPENMODE_WRITE))
+	{
+		YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for write", _path);
+		return;
+	}
+	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
+	{
+		YAE_ERRORF_CAT("resource", "Failed to write into \"%s\"", _path);
+		return;
+	}
+	file.close();
+}
+
+Resource* createResourceFromFile(const char* _path)
+{
+	FileReader reader(_path, &scratchAllocator());
+
+	if (!reader.load())
+	{
+		YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for read", _path);
+		return nullptr;
+	}
+
+	JsonSerializer serializer(&scratchAllocator());
+	if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
+	{
+		YAE_ERRORF_CAT("resource", "Failed to parse \"%s\" JSON file", _path);
+		return nullptr;
+	}
+
+	Resource* result = nullptr;
+	serializer.beginRead();
+	YAE_VERIFY(serializer.beginSerializeObject());
+	String resourceTypeStr(&scratchAllocator());
+	YAE_VERIFY(serializer.serialize(resourceTypeStr, "type"));
+	mirror::Class* resourceType = mirror::FindClassByName(resourceTypeStr.c_str());
+	if (resourceType != nullptr)
+	{
+		YAE_ASSERT(resourceType->hasFactory());
+		result = (Resource*) resourceType->instantiate([](size_t _size, void*) { return defaultAllocator().allocate(_size); });
+		YAE_ASSERT(result != nullptr);
+
+		YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, result, resourceType));
+	}
+	else
+	{
+		YAE_ERRORF_CAT("resource", "Unknown reflected type \"%s\"", resourceTypeStr.c_str());
+	}
+	YAE_VERIFY(serializer.endSerializeObject());
+	serializer.endRead();
+
+
+	return result;
+}
+
 static void drawNode(NodeID _nodeID)
 {
 	SpatialNode* node = _nodeID.get();
@@ -149,7 +218,7 @@ void afterInitApplication(Application* _app)
 	YAE_ASSERT(gameInstance->texture->isLoaded());
 
 	gameInstance->ladybugTexture = resource::findOrCreateFile<TextureFile>("./data/textures/ladybug_palette.png");
-	gameInstance->ladybugTexture->setFilter(TEXTUREFILTER_NEAREST);
+	gameInstance->ladybugTexture->setFilter(TextureFilter::NEAREST);
 	gameInstance->ladybugTexture->load();
 	YAE_ASSERT(gameInstance->ladybugTexture->isLoaded());
 
@@ -452,6 +521,19 @@ void updateApplication(Application* _app, float _dt)
 	// }
 
 	renderer().popScene();
+
+	const char* resourcePath = "./data/textures/ladybug_palette.res";
+
+	if (ImGui::Button("Save resource"))
+	{
+		saveResourceToFile(gameInstance->ladybugTexture, resourcePath);
+	}
+
+	if (ImGui::Button("Load resource"))
+	{
+		Resource* resource = createResourceFromFile(resourcePath);
+		defaultAllocator().destroy(resource);
+	}
 }
 
 bool onSerializeApplicationSettings(Application* _application, Serializer* _serializer)

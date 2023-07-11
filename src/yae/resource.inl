@@ -36,5 +36,11 @@ T* findOrCreateFile(const char* _path)
 	return resource;
 }
 
+template <typename T>
+T* findOrCreateFromFile(const char* _path)
+{
+	return mirror::Cast<T*>(findOrCreateFromFile(_path));
+}
+
 } // namespace resource
 } // namespace yae

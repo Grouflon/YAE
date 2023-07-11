@@ -139,12 +139,9 @@ bool Renderer::init(SDL_Window* _window)
 	// Shaders
 	Shader* shaders[] =
 	{
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/font.vert"),
-		resource::findOrCreateFile<ShaderFile>("./data/shaders/font.frag")
+		resource::findOrCreateFromFile<ShaderFile>("./data/shaders/font_vert.res"),
+		resource::findOrCreateFromFile<ShaderFile>("./data/shaders/font_frag.res")
 	};
-	// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
-	if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
-	if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::FRAGMENT);
 
 	m_fontShader = resource::findOrCreate<ShaderProgram>("fontShader");
 	m_fontShader->setShaderStages(shaders, countof(shaders));

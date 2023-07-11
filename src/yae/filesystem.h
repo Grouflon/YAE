@@ -80,6 +80,7 @@ public:
 	bool load();
 	u32 getContentSize() const;
 	const void* getContent() const;
+	const char* getPath() const;
 
 	Allocator& allocator() const;
 

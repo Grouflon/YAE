@@ -2,6 +2,7 @@
 
 #include <yae/containers/Array.h>
 
+#include <mirror.h>
 
 #ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
 	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0
@@ -72,15 +73,25 @@ struct TextureHandle
 */
 typedef u32 TextureHandle;
 
-enum TextureFilter
+enum class TextureFilter : i8
 {
-	TEXTUREFILTER_LINEAR,
-	TEXTUREFILTER_NEAREST,
+	LINEAR,
+	NEAREST,
 };
+MIRROR_ENUM_CLASS(TextureFilter)
+(
+	MIRROR_ENUM_CLASS_VALUE(LINEAR)()
+	MIRROR_ENUM_CLASS_VALUE(NEAREST)()
+);
 
 struct YAE_API TextureParameters
 {
-	TextureFilter filter = TEXTUREFILTER_LINEAR;
+	TextureFilter filter = TextureFilter::LINEAR;
+
+	MIRROR_CLASS_NOVIRTUAL(TextureParameters)
+	(
+		MIRROR_MEMBER(filter)();
+	)
 };
 
 /*
@@ -126,6 +137,13 @@ enum class ShaderType : u8
 	GEOMETRY,
 	FRAGMENT,
 };
+MIRROR_ENUM_CLASS(ShaderType)
+(
+	MIRROR_ENUM_CLASS_VALUE(UNDEFINED)();
+	MIRROR_ENUM_CLASS_VALUE(VERTEX)();
+	MIRROR_ENUM_CLASS_VALUE(GEOMETRY)();
+	MIRROR_ENUM_CLASS_VALUE(FRAGMENT)();
+);
 
 enum class PrimitiveMode : u8
 {

@@ -204,14 +204,10 @@ void afterInitApplication(yae::Application* _application)
 #if YAE_PLATFORM_WEB == 0
 		Shader* shaders[] =
 		{
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.vert"),
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.geom"),
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/wireframe.frag")
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/wireframe_vert.res"),
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/wireframe_geom.res"),
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/wireframe_frag.res")
 		};
-		// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
-		if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
-		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
-		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
 
 		editorInstance->wireframeShader->setShaderStages(shaders, countof(shaders));
 #endif
@@ -226,14 +222,10 @@ void afterInitApplication(yae::Application* _application)
 #if YAE_PLATFORM_WEB == 0
 		Shader* shaders[] =
 		{
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.vert"),
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.geom"),
-			resource::findOrCreateFile<ShaderFile>("./data/shaders/normals.frag")
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/normals_vert.res"),
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/normals_geom.res"),
+			resource::findOrCreateFromFile<ShaderFile>("./data/shaders/normals_frag.res")
 		};
-		// NOTE: Several resources can't initialize the same shaders, this is bad. how not to do that ?
-		if (!shaders[0]->isLoaded()) shaders[0]->setShaderType(ShaderType::VERTEX);
-		if (!shaders[1]->isLoaded()) shaders[1]->setShaderType(ShaderType::GEOMETRY);
-		if (!shaders[2]->isLoaded()) shaders[2]->setShaderType(ShaderType::FRAGMENT);
 
 		editorInstance->normalsShader->setShaderStages(shaders, countof(shaders));
 		editorInstance->normalsShader->setPrimitiveMode(PrimitiveMode::POINTS);
@@ -856,6 +848,7 @@ void updateApplication(yae::Application* _application, float _dt)
     			{
     				ImGui::Text("name: %s", type->getName());
     				ImGui::Text("type: %s", mirror::TypeToString(type->getType()));
+    				ImGui::Text("size: %lld", type->getSize());
     				if (mirror::Class* clss = type->asClass())
     				{
     					size_t membersCount = clss->getMembersCount();
@@ -876,6 +869,17 @@ void updateApplication(yae::Application* _application, float _dt)
     					else
     					{
     						ImGui::Text("no members");
+    					}
+    				}
+    				else if (mirror::Enum* enm = type->asEnum())
+    				{
+    					if (enm->getSubType() != nullptr)
+    					{
+    						ImGui::Text("subtype: %s", enm->getSubType()->getName());
+    					}
+    					for (const mirror::EnumValue* value : enm->getValues())
+    					{
+    						ImGui::BulletText("%s (%lld)", value->getName(), value->getValue());
     					}
     				}
     			}

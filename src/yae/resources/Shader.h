@@ -11,7 +11,9 @@ class YAE_API Shader : public Resource
 {
 	MIRROR_CLASS(Shader)
 	(
-		MIRROR_PARENT(Resource)
+		MIRROR_PARENT(Resource);
+
+		MIRROR_MEMBER(m_shaderType)();
 	);
 
 public:

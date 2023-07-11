@@ -12,6 +12,8 @@ class YAE_API Texture : public Resource
 	MIRROR_CLASS(Texture)
 	(
 		MIRROR_PARENT(Resource)
+
+		MIRROR_MEMBER(m_parameters)();
 	);
 
 public:
@@ -39,6 +41,7 @@ public:
 	u32 m_height = 0;
 	u32 m_channelCount = 0;
 	TextureHandle m_textureHandle;
+	
 	TextureParameters m_parameters;
 };
 
