@@ -39,6 +39,8 @@ public:
 	// Find
 	const T* find(const T& _item) const;
 	T* find(const T& _item);
+	const T* find(bool (*_predicate)(const T&, void*), void* _data = nullptr) const;
+	T* find(bool (*_predicate)(const T&, void*), void* _data = nullptr);
 
 	// Operators
 	bool operator==(const BaseArray<T>& _rhs) const;

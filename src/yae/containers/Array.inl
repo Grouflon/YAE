@@ -140,6 +140,29 @@ T* BaseArray<T>::find(const T& _item)
 	return nullptr;
 }
 
+template <typename T>
+const T* BaseArray<T>::find(bool (*_predicate)(const T&, void*), void* _data) const
+{
+	for (T* it = begin(); it != end(); ++it)
+	{
+		if (_predicate(*it, _data))
+			return it;
+	}
+	return nullptr;
+}
+
+
+template <typename T>
+T* BaseArray<T>::find(bool (*_predicate)(const T&, void*), void* _data)
+{
+	for (T* it = begin(); it != end(); ++it)
+	{
+		if (_predicate(*it, _data))
+			return it;
+	}
+	return nullptr;
+}
+
 
 template <typename T>
 bool BaseArray<T>::operator==(const BaseArray<T>& _rhs) const
