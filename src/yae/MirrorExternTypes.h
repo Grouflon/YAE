@@ -49,4 +49,11 @@ MIRROR_EXTERN_CLASS(Matrix4)
 	MIRROR_MEMBER(m)();
 );
 
+MIRROR_EXTERN_CLASS(Transform)
+(
+	MIRROR_MEMBER(position)();
+	MIRROR_MEMBER(rotation)();
+	MIRROR_MEMBER(scale)();
+);
+
 } // namespace yae

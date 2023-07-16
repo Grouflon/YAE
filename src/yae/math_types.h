@@ -33,6 +33,7 @@ struct Vector4;
 struct Quaternion;
 struct Matrix3;
 struct Matrix4;
+struct Transform;
 
 // - Vector2 -
 struct YAE_API Vector2
@@ -321,6 +322,7 @@ struct YAE_API Matrix4
 	static Matrix4 FromRotation(const Quaternion& _rotation);
 	static Matrix4 FromScale(const Vector3& _scale);
 	static Matrix4 FromTransform(const Vector3& _position, const Quaternion& _rotation, const Vector3& _scale);
+	static Matrix4 FromTransform(const Transform& _transform);
 	static Matrix4 FromPerspective(float _fov, float _aspectRatio, float _nearPlane, float _farPlane);
 	static Matrix4 FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up = Vector3::UP);
 	static Matrix4 FromMatrix3(const Matrix3& _m);
@@ -368,6 +370,35 @@ Matrix4 operator/(const Matrix4& _m1, const Matrix4& _m2);
 // -- Boolean operators --
 bool operator==(const Matrix4& _m1, const Matrix4& _m2);
 bool operator!=(const Matrix4& _m1, const Matrix4& _m2);
+
+
+// - Transform
+struct YAE_API Transform
+{
+	Vector3 position;
+	Quaternion rotation;
+	Vector3 scale;
+
+	// Ctors
+	Transform(); // leaves uninitialized
+	Transform(const Vector3& _position,
+			  const Quaternion& _rotation = Quaternion::IDENTITY,
+			  const Vector3& _scale = Vector3::ONE);
+
+	// Constants
+	static const Transform IDENTITY;
+};
+
+// -- Binary operators --
+Transform operator*(const Transform& _t1, const Transform& _t2);
+Vector4 operator*(const Transform& _t, const Vector4& _v);
+Vector3 operator*(const Transform& _t, const Vector3& _v);
+Vector2 operator*(const Transform& _t, const Vector2& _v);
+Quaternion operator*(const Transform& _t, const Quaternion& _q);
+
+// -- Boolean operators --
+bool operator==(const Transform& _t1, const Transform& _t2);
+bool operator!=(const Transform& _t1, const Transform& _t2);
 
 } // namespace yae
 

@@ -9,21 +9,6 @@ namespace yae {
 
 class SpatialNode;
 
-struct GAME_API Transform
-{
-	Transform() {}
-	Transform(const Vector3& _position, const Quaternion& _rotation = Quaternion::IDENTITY, const Vector3& _scale = Vector3::ONE)
-		: position(_position), rotation(_rotation), scale(_scale) {}
-
-	Vector3 position = Vector3::ZERO;
-	Quaternion rotation = Quaternion::IDENTITY;
-	Vector3 scale = Vector3::ONE;
-
-	Matrix4 toMatrix4() const;
-
-	Transform operator*(const Transform& _rhs) const;
-};
-
 struct GAME_API NodeID
 {
 	NodeID() {}

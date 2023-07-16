@@ -47,6 +47,8 @@ const Matrix4 Matrix4::IDENTITY = Matrix4(
 	0.f, 0.f, 0.f ,1.f
 );
 
+const Transform Transform::IDENTITY = Transform(Vector3::ZERO, Quaternion::IDENTITY, Vector3::ONE);
+
 // - Quaternion -
 Quaternion Quaternion::FromEuler(float _pitch, float _yaw, float _roll)
 {
@@ -111,6 +113,11 @@ Matrix4 Matrix4::FromTransform(const Vector3& _position, const Quaternion& _rota
 	Matrix4 r = Matrix4::FromRotation(_rotation);
 	Matrix4 s = Matrix4::FromScale(_scale);
 	return t * r * s;
+}
+
+Matrix4 Matrix4::FromTransform(const Transform& _transform)
+{
+	return FromTransform(_transform.position, _transform.rotation, _transform.scale);
 }
 
 Matrix4 Matrix4::FromPerspective(float _fov, float _aspectRatio, float _nearPlane, float _farPlane)

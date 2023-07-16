@@ -6,20 +6,6 @@
 
 namespace yae {
 
-Matrix4 Transform::toMatrix4() const
-{
-	return Matrix4::FromTransform(position, rotation, scale);
-}
-
-Transform Transform::operator*(const Transform& _rhs) const
-{
-	Transform t;
-	t.position = toMatrix4() * _rhs.position;
-	t.rotation = _rhs.rotation * rotation;
-	t.scale = scale * _rhs.scale;
-	return t;
-}
-
 const NodeID NodeID::INVALID = ~u64(0);
 
 SpatialNode* NodeID::get() const
@@ -202,12 +188,12 @@ NodeID SpatialNode::getID() const
 Matrix4 SpatialNode::getWorldMatrix() const
 {
 	_refreshWorldTransform();
-	return m_worldTransform.toMatrix4();
+	return Matrix4::FromTransform(m_worldTransform);
 }
 
 Matrix4 SpatialNode::getLocalMatrix() const
 {
-	return m_localTransform.toMatrix4();
+	return Matrix4::FromTransform(m_localTransform);
 }
 
 void SpatialNode::_setWorldTransformDirty()

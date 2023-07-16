@@ -1494,4 +1494,53 @@ inline bool operator!=(const Matrix4& _m1, const Matrix4& _m2)
 	return (_m1[0] != _m2[0]) || (_m1[1] != _m2[1]) || (_m1[2] != _m2[2]) || (_m1[3] != _m2[3]);
 }
 
+// - Transform
+
+// Ctors
+inline Transform::Transform() {}
+inline Transform::Transform(const Vector3& _position, const Quaternion& _rotation, const Vector3& _scale)
+	: position(_position), rotation(_rotation), scale(_scale)
+{
+}
+
+// -- Binary operators --
+inline Transform operator*(const Transform& _t1, const Transform& _t2)
+{
+	Transform t;
+	t.position = Matrix4::FromTransform(_t1) * _t2.position;
+	t.rotation = _t2.rotation * _t1.rotation;
+	t.scale = _t1.scale * _t2.scale;
+	return t;
+}
+
+inline Vector4 operator*(const Transform& _t, const Vector4& _v)
+{
+	return Matrix4::FromTransform(_t) * _v;
+}
+
+inline Vector3 operator*(const Transform& _t, const Vector3& _v)
+{
+	return Matrix4::FromTransform(_t) * _v;
+}
+
+inline Vector2 operator*(const Transform& _t, const Vector2& _v)
+{
+	return Matrix4::FromTransform(_t) * _v;
+}
+
+inline Quaternion operator*(const Transform& _t, const Quaternion& _q)
+{
+	return _q * _t.rotation;
+}
+
+// -- Boolean operators --
+inline bool operator==(const Transform& _t1, const Transform& _t2)
+{
+	return (_t1.position == _t2.position) && (_t1.rotation == _t2.rotation) && (_t1.scale == _t2.scale);
+}
+inline bool operator!=(const Transform& _t1, const Transform& _t2)
+{
+	return (_t1.position != _t2.position) || (_t1.rotation != _t2.rotation) || (_t1.scale != _t2.scale);
+}
+
 } // namespace yae
