@@ -23,7 +23,7 @@ def default_settings()
 		linker = "emcc"
 	end
 	c_flags = %W(-std=c11)
-	cpp_flags = %W(-std=c++14)
+	cpp_flags = %W(-std=c++17)
 	compiler_flags = [
 		"-Wall",
 		"-Werror",
