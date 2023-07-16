@@ -135,6 +135,7 @@ public:
 	void destroyScene(RenderScene* _scene);
 	void destroyScene(const char* _sceneName);
 	RenderScene* getScene(const char* _sceneName) const;
+	void pushScene(RenderScene* _scene);
 	void pushScene(const char* _sceneName);
 	void popScene();
 
@@ -166,6 +167,7 @@ public:
 	virtual void _endFrame() = 0;
 
 	RenderScene* _getCurrentScene() const;
+	void _destroyRenderTargetsPendingDestruction();
 
 	SDL_Window* m_window = nullptr;
 	Im3d::Context* m_emptyIm3dContext = nullptr;

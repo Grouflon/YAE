@@ -26,6 +26,7 @@ public:
 
 	const DataArray<Resource*> getResources() const;
 
+	void flagResourceForReload(Resource* _resource);
 	void startReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void stopReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void reloadChangedResources();

@@ -51,6 +51,7 @@ Resource* findOrCreateFromFile(const char* _path)
 		YAE_VERIFY(serializer.endSerializeObject());
 		serializer.endRead();
 
+		resource->m_transient = false;
 		manager.registerResource(_path, resource);
 	}
 	return resource;

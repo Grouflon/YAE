@@ -34,6 +34,17 @@ const char* MeshFile::getPath() const
 	return m_path.c_str();
 }
 
+void MeshFile::setOffset(const Transform& _offset)
+{
+	YAE_ASSERT(!isLoaded());
+	m_offset = _offset;
+}
+
+const Transform& MeshFile::getOffset() const
+{
+	return m_offset;
+}
+
 void MeshFile::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
@@ -92,6 +103,10 @@ void MeshFile::_doLoad()
 				if (uniqueVertexIndexPtr == nullptr)
 				{
 					uniqueVertexIndexPtr = &uniqueVertices.set(vertexHash, m_vertices.size());
+
+					// Apply offset
+					v.pos = m_offset * v.pos;
+
 					m_vertices.push_back(v);
 				}
 				m_indices.push_back(*uniqueVertexIndexPtr);

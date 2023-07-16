@@ -187,8 +187,6 @@ void Renderer::shutdown()
 	toolAllocator().destroy(m_emptyIm3dContext);
 	m_emptyIm3dContext = nullptr;
 
-	_shutdown();
-
 	// Let's clear everything, even if the user leaks things
 	for (auto& pair : m_cameras)
 	{
@@ -208,6 +206,8 @@ void Renderer::shutdown()
 		defaultAllocator().destroy(renderTarget);
 	}
 	m_renderTargets.clear();
+
+	_shutdown();
 }
 
 void Renderer::beginFrame()
@@ -591,13 +591,17 @@ RenderScene* Renderer::getScene(const char* _sceneName) const
 	return scenePtr != nullptr ? *scenePtr : nullptr;
 }
 
+void Renderer::pushScene(RenderScene* _scene)
+{
+	YAE_ASSERT(_scene != nullptr);
+
+	m_sceneStack.push_back(_scene);
+	Im3d::SetContext(*_scene->m_im3d);
+}
+
 void Renderer::pushScene(const char* _sceneName)
 {
-	RenderScene* scene = getScene(_sceneName);
-	YAE_ASSERT(scene != nullptr);
-
-	m_sceneStack.push_back(scene);
-	Im3d::SetContext(*scene->m_im3d);
+	pushScene(getScene(_sceneName));
 }
 
 void Renderer::popScene()

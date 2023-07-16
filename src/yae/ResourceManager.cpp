@@ -97,6 +97,13 @@ const DataArray<Resource*> ResourceManager::getResources() const
 	return m_resources;
 }
 
+void ResourceManager::flagResourceForReload(Resource* _resource)
+{
+	m_resourcesToReloadMutex.lock();
+	m_resourcesToReload.push_back(_resource);
+	m_resourcesToReloadMutex.unlock();
+}
+
 void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
 #if YAE_FILEWATCH_ENABLED
@@ -111,9 +118,7 @@ void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* 
 		{
 			if (_change_type == filewatch::Event::modified)
 			{
-				rm->m_resourcesToReloadMutex.lock();
-				rm->m_resourcesToReload.push_back(_resource);
-				rm->m_resourcesToReloadMutex.unlock();
+				rm->flagResourceForReload(_resource);
 				YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _path.c_str());
 			}
 		}
@@ -145,7 +150,7 @@ void ResourceManager::reloadChangedResources()
 	
 	for (Resource* resource : resourcesToReload)
 	{
-		resource->reload();
+		resource->_reload();
 	}
 }
 

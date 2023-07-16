@@ -6,6 +6,15 @@ namespace yae {
 namespace resource {
 
 template <typename T>
+T* find(const char* _name)
+{
+	ResourceManager& manager = resourceManager();
+	YAE_ASSERT_MSG(mirror::GetClass<T>()->isChildOf(mirror::GetClass<Resource>()), "Type is not a child of Resource");
+	
+	return manager.findResource<T>(_name);
+}
+
+template <typename T>
 T* findOrCreate(const char* _name)
 {
 	ResourceManager& manager = resourceManager();

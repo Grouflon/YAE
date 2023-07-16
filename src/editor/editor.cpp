@@ -18,19 +18,13 @@
 #include <yae/serialization/Serializer.h>
 #include <yae/string.h>
 
+#include <editor/ResourceEditor.h>
+
 #include <imgui/imgui.h>
 #include <im3d/im3d.h>
 #include <mirror/mirror.h>
 
 using namespace yae;
-
-class MeshInspector
-{
-public:
-	Mesh* mesh = nullptr;
-	bool opened = true;
-	RenderTarget* renderTarget = nullptr;
-};
 
 enum InputMode
 {
@@ -42,7 +36,6 @@ enum InputMode
 
 struct EditorInstance
 {
-	bool showResources = false;
 	bool showMemoryProfiler = false;
 	bool showFrameRate = false;
 	bool showInputDebugWindow = false;
@@ -54,7 +47,7 @@ struct EditorInstance
 	ShaderProgram* normalsShader = nullptr;
 
 	// resource inspector
-	DataArray<MeshInspector*> meshInspectors;
+	editor::ResourceEditor resourceEditor;
 
 	// input window
 	InputMode inputMode = INPUTMODE_NONE;
@@ -65,58 +58,17 @@ struct EditorInstance
 
 	MIRROR_CLASS_NOVIRTUAL(EditorInstance)
 	(
-		MIRROR_MEMBER(showResources)();
 		MIRROR_MEMBER(showMemoryProfiler)();
 		MIRROR_MEMBER(showFrameRate)();
 		MIRROR_MEMBER(showInputDebugWindow)();
 		MIRROR_MEMBER(showRendererDebugWindow)();
 		MIRROR_MEMBER(showMirrorDebugWindow)();
 		MIRROR_MEMBER(showDemoWindow)();
+
+		MIRROR_MEMBER(resourceEditor)();
 	);
 };
 MIRROR_CLASS_DEFINITION(EditorInstance);
-
-MeshInspector* openMeshInspector(EditorInstance& _editorInstance, Mesh* _mesh)
-{
-	MeshInspector* inspector = nullptr;
-
-	for (MeshInspector* meshInspector : _editorInstance.meshInspectors)
-	{
-		if (meshInspector->mesh == _mesh)
-		{
-			inspector = meshInspector;
-			break;
-		}
-	}
-
-	if (inspector == nullptr)
-	{
-		inspector = toolAllocator().create<MeshInspector>();
-		inspector->mesh = _mesh;
-		inspector->renderTarget = renderer().createRenderTarget(false, 128, 128);
-		RenderScene* scene = renderer().createScene(_mesh->getName());
-		RenderCamera* camera = renderer().createCamera(_mesh->getName());
-		scene->addCamera(camera);
-		camera->renderTarget = inspector->renderTarget;
-		camera->clearColor = Vector4(.1f, .1f, .1f, 1.f);
-		_editorInstance.meshInspectors.push_back(inspector);
-	}
-
-
-	return inspector;
-}
-
-void closeMeshInspector(EditorInstance& _editorInstance, MeshInspector* _meshInspector)
-{
-	auto it = _editorInstance.meshInspectors.find(_meshInspector);
-	YAE_ASSERT(it != nullptr);
-	_editorInstance.meshInspectors.erase(it);
-
-	renderer().destroyRenderTarget(_meshInspector->renderTarget);
-	renderer().destroyScene(_meshInspector->mesh->getName());
-	renderer().destroyCamera(_meshInspector->mesh->getName());
-	toolAllocator().destroy(_meshInspector);
-}
 
 void displayTypeTreeNode(EditorInstance* _editorInstance, mirror::TypeDesc* _type, mirror::TypeDesc* _parent = nullptr)
 {
@@ -234,11 +186,15 @@ void afterInitApplication(yae::Application* _application)
 		editorInstance->normalsShader->load();
 		//YAE_ASSERT(editorInstance->normalsShader->isLoaded());
 	}
+
+	editorInstance->resourceEditor.init();
 }
 
 void beforeShutdownApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
+
+	editorInstance->resourceEditor.shutdown();
 
 	editorInstance->wireframeShader->release();
 	editorInstance->wireframeShader = nullptr;
@@ -251,11 +207,6 @@ void afterShutdownApplication(yae::Application* _application)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
 	_application->setUserData("editor", nullptr);
-
-	for (MeshInspector* meshInspector : editorInstance->meshInspectors)
-	{
-		toolAllocator().destroy(meshInspector);
-	}
 
 	toolAllocator().destroy(editorInstance);
 }
@@ -279,7 +230,7 @@ void updateApplication(yae::Application* _application, float _dt)
 
         if (ImGui::BeginMenu("Display"))
         {
-	        changedSettings = ImGui::MenuItem("Resources", NULL, &editorInstance->showResources) || changedSettings;
+	        changedSettings = ImGui::MenuItem("Resources", NULL, &editorInstance->resourceEditor.opened) || changedSettings;
 
         	if (ImGui::BeginMenu("Profiling"))
 	        {
@@ -309,88 +260,7 @@ void updateApplication(yae::Application* _application, float _dt)
         ImGui::EndMainMenuBar();
     }
 
-    if (editorInstance->showResources)
-    {
-    	if (ImGui::Begin("Resources", &editorInstance->showResources, ImGuiWindowFlags_AlwaysAutoResize))
-    	{
-    		ResourceManager& rm = resourceManager();
-    		for (Resource* resource : rm.getResources())
-    		{
-	            if (ImGui::Selectable(resource->getName(), false))
-	            {
-	            	Mesh* mesh = mirror::Cast<Mesh*>(resource);
-	            	if (mesh != nullptr)
-	            	{
-	            		openMeshInspector(*editorInstance, mesh);
-	            	}
-	            }
-	            /*
-	            ImGui::SameLine(150);
-	            ImGui::Text("%d vertices", meshResource.mesh->vertices.size());
-	            ImGui::SameLine(300);
-	            ImGui::Text("%d indices", meshResource.mesh->indices.size());
-	            */
-    		}
-    	}
-    	ImGui::End();
-
-    	DataArray<MeshInspector*> tempInspectors(&scratchAllocator());
-    	tempInspectors = editorInstance->meshInspectors;
-    	for (MeshInspector* meshInspector : tempInspectors)
-    	{
-    		Mesh* mesh = meshInspector->mesh;
-    		YAE_ASSERT(mesh != nullptr);
-
-    		RenderCamera* camera = renderer().getCamera(meshInspector->mesh->getName());
-    		Vector3 cameraArm = Vector3::FORWARD * -2.f + Vector3::RIGHT * -2.f + Vector3::UP * 1.f; 
-			camera->position = Quaternion::FromAngleAxis(app().getTime() * PI * 0.2f, Vector3::UP) * cameraArm;
-			Matrix4 cameraTransform = math::inverse(Matrix4::FromLookAt(camera->position, Vector3::ZERO, -Vector3::UP));
-			camera->rotation = Quaternion::FromMatrix4(cameraTransform);
-
-    		renderer().pushScene(meshInspector->mesh->getName());
-    		{
-				Im3d::SetSize(4.0f);
-    			Im3d::DrawRotation(Quaternion::IDENTITY, 1.5f);
-
-    			static int gridSize = 20;
-				const float gridHalf = (float)gridSize * 0.5f;
-				Im3d::SetAlpha(1.0f);
-				Im3d::SetSize(2.0f);
-				Im3d::BeginLines();
-					for (int x = 0; x <= gridSize; ++x)
-					{
-						Im3d::Vertex(-gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(0.0f, 0.0f, 0.0f));
-						Im3d::Vertex( gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(1.0f, 0.0f, 0.0f));
-					}
-					for (int z = 0; z <= gridSize; ++z)
-					{
-						Im3d::Vertex((float)z - gridHalf, 0.0f, -gridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-						Im3d::Vertex((float)z - gridHalf, 0.0f,  gridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
-					}
-				Im3d::End();
-
-				renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->wireframeShader, nullptr);
-				//renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->normalsShader, nullptr);
-    		}
-    		renderer().popScene();
-
-    		String name(string::format("Mesh: %s", meshInspector->mesh->getName()), &scratchAllocator());
-    		ImGui::SetNextWindowSize(ImVec2(50.f, 50.f), ImGuiCond_FirstUseEver);
-    		if (ImGui::Begin(name.c_str(), &meshInspector->opened))
-    		{
-    			ImVec2 windowSize = ImGui::GetContentRegionAvail();
-    			renderer().resizeRenderTarget(meshInspector->renderTarget, windowSize.x , windowSize.y);
-    			ImGui::Image((void*)meshInspector->renderTarget->m_renderTexture, windowSize);
-    		}
-    		ImGui::End();
-
-    		if (!meshInspector->opened)
-    		{
-    			closeMeshInspector(*editorInstance, meshInspector);
-    		}
-    	}
-
-    }
+    editorInstance->resourceEditor.update();
 
     if (editorInstance->showMemoryProfiler)
     {

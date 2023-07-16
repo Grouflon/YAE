@@ -34,7 +34,7 @@ void Resource::release()
 	}
 }
 
-void Resource::reload()
+void Resource::_reload()
 {
 	if (m_loadCount == 0)
 		return;

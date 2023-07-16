@@ -36,19 +36,18 @@ public:
 	bool load();
 	void release();
 
-	void reload();
-
 	bool isLoaded() const { return m_loadCount > 0 && m_errorCount == 0; } // @TODO warning as errors option ?
 
 	const Array<ResourceLog>& getLogs() const { return m_logs; }
 
 // private:
+	void _reload();
 	void _internalLoad();
 	void _internalUnload();
 
 	virtual void _doLoad() {}
 	virtual void _doUnload() {}
-
+	
 	void _log(ResourceLogType _type, const char* _msg);
 
 	Array<ResourceLog> m_logs;
@@ -57,6 +56,7 @@ public:
 	u32 m_errorCount = 0;
 	u32 m_warningCount = 0;
 	bool m_isLoading = false;
+	bool m_transient = true;
 };
 
 } // namespace yae

@@ -331,6 +331,15 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
 	GLint status = 0, logLength = 0;
     YAE_GL_VERIFY(glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status));
     YAE_GL_VERIFY(glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &logLength));
+
+    if (logLength > 1)
+    {
+    	String buf(&scratchAllocator());
+    	buf.resize(logLength);
+        YAE_GL_VERIFY(glGetShaderInfoLog(shaderId, logLength, NULL, (GLchar*)buf.data()));
+    	YAE_ERRORF("Shader compilation result:\n%s", buf.c_str());
+    }
+
     if ((GLboolean)status == GL_TRUE)
     {
     	_outShaderHandle = shaderId;
@@ -339,14 +348,6 @@ bool OpenGLRenderer::createShader(ShaderType _type, const char* _code, size_t _c
     {
     	glDeleteShader(shaderId);
     	YAE_ERROR("Failed to compile shader.");
-    }
-
-    if (logLength > 1)
-    {
-    	String buf(&scratchAllocator());
-    	buf.resize(logLength);
-        YAE_GL_VERIFY(glGetShaderInfoLog(shaderId, logLength, NULL, (GLchar*)buf.data()));
-    	YAE_ERRORF("Shader compilation result:\n%s", buf.c_str());
     }
 
 	return (GLboolean)status == GL_TRUE;

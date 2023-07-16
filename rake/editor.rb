@@ -3,6 +3,7 @@ namespace "editor" do
 def settings()
 	_settings = default_settings()
 	_settings[:source_files] |= FileList[
+		"src/editor/ResourceEditor.cpp", # bad bugfix for mirror initialization order
 		"src/editor/**/*.cpp",
 	]
 
