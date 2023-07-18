@@ -561,14 +561,17 @@ void OpenGLRenderer::_renderCamera(const RenderCamera* _camera)
 	    YAE_GL_VERIFY(glDisable(GL_STENCIL_TEST));
 	    YAE_GL_VERIFY(glEnable(GL_SCISSOR_TEST));
 	    YAE_GL_VERIFY(glEnable(GL_CULL_FACE));
-	    YAE_GL_VERIFY(glFrontFace(GL_CW));
+	    // NOTE: OpenGL has an inconsistent texture axis system between rendering to viewport and to render target.
+	    // To fix that, the projection matrix is inverted on the y axis, but it means the front face has to be changed accordingly.
+	    // See _computeFixedViewProjectionMatrix()
+	    YAE_GL_VERIFY(glFrontFace(_camera->renderTarget != nullptr ? GL_CCW : GL_CW));
 	    YAE_GL_VERIFY(glCullFace(GL_BACK));
 	    YAE_GL_VERIFY(glEnable(GL_BLEND));
 		YAE_GL_VERIFY(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	}
 
 	Vector2 viewportSize = _camera->getViewportSize();
-    Matrix4 viewProj = _camera->computeViewProjectionMatrix();
+    Matrix4 viewProj = _computeFixedViewProjectionMatrix(_camera);
     RenderScene* scene = _camera->m_scene;
 
 	{
@@ -768,7 +771,7 @@ void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 
 #if YAE_RENDER_IM3D
 	const Vector2 viewportSize = getFrameBufferSize();
-	const Matrix4 viewProj = _camera->computeViewProjectionMatrix();
+	const Matrix4 viewProj = _computeFixedViewProjectionMatrix(_camera);
 
     YAE_GL_VERIFY(glEnable(GL_DEPTH_TEST));
     YAE_GL_VERIFY(glDepthFunc(GL_LEQUAL));
@@ -835,6 +838,19 @@ void OpenGLRenderer::_renderIm3d(const RenderCamera* _camera)
 		drawLayer(drawList);
 	}
 #endif
+}
+
+Matrix4 OpenGLRenderer::_computeFixedViewProjectionMatrix(const RenderCamera* _camera) const
+{
+	// with OpenGL coordinates of viewport and render target are reversed.
+	// We have to take that into account and fix the projection matrix when we render to a render target
+	Matrix4 viewMatrix = _camera->computeViewMatrix();
+	Matrix4 projectionMatrix = _camera->computeProjectionMatrix();
+	if (_camera->renderTarget != nullptr)
+	{
+		projectionMatrix = Matrix4::FromScale(Vector3(1.0f, -1.0f, 1.0f)) * projectionMatrix;	
+	}
+	return projectionMatrix * viewMatrix;
 }
 
 } // namespace yae

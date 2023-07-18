@@ -53,6 +53,8 @@ public:
 	virtual void _endRender() override;
 	virtual void _endFrame() override;
 
+	Matrix4 _computeFixedViewProjectionMatrix(const RenderCamera* _camera) const;
+
 	void* m_glContext = nullptr;
 
 	u32 m_vao = 0;
