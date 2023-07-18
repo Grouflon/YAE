@@ -15,6 +15,8 @@ typedef void* (*ResourceInspectorInitFunction)(Resource* _resource);
 typedef bool (*ResourceInspectorUpdateFunction)(Resource* _resource, void* _userData);
 typedef void (*ResourceInspectorShutdownFunction)(Resource* _resource, void* _userData);
 
+// NOTE: Storing functions pointers like this doesn't seem to do well with hot-reload, as I expected.
+// Using virtual inspectors, reflection and factories would probably circumvent the problem but meh.
 struct ResourceInspectorDefinition
 {
 	ResourceInspectorInitFunction initFunction = nullptr;

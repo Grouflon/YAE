@@ -9,6 +9,7 @@
 #include <yae/rendering/Renderer.h>
 #include <yae/resource.h>
 #include <yae/imgui_extension.h>
+#include <yae/InputSystem.h>
 #include <yae/inline_string.h>
 #include <yae/string.h>
 #include <yae/im3d_extension.h>
@@ -59,6 +60,11 @@ public:
 	RenderScene* scene = nullptr;
 	RenderCamera* camera = nullptr;
 	ShaderProgram* wireframeShader = nullptr;
+	ShaderProgram* normalsShader = nullptr;
+	float cameraYaw = 145.0f;
+	float cameraPitch = 20.0f;
+	float armLength = 5.0f;
+	bool showNormals = false;
 };
 
 void* meshInspectorInit(Resource* _resource)
@@ -81,6 +87,13 @@ void* meshInspectorInit(Resource* _resource)
 		inspector->wireframeShader->load();
 	}
 
+	inspector->normalsShader = resource::find<ShaderProgram>("normalsShader");
+	YAE_ASSERT(inspector->normalsShader != nullptr);
+	if (inspector->normalsShader)
+	{
+		inspector->normalsShader->load();
+	}
+
 	return inspector;
 }
 
@@ -91,11 +104,59 @@ bool meshInspectorUpdate(Resource* _resource, void* _userData)
 	MeshInspector* inspector = (MeshInspector*)_userData;
 	YAE_ASSERT(inspector != nullptr);
 
-	Vector3 cameraArm = Vector3::FORWARD * -2.f + Vector3::RIGHT * -2.f + Vector3::UP * 1.f; 
-	inspector->camera->position = Quaternion::FromAngleAxis(app().getTime() * PI * 0.2f, Vector3::UP) * cameraArm;
-	Matrix4 cameraTransform = math::inverse(Matrix4::FromLookAt(inspector->camera->position, Vector3::ZERO, -Vector3::UP));
-	inspector->camera->rotation = Quaternion::FromMatrix4(cameraTransform);
+	// ImGui
+	String name(string::format("Mesh: %s", mesh->getName()), &scratchAllocator());
+	ImGui::SetNextWindowSize(ImVec2(700.f, 400.f), ImGuiCond_FirstUseEver);
+	bool opened = true;
+	if (ImGui::Begin(name.c_str(), &opened, ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_MenuBar))
+	{
+		if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("Display"))
+			{
+        		ImGui::MenuItem("Show Normals", NULL, &inspector->showNormals);
 
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		}
+
+		ImGui::BeginChild("MeshInspectorL", ImVec2(200.f, 0.f));
+		{
+			inspectResourceMembers(_resource);
+		}
+		ImGui::EndChild();
+		ImGui::SameLine();
+		ImGui::BeginChild("MeshInspectorR");
+		{
+			ImVec2 windowSize = ImGui::GetContentRegionAvail();
+			renderer().resizeRenderTarget(inspector->renderTarget, windowSize.x , windowSize.y);
+			ImGui::Image((void*)inspector->renderTarget->m_renderTexture, windowSize);
+			if (ImGui::IsItemHovered())
+			{
+				float rotationSpeed = 0.75f;
+				float zoomSpeed = 0.2f;
+
+				if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+				{
+					ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
+					ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+
+					inspector->cameraYaw += rotationSpeed * delta.x;
+					inspector->cameraPitch += rotationSpeed * delta.y;
+				}
+
+				inspector->armLength = math::max(inspector->armLength + ImGui::GetIO().MouseWheel * -zoomSpeed, 0.0f);
+			}
+			else
+			{
+			}
+		}
+		ImGui::EndChild();
+	}
+	ImGui::End();
+
+	// Scene
 	renderer().pushScene(inspector->scene);
 	{
 		Im3d::SetSize(4.0f);
@@ -119,30 +180,16 @@ bool meshInspectorUpdate(Resource* _resource, void* _userData)
 		Im3d::End();
 
 		renderer().drawMesh(Matrix4::IDENTITY, mesh, inspector->wireframeShader, nullptr);
-		//renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->normalsShader, nullptr);
+
+		if (inspector->showNormals)
+		{
+			renderer().drawMesh(Matrix4::IDENTITY, mesh, inspector->normalsShader, nullptr);
+		}
 	}
 	renderer().popScene();
 
-	String name(string::format("Mesh: %s", mesh->getName()), &scratchAllocator());
-	ImGui::SetNextWindowSize(ImVec2(700.f, 400.f), ImGuiCond_FirstUseEver);
-	bool opened = true;
-	if (ImGui::Begin(name.c_str(), &opened, ImGuiWindowFlags_NoSavedSettings))
-	{
-		ImGui::BeginChild("MeshInspectorL", ImVec2(200.f, 0.f));
-		{
-			inspectResourceMembers(_resource);
-		}
-		ImGui::EndChild();
-		ImGui::SameLine();
-		ImGui::BeginChild("MeshInspectorR");
-		{
-			ImVec2 windowSize = ImGui::GetContentRegionAvail();
-			renderer().resizeRenderTarget(inspector->renderTarget, windowSize.x , windowSize.y);
-			ImGui::Image((void*)inspector->renderTarget->m_renderTexture, windowSize);
-		}
-		ImGui::EndChild();
-	}
-	ImGui::End();
+	inspector->camera->rotation = Quaternion::FromEuler(D2R * inspector->cameraPitch, D2R * inspector->cameraYaw, 0.0f);
+	inspector->camera->position = -(inspector->camera->rotation * (Vector3::FORWARD * inspector->armLength));
 
 	return opened;
 }

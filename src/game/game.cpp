@@ -306,7 +306,7 @@ void updateApplication(Application* _app, float _dt)
 	}
 
 	// MOVE CAMERA
-	bool fpsModeEnabled = input().isMouseButtonDown(MOUSEBUTTON_RIGHT);
+	bool fpsModeEnabled = input().isMouseButtonDown(MOUSEBUTTON_RIGHT) && !ImGui::GetIO().WantCaptureMouse;
 	if (fpsModeEnabled != gameInstance->fpsModeEnabled)
 	{
 		gameInstance->fpsModeEnabled = fpsModeEnabled;
