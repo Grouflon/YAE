@@ -60,6 +60,7 @@ public:
 	void _loadModule(Module* _module, const char* _dllPath);
 	void _unloadModule(Module* _module);
 	void _copyAndLoadModule(Module* _module);
+	void _processModuleHotReload();
 
 	String _getModuleDLLPath(const char* _moduleName) const;
 	String _getModuleSymbolsPath(const char* _moduleName) const;

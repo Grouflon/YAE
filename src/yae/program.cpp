@@ -578,35 +578,7 @@ bool Program::_doFrame()
 	// Hot Reload Modules
 	if (m_hotReloadEnabled)
 	{
-		DataArray<Module*> modulesToReload(&scratchAllocator());
-		for (Module* module : m_modules)
-		{
-			// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
-			String dllPath = _getModuleDLLPath(module->name.c_str());
-			Date lastWriteTime = filesystem::getFileLastWriteTime(dllPath.c_str());
-			Date timeSinceLastWriteTime = date::now() - lastWriteTime;
-			bool isDLLOutDated = (lastWriteTime > module->lastLibraryWriteTime && timeSinceLastWriteTime > 0);
-			if (isDLLOutDated)
-			{
-				modulesToReload.push_back(module);
-			}
-		}
-
-		if (modulesToReload.size() > 0)
-		{
-			YAE_CAPTURE_SCOPE("ReloadGameAPI");
-
-			for (int i = modulesToReload.size() - 1; i >= 0; --i)
-			{
-				Module* module = modulesToReload[i];
-				_unloadModule(module);
-			}
-
-			for (Module* module : modulesToReload)
-			{
-				_copyAndLoadModule(module);
-			}
-		}
+		_processModuleHotReload();
 	}
 
 	// Settings save check
@@ -659,10 +631,12 @@ void Program::_loadModule(Module* _module, const char* _dllPath)
 
 	_module->onModuleLoadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleLoaded");
 	_module->onModuleUnloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleUnloaded");
+	_module->onModuleReloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleReloaded");
 	_module->initModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "initModule");
 	_module->shutdownModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "shutdownModule");
 	_module->beforeInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeInitApplication");
 	_module->afterInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterInitApplication");
+	_module->onApplicationModuleReloadedFunction = (void (*)(Application*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onApplicationModuleReloaded");
 	_module->updateApplicationFunction = (void (*)(Application*, float))platform::getProcedureAddress(_module->libraryHandle, "updateApplication");
 	_module->beforeShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeShutdownApplication");
 	_module->afterShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterShutdownApplication");
@@ -725,6 +699,54 @@ void Program::_copyAndLoadModule(Module* _module)
 	_module->lastLibraryWriteTime = filesystem::getFileLastWriteTime(dllSrc.c_str());
 }
 
+void Program::_processModuleHotReload()
+{
+	DataArray<Module*> modulesToReload(&scratchAllocator());
+	for (Module* module : m_modules)
+	{
+		// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
+		String dllPath = _getModuleDLLPath(module->name.c_str());
+		Date lastWriteTime = filesystem::getFileLastWriteTime(dllPath.c_str());
+		Date timeSinceLastWriteTime = date::now() - lastWriteTime;
+		bool isDLLOutDated = (lastWriteTime > module->lastLibraryWriteTime && timeSinceLastWriteTime > 0);
+		if (isDLLOutDated)
+		{
+			modulesToReload.push_back(module);
+		}
+	}
+
+	if (modulesToReload.size() > 0)
+	{
+		YAE_CAPTURE_SCOPE("ReloadGameAPI");
+
+		for (int i = modulesToReload.size() - 1; i >= 0; --i)
+		{
+			Module* module = modulesToReload[i];
+			_unloadModule(module);
+		}
+
+		for (Module* module : modulesToReload)
+		{
+			_copyAndLoadModule(module);
+
+			if (module->onModuleReloadedFunction != nullptr)
+			{
+				module->onModuleReloadedFunction(this, module);
+			}
+
+			if (module->onApplicationModuleReloadedFunction != nullptr)
+			{
+				for (Application* application : m_applications)
+				{
+					m_currentApplication = application;
+					module->onApplicationModuleReloadedFunction(application, module);
+				}
+				m_currentApplication = nullptr;
+			}
+			
+		}
+	}
+}
 
 String Program::_getModuleDLLPath(const char* _moduleName) const
 {
