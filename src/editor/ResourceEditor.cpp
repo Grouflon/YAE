@@ -200,10 +200,16 @@ void meshInspectorShutdown(Resource* _resource, void* _userData)
 	Mesh* mesh = mirror::Cast<Mesh*>(_resource);
 	YAE_ASSERT(mesh != nullptr);
 
-	if (inspector->wireframeShader)
+	if (inspector->wireframeShader != nullptr)
 	{
 		inspector->wireframeShader->release();
 	}
+
+	if (inspector->normalsShader != nullptr)
+	{
+		inspector->normalsShader->release();
+	}
+
 	renderer().destroyRenderTarget(inspector->renderTarget);
 	renderer().destroyScene(inspector->scene);
 	renderer().destroyCamera(inspector->camera);
