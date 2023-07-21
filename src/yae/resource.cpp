@@ -13,21 +13,23 @@ namespace resource {
 Resource* findOrCreateFromFile(const char* _path)
 {
 	ResourceManager& manager = resourceManager();
+	String path = String(filesystem::getAbsolutePath(_path), &scratchAllocator());
 
-	Resource* resource = manager.findResource(_path);
+
+	Resource* resource = manager.findResource(path.c_str());
 	if (resource == nullptr)
 	{
-		FileReader reader(_path, &scratchAllocator());
+		FileReader reader(path.c_str(), &scratchAllocator());
 		if (!reader.load())
 		{
-			YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for read", _path);
+			YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for read", path.c_str());
 			return nullptr;
 		}
 
 		JsonSerializer serializer(&scratchAllocator());
 		if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
 		{
-			YAE_ERRORF_CAT("resource", "Failed to parse \"%s\" JSON file", _path);
+			YAE_ERRORF_CAT("resource", "Failed to parse \"%s\" JSON file", path.c_str());
 			return nullptr;
 		}
 
@@ -52,7 +54,7 @@ Resource* findOrCreateFromFile(const char* _path)
 		serializer.endRead();
 
 		resource->m_transient = false;
-		manager.registerResource(_path, resource);
+		manager.registerResource(path.c_str(), resource);
 	}
 	return resource;
 }

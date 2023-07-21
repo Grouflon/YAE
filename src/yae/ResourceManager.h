@@ -16,6 +16,8 @@ public:
 	ResourceManager();
 	~ResourceManager();
 
+	void gatherResources(const char* _path);
+
 	void registerResource(const char* _name, Resource* _resource);
 	void unregisterResource(Resource* _resource);
 

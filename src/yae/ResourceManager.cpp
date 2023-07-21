@@ -5,6 +5,7 @@
 #include <yae/resources/Resource.h>
 #include <yae/time.h>
 #include <yae/hash.h>
+#include <yae/filesystem.h>
 
 #define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
 
@@ -27,6 +28,26 @@ ResourceManager::~ResourceManager()
 	flushResources();
 
 	YAE_ASSERT_MSG(m_resources.size() == 0, "Resources list must be empty when the manager gets destroyed");
+}
+
+void ResourceManager::gatherResources(const char* _path)
+{
+	String path = String(filesystem::normalizePath(_path), &scratchAllocator());
+
+	YAE_VERBOSEF_CAT("resource", "Gathering resources inside \"%s\"...", path.c_str());
+
+	filesystem::walkDirectory(path.c_str(), [](const char* _path, filesystem::EntryType _type)
+	{
+		String extension(filesystem::getExtension(_path), &scratchAllocator());
+		if (strcmp(extension.c_str(), "res") == 0)
+		{
+			resource::findOrCreateFromFile(_path);
+		}
+		return true;
+	}
+	, true, filesystem::EntryType_File);
+
+	YAE_VERBOSEF_CAT("resource", "Gathering done.");
 }
 
 void ResourceManager::registerResource(const char* _name, Resource* _resource)
@@ -59,12 +80,13 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 			while (m_resourcesByID.get(id) != nullptr);
 			_resource->m_id = id;
 		}
+		YAE_ASSERT(m_resourcesByID.get(_resource->getID()) == nullptr);
 		m_resourcesByID.set(_resource->getID(), _resource);
 	}
 	
 
 	m_resources.push_back(_resource);
-	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"...", _resource->m_name);
+	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"(%s)...", _resource->m_name, _resource->getClass()->getName());
 }
 
 void ResourceManager::unregisterResource(Resource* _resource)
@@ -81,6 +103,11 @@ void ResourceManager::unregisterResource(Resource* _resource)
 		StringHash nameHash = StringHash(_resource->m_name);	
 		YAE_ASSERT(m_resourcesByName.get(nameHash) != nullptr);
 		m_resourcesByName.remove(nameHash);
+	}
+
+	{
+		YAE_ASSERT(m_resourcesByID.get(_resource->getID()) != nullptr);
+		m_resourcesByID.remove(_resource->getID());
 	}
 
 	YAE_VERBOSEF_CAT("resource", "Unregistered \"%s\"...", _resource->m_name);
