@@ -210,55 +210,9 @@ void meshInspectorShutdown(Resource* _resource, void* _userData)
 	toolAllocator().destroy(inspector);
 }
 
-
-/*
-MeshInspector* openMeshInspector(EditorInstance& _editorInstance, Mesh* _mesh)
-{
-	MeshInspector* inspector = nullptr;
-
-	for (MeshInspector* meshInspector : _editorInstance.meshInspectors)
-	{
-		if (meshInspector->mesh == _mesh)
-		{
-			inspector = meshInspector;
-			break;
-		}
-	}
-
-	if (inspector == nullptr)
-	{
-		inspector = toolAllocator().create<MeshInspector>();
-		inspector->mesh = _mesh;
-		inspector->renderTarget = renderer().createRenderTarget(false, 128, 128);
-		RenderScene* scene = renderer().createScene(_mesh->getName());
-		RenderCamera* camera = renderer().createCamera(_mesh->getName());
-		scene->addCamera(camera);
-		camera->renderTarget = inspector->renderTarget;
-		camera->clearColor = Vector4(.1f, .1f, .1f, 1.f);
-		_editorInstance.meshInspectors.push_back(inspector);
-	}
-
-
-	return inspector;
-}
-
-void closeMeshInspector(EditorInstance& _editorInstance, MeshInspector* _meshInspector)
-{
-	auto it = _editorInstance.meshInspectors.find(_meshInspector);
-	YAE_ASSERT(it != nullptr);
-	_editorInstance.meshInspectors.erase(it);
-
-	renderer().destroyRenderTarget(_meshInspector->renderTarget);
-	renderer().destroyScene(_meshInspector->mesh->getName());
-	renderer().destroyCamera(_meshInspector->mesh->getName());
-	toolAllocator().destroy(_meshInspector);
-}
-*/
-
 void ResourceEditor::init()
 {
-	_registerInspectorDefinition(mirror::GetTypeID<Resource>(), {nullptr, &defaultResourceInspectorUpdate, nullptr});
-	_registerInspectorDefinition(mirror::GetTypeID<Mesh>(), {&meshInspectorInit, &meshInspectorUpdate, &meshInspectorShutdown});
+	_registerInspectorDefinitions();
 }
 
 void ResourceEditor::shutdown()
@@ -268,6 +222,16 @@ void ResourceEditor::shutdown()
 	{
 		_closeInspector(inspector.resource);
 	}
+}
+
+void ResourceEditor::reload()
+{
+	// NOTE: Storing functions pointers like this doesn't seem to do well with hot-reload, as I expected.
+	// Using virtual inspectors, reflection and factories would probably circumvent the problem but meh.
+	// We'll just re-register after reload for now. It's a bit manual, but not that much since once written once it doesn't add any overhead to adding new types
+
+	m_inspectorDefinitions.clear();
+	_registerInspectorDefinitions();
 }
 
 void ResourceEditor::update()
@@ -283,12 +247,6 @@ void ResourceEditor::update()
 	            {
 	            	_openInspector(resource);
 	            }
-	            /*
-	            ImGui::SameLine(150);
-	            ImGui::Text("%d vertices", meshResource.mesh->vertices.size());
-	            ImGui::SameLine(300);
-	            ImGui::Text("%d indices", meshResource.mesh->indices.size());
-	            */
     		}
   
     	}
@@ -306,64 +264,13 @@ void ResourceEditor::update()
     			}
     		}
     	}
-
-    	// DataArray<MeshInspector*> tempInspectors(&scratchAllocator());
-    	// tempInspectors = editorInstance->meshInspectors;
-    	// for (MeshInspector* meshInspector : tempInspectors)
-    	// {
-    	// 	Mesh* mesh = meshInspector->mesh;
-    	// 	YAE_ASSERT(mesh != nullptr);
-
-    	// 	RenderCamera* camera = renderer().getCamera(meshInspector->mesh->getName());
-    	// 	Vector3 cameraArm = Vector3::FORWARD * -2.f + Vector3::RIGHT * -2.f + Vector3::UP * 1.f; 
-		// 	camera->position = Quaternion::FromAngleAxis(app().getTime() * PI * 0.2f, Vector3::UP) * cameraArm;
-		// 	Matrix4 cameraTransform = math::inverse(Matrix4::FromLookAt(camera->position, Vector3::ZERO, -Vector3::UP));
-		// 	camera->rotation = Quaternion::FromMatrix4(cameraTransform);
-
-    	// 	renderer().pushScene(meshInspector->mesh->getName());
-    	// 	{
-		// 		Im3d::SetSize(4.0f);
-    	// 		Im3d::DrawRotation(Quaternion::IDENTITY, 1.5f);
-
-    	// 		static int gridSize = 20;
-		// 		const float gridHalf = (float)gridSize * 0.5f;
-		// 		Im3d::SetAlpha(1.0f);
-		// 		Im3d::SetSize(2.0f);
-		// 		Im3d::BeginLines();
-		// 			for (int x = 0; x <= gridSize; ++x)
-		// 			{
-		// 				Im3d::Vertex(-gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(0.0f, 0.0f, 0.0f));
-		// 				Im3d::Vertex( gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(1.0f, 0.0f, 0.0f));
-		// 			}
-		// 			for (int z = 0; z <= gridSize; ++z)
-		// 			{
-		// 				Im3d::Vertex((float)z - gridHalf, 0.0f, -gridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-		// 				Im3d::Vertex((float)z - gridHalf, 0.0f,  gridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
-		// 			}
-		// 		Im3d::End();
-
-		// 		renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->wireframeShader, nullptr);
-		// 		//renderer().drawMesh(Matrix4::IDENTITY, mesh, editorInstance->normalsShader, nullptr);
-    	// 	}
-    	// 	renderer().popScene();
-
-    	// 	String name(string::format("Mesh: %s", meshInspector->mesh->getName()), &scratchAllocator());
-    	// 	ImGui::SetNextWindowSize(ImVec2(50.f, 50.f), ImGuiCond_FirstUseEver);
-    	// 	if (ImGui::Begin(name.c_str(), &meshInspector->opened))
-    	// 	{
-    	// 		ImVec2 windowSize = ImGui::GetContentRegionAvail();
-    	// 		renderer().resizeRenderTarget(meshInspector->renderTarget, windowSize.x , windowSize.y);
-    	// 		ImGui::Image((void*)meshInspector->renderTarget->m_renderTexture, windowSize);
-    	// 	}
-    	// 	ImGui::End();
-
-    	// 	if (!meshInspector->opened)
-    	// 	{
-    	// 		closeMeshInspector(*editorInstance, meshInspector);
-    	// 	}
-    	// }
-
     }
+}
+
+void ResourceEditor::_registerInspectorDefinitions()
+{
+	_registerInspectorDefinition(mirror::GetTypeID<Resource>(), {nullptr, &defaultResourceInspectorUpdate, nullptr});
+	_registerInspectorDefinition(mirror::GetTypeID<Mesh>(), {&meshInspectorInit, &meshInspectorUpdate, &meshInspectorShutdown});
 }
 
 void ResourceEditor::_registerInspectorDefinition(mirror::TypeID _type, const ResourceInspectorDefinition& _inspector)

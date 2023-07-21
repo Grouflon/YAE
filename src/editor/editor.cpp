@@ -211,6 +211,12 @@ void afterShutdownApplication(yae::Application* _application)
 	toolAllocator().destroy(editorInstance);
 }
 
+void onApplicationModuleReloaded(yae::Application* _application, yae::Module* _module)
+{
+	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
+	editorInstance->resourceEditor.reload();
+}
+
 void updateApplication(yae::Application* _application, float _dt)
 {
 	EditorInstance* editorInstance = (EditorInstance*)_application->getUserData("editor");
