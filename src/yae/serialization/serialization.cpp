@@ -38,24 +38,38 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 				return _serializer->serialize(*(String*)_value, _key);
 			}
 
-			// Simplified serialization for types that can be considered float arrays (e.g. Vectors, Quaternions...)
-			const mirror::MetaData* floatArrayMetaData = clss->getMetaDataSet().findMetaData("FloatArray");
-			if (floatArrayMetaData != nullptr)
+			// Simplified serialization for overriden serialization types that can be considered primitive arrays (e.g. Vectors, Quaternions...)
+			const mirror::MetaData* serializeTypeMetaData = clss->getMetaDataSet().findMetaData("SerializeType");
+			if (serializeTypeMetaData != nullptr)
 			{
-				u32 arraySize = (u32)floatArrayMetaData->asInt();
-
-				if (!_serializer->beginSerializeArray(arraySize, _key))
-					return _flags & SF_IGNORE_MISSING_KEYS;
-
-				for (u32 i = 0; i < arraySize; ++i)
-				{
-					if (!_serializer->serialize(*((float*)_value + i)))
-						return false;
-				}
-
-				if (!_serializer->endSerializeArray())
+				const mirror::TypeDesc* serializeType = mirror::FindTypeByName(serializeTypeMetaData->asString());
+				if (serializeType == nullptr)
 					return false;
-				return true;
+
+				const mirror::MetaData* serializeArraySizeMetaData = clss->getMetaDataSet().findMetaData("SerializeArraySize");
+				// If we have an array size, then let's serialize the type as an array
+				if (serializeArraySizeMetaData != nullptr)
+				{
+					u32 arraySize = (u32)serializeArraySizeMetaData->asInt();
+					size_t typeSize = serializeType->getSize();
+
+					if (!_serializer->beginSerializeArray(arraySize, _key))
+						return _flags & SF_IGNORE_MISSING_KEYS;
+
+					for (u32 i = 0; i < arraySize; ++i)
+					{
+						if (!serializeMirrorType(_serializer, (char*)_value + i * typeSize, serializeType, nullptr, _flags))
+							return false;
+					}
+
+					if (!_serializer->endSerializeArray())
+						return false;
+					return true;
+				}
+				else
+				{
+					return serializeMirrorType(_serializer, _value, serializeType, _key, _flags);
+				}
 			}
 
 			// Otherwise use standard reflection

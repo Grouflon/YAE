@@ -1,6 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
+#include <yae/resources/ResourceID.h>
 
 #include <mirror.h>
 
@@ -10,20 +11,20 @@ MIRROR_EXTERN_CLASS(String)
 (
 );
 
-MIRROR_EXTERN_CLASS(Vector2, FloatArray = 2)
+MIRROR_EXTERN_CLASS(Vector2, SerializeType = float, SerializeArraySize = 2)
 (
 	MIRROR_MEMBER(x)();
 	MIRROR_MEMBER(y)();
 );
 
-MIRROR_EXTERN_CLASS(Vector3, FloatArray = 3)
+MIRROR_EXTERN_CLASS(Vector3, SerializeType = float, SerializeArraySize = 3)
 (
 	MIRROR_MEMBER(x)();
 	MIRROR_MEMBER(y)();
 	MIRROR_MEMBER(z)();
 );
 
-MIRROR_EXTERN_CLASS(Vector4, FloatArray = 4)
+MIRROR_EXTERN_CLASS(Vector4, SerializeType = float, SerializeArraySize = 4)
 (
 	MIRROR_MEMBER(x)();
 	MIRROR_MEMBER(y)();
@@ -31,7 +32,7 @@ MIRROR_EXTERN_CLASS(Vector4, FloatArray = 4)
 	MIRROR_MEMBER(w)();
 );
 
-MIRROR_EXTERN_CLASS(Quaternion, FloatArray = 4)
+MIRROR_EXTERN_CLASS(Quaternion, SerializeType = float, SerializeArraySize = 4)
 (
 	MIRROR_MEMBER(x)();
 	MIRROR_MEMBER(y)();

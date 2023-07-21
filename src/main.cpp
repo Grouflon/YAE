@@ -12,6 +12,14 @@
 int main(int _argc, char** _argv)
 {
     mirror::GetTypeSet().resolveTypes();
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<u8>(), "u8");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<u16>(), "u16");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<u32>(), "u32");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<u64>(), "u64");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<i8>(), "i8");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<i16>(), "i16");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<i32>(), "i32");
+    mirror::GetTypeSet().addTypeName(mirror::GetTypeDesc<i64>(), "i64");
 
     yae::FixedSizeAllocator allocator = yae::FixedSizeAllocator(1024*1024*32);
     yae::FixedSizeAllocator scratchAllocator = yae::FixedSizeAllocator(1024*1024*32);
