@@ -243,7 +243,9 @@ void ResourceEditor::update()
     		ResourceManager& rm = resourceManager();
     		for (Resource* resource : rm.getResources())
     		{
-	            if (ImGui::Selectable(resource->getName(), resource == m_currentResource))
+    			char buf[256];
+    			string::format(buf, sizeof(buf), "%010u|%s", resource->getID(), resource->getName());
+	            if (ImGui::Selectable(buf, resource == m_currentResource))
 	            {
 	            	_openInspector(resource);
 	            }

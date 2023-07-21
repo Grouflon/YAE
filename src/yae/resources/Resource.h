@@ -3,6 +3,7 @@
 #include <yae/types.h>
 
 #include <yae/containers/Array.h>
+#include <yae/resources/ResourceID.h>
 
 #include <mirror/mirror.h>
 
@@ -25,6 +26,7 @@ class YAE_API Resource
 {
 	MIRROR_CLASS(Resource)
 	(
+		MIRROR_MEMBER(m_id)();
 	);
 
 public:
@@ -32,6 +34,7 @@ public:
 	virtual ~Resource();
 	
 	const char* getName() const { return m_name; }
+	ResourceID getID() const { return m_id; }
 
 	bool load();
 	void release();
@@ -52,6 +55,7 @@ public:
 
 	Array<ResourceLog> m_logs;
 	char m_name[256];
+	ResourceID m_id;
 	u32 m_loadCount = 0;
 	u32 m_errorCount = 0;
 	u32 m_warningCount = 0;

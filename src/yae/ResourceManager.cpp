@@ -3,6 +3,8 @@
 #include <yae/string.h>
 #include <yae/resource.h>
 #include <yae/resources/Resource.h>
+#include <yae/time.h>
+#include <yae/hash.h>
 
 #define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
 
@@ -15,6 +17,7 @@ namespace yae {
 
 ResourceManager::ResourceManager()
 	: m_resources(&defaultAllocator())
+	, m_resourcesByName(&defaultAllocator())
 	, m_resourcesByID(&defaultAllocator())
 {
 }
@@ -32,12 +35,35 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 	YAE_ASSERT(std::find(m_resources.begin(), m_resources.end(), _resource) == m_resources.end());
 
 	YAE_VERIFY(string::safeCopyToBuffer(_resource->m_name, _name, countof(_resource->m_name)) < countof(_resource->m_name));
-	StringHash id = StringHash(_resource->m_name);	
-	YAE_ASSERT(m_resourcesByID.get(id) == nullptr);
+
+	{
+		StringHash nameHash = StringHash(_resource->m_name);	
+		YAE_ASSERT(m_resourcesByName.get(nameHash) == nullptr);
+		m_resourcesByName.set(nameHash, _resource);	
+	}
+	
+	{
+		if (_resource->getID() == ResourceID::INVALID_ID)
+		{
+			u32 id = 0;
+			size_t loopCount = 0;
+			do
+			{
+				// unique ID is just a hash of the current time + reroll if it already exists.
+				// hopefully it will be enough
+				Time t = time::now();
+				id = hash::hash32(&t, sizeof(t));
+				++loopCount;
+				YAE_ASSERT(loopCount < 32);
+			}
+			while (m_resourcesByID.get(id) != nullptr);
+			_resource->m_id = id;
+		}
+		m_resourcesByID.set(_resource->getID(), _resource);
+	}
+	
 
 	m_resources.push_back(_resource);
-	m_resourcesByID.set(id, _resource);
-
 	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"...", _resource->m_name);
 }
 
@@ -52,9 +78,9 @@ void ResourceManager::unregisterResource(Resource* _resource)
 	}
 
 	{
-		StringHash id = StringHash(_resource->m_name);	
-		YAE_ASSERT(m_resourcesByID.get(id) != nullptr);
-		m_resourcesByID.remove(id);
+		StringHash nameHash = StringHash(_resource->m_name);	
+		YAE_ASSERT(m_resourcesByName.get(nameHash) != nullptr);
+		m_resourcesByName.remove(nameHash);
 	}
 
 	YAE_VERBOSEF_CAT("resource", "Unregistered \"%s\"...", _resource->m_name);
@@ -64,7 +90,16 @@ void ResourceManager::unregisterResource(Resource* _resource)
 Resource* ResourceManager::findResource(const char* _name) const
 {
 	StringHash id = StringHash(_name);
-	Resource*const* resourcePtr = m_resourcesByID.get(id);
+	Resource*const* resourcePtr = m_resourcesByName.get(id);
+	if (resourcePtr == nullptr)
+		return nullptr;
+
+	return *resourcePtr;
+}
+
+Resource* ResourceManager::findResource(ResourceID _id) const
+{
+	Resource*const* resourcePtr = m_resourcesByID.get(_id);
 	if (resourcePtr == nullptr)
 		return nullptr;
 

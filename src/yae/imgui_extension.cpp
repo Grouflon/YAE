@@ -127,13 +127,16 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 
 	case mirror::Type_Class:
 		{
-			bool result = false;
-			if (ImGui::TreeNodeEx(_name, ImGuiTreeNodeFlags_DefaultOpen))
+			if (_type->asClass()->getMembersCount() != 0)
 			{
-				result = EditMirrorClassInstance(_data, _type->asClass());
-				ImGui::TreePop();
+				bool result = false;
+				if (ImGui::TreeNodeEx(_name, ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					result = EditMirrorClassInstance(_data, _type->asClass());
+					ImGui::TreePop();
+				}
+				return result;
 			}
-			return result;
 		}
 		break;
 

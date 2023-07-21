@@ -57,4 +57,6 @@ MIRROR_EXTERN_CLASS(Transform)
 	MIRROR_MEMBER(scale)();
 );
 
+MIRROR_EXTERN_CLASS(ResourceID, SerializeType = u32)();
+
 } // namespace yae

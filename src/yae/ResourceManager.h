@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-
+#include <yae/resources/ResourceID.h>
 #include <yae/containers/HashMap.h>
 
 #include <mutex>
@@ -22,6 +22,7 @@ public:
 	void flushResources();
 
 	Resource* findResource(const char* _name) const;
+	Resource* findResource(ResourceID _id) const;
 	template <typename T> T* findResource(const char* _name) const;
 
 	const DataArray<Resource*> getResources() const;
@@ -37,7 +38,8 @@ public:
 	void _processReloadDependencies();
 
 	DataArray<Resource*> m_resources;
-	HashMap<StringHash, Resource*> m_resourcesByID;
+	HashMap<StringHash, Resource*> m_resourcesByName;
+	HashMap<ResourceID, Resource*> m_resourcesByID;
 
 	HashMap<StringHash, void*> m_fileWatchers;
 
