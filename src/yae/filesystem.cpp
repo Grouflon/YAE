@@ -3,7 +3,7 @@
 #include <yae/program.h>
 #include <yae/platform.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <cstdio>
 
 namespace yae {
@@ -132,7 +132,7 @@ String getExtension(const char* _path)
 bool doesPathExists(const char* _path)
 {
 	std::error_code errorCode;
-	bool result = std::experimental::filesystem::exists(_path, errorCode);
+	bool result = std::filesystem::exists(_path, errorCode);
 	YAE_ASSERT(errorCode.value() == 0);
 	return result;
 }
@@ -141,14 +141,14 @@ bool doesPathExists(const char* _path)
 bool deletePath(const char* _path)
 {
 	std::error_code errorCode;
-	std::uintmax_t ret = std::experimental::filesystem::remove_all(_path, errorCode);
+	std::uintmax_t ret = std::filesystem::remove_all(_path, errorCode);
 	return ret > 0 && ret != static_cast<std::uintmax_t>(-1);
 }
 
 
 bool createDirectory(const char* _path)
 {
-	return std::experimental::filesystem::create_directory(_path);
+	return std::filesystem::create_directory(_path);
 }
 
 
@@ -156,11 +156,16 @@ Date getFileLastWriteTime(const char* _path)
 {
 #if YAE_PLATFORM_WEB == 0
 	std::error_code errorCode;
-	auto ftime = std::experimental::filesystem::last_write_time(_path, errorCode);
+	auto ftime = std::filesystem::last_write_time(_path, errorCode);
 	if (errorCode.value() != 0)
 		return Date(0);
 
-    std::time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
+	using namespace std::chrono;
+
+	auto sctp = time_point_cast<system_clock::duration>(ftime - decltype(ftime)::clock::now() + system_clock::now());
+    std::time_t cftime = system_clock::to_time_t(sctp);
+
+    //std::time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
     return Date(i64(cftime));
 #else
     YAE_ASSERT_MSG(false, "getFileLastWriteTime is not supported for Web yet");
@@ -171,7 +176,7 @@ Date getFileLastWriteTime(const char* _path)
 
 bool copy(const char* _from, const char* _to, CopyMode _mode)
 {
-	using namespace std::experimental::filesystem;
+	using namespace std::filesystem;
 	copy_options copyOptions = copy_options::none;
 	switch(_mode)
 	{
@@ -181,8 +186,60 @@ bool copy(const char* _from, const char* _to, CopyMode _mode)
 	}
 
 	std::error_code errorCode;
-	std::experimental::filesystem::copy(_from, _to, copyOptions, errorCode);
+	std::filesystem::copy(_from, _to, copyOptions, errorCode);
 	return errorCode.value() == 0;
+}
+
+bool internalWalkDirectory (const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive, EntryType _filter)
+{
+	bool continueWalk = true;
+
+	for (const auto& entry : std::filesystem::directory_iterator(_path))
+	{
+		std::string path = entry.path().string();
+		if (entry.is_directory())
+		{
+			if (_filter & EntryType_Directory)
+			{
+				continueWalk = _visitor(path.c_str(), EntryType_Directory);
+			}
+
+			if (_recursive && continueWalk)
+			{
+				continueWalk = internalWalkDirectory(path.c_str(), _visitor, true, _filter);
+			}
+		}
+		else if (entry.is_symlink())
+		{
+			if (_filter & EntryType_Symlink)
+			{
+				continueWalk = _visitor(path.c_str(), EntryType_Symlink);
+			}
+		}
+		else if (entry.is_regular_file())
+		{
+			if (_filter & EntryType_File)
+			{
+				continueWalk = _visitor(path.c_str(), EntryType_File);
+			}
+		}
+		if (!continueWalk)
+			break;
+	}
+	return continueWalk;
+};
+
+void walkDirectory(const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive, EntryType _filter)
+{
+	YAE_ASSERT(_visitor != nullptr);
+
+	if (!std::filesystem::exists(_path))
+	{
+		YAE_ERRORF_CAT("filesystem", "Can't walk \"%s\": Directory does not exists.");
+		return;
+	}
+
+	internalWalkDirectory(_path, _visitor, _recursive, _filter);
 }
 
 } // namespace filesystem

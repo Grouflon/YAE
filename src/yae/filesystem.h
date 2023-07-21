@@ -38,6 +38,17 @@ enum CopyMode
 };
 YAE_API bool copy(const char* _from, const char* _to, CopyMode _mode = CopyMode_SkipExisting);
 
+typedef i32 EntryType;
+enum EntryType_
+{
+	EntryType_File = 1 << 0,
+	EntryType_Directory = 1 << 1,
+	EntryType_Symlink = 2 << 2,
+
+	EntryType_All = EntryType_File|EntryType_Directory|EntryType_Symlink,
+};
+YAE_API void walkDirectory(const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive = true, EntryType _filter = EntryType_All);
+
 } // namespace filesystem
 
 class YAE_API FileHandle
