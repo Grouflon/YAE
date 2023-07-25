@@ -13,7 +13,7 @@ class YAE_API ShaderProgram : public Resource
 {
 	MIRROR_CLASS(ShaderProgram)
 	(
-		MIRROR_PARENT(Resource)
+		MIRROR_PARENT(Resource);
 	);
 
 public:

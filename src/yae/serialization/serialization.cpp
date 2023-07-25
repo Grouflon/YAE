@@ -184,9 +184,35 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 		}
 		break;
 
+		case mirror::Type_Custom:
+		{
+			if (strcmp(_type->getCustomTypeName(), "Array") == 0)
+			{
+				const mirror::ArrayType* arrayType = (const mirror::ArrayType*)_type;
+
+				u32 arraySize = arrayType->getSize(_value);
+				if (!_serializer->beginSerializeArray(arraySize, _key))
+					return _flags & SF_IGNORE_MISSING_KEYS;
+				arrayType->setSize(_value, arraySize);
+
+				const mirror::TypeDesc* subType = arrayType->getSubType();
+				for (u32 i = 0; i < arraySize; ++i)
+				{
+					void* valuePointer = (void*)(size_t(arrayType->getData(_value)) + (i * subType->getSize()));
+					bool success = serializeMirrorType(_serializer, valuePointer, subType, nullptr, _flags);
+					if (!success)
+						return false;
+				}
+
+				if (!_serializer->endSerializeArray())
+					return false;
+			}
+		}
+		break;
+
 		default: YAE_ASSERT_MSG(false, "type not implemented"); break;
 	}
-	return false;
+	return true;
 }
 
 bool serializeClassInstance(Serializer* _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
