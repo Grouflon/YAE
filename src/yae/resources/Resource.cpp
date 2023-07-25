@@ -24,7 +24,7 @@ bool Resource::load()
 	return m_errorCount == 0;
 }
 
-void Resource::release()
+void Resource::unload()
 {
 	YAE_ASSERT_MSG(m_loadCount > 0, "Asymetric load/unload detected");
 	--m_loadCount;

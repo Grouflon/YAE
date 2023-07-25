@@ -2,6 +2,7 @@
 
 #include <yae/program.h>
 #include <yae/platform.h>
+#include <yae/containers/Array.h>
 
 #include <filesystem>
 #include <cstdio>
@@ -190,37 +191,42 @@ bool copy(const char* _from, const char* _to, CopyMode _mode)
 	return errorCode.value() == 0;
 }
 
-bool internalWalkDirectory (const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive, EntryType _filter)
+bool internalWalkDirectory(const char* _path, bool(*_visitor)(const Entry& _entry, void* _userData), bool _recursive, EntryType _filter, void* _userData)
 {
 	bool continueWalk = true;
 
-	for (const auto& entry : std::filesystem::directory_iterator(_path))
+	for (const auto& directoryEntry : std::filesystem::directory_iterator(_path))
 	{
-		std::string path = entry.path().string();
-		if (entry.is_directory())
+		Entry entry;
+		entry.path = normalizePath(directoryEntry.path().string().c_str());
+
+		if (directoryEntry.is_directory())
 		{
 			if (_filter & EntryType_Directory)
 			{
-				continueWalk = _visitor(path.c_str(), EntryType_Directory);
+				entry.type = EntryType_Directory;
+				continueWalk = _visitor(entry, _userData);
 			}
 
 			if (_recursive && continueWalk)
 			{
-				continueWalk = internalWalkDirectory(path.c_str(), _visitor, true, _filter);
+				continueWalk = internalWalkDirectory(entry.path.c_str(), _visitor, true, _filter, _userData);
 			}
 		}
-		else if (entry.is_symlink())
+		else if (directoryEntry.is_symlink())
 		{
 			if (_filter & EntryType_Symlink)
 			{
-				continueWalk = _visitor(path.c_str(), EntryType_Symlink);
+				entry.type = EntryType_Symlink;
+				continueWalk = _visitor(entry, _userData);
 			}
 		}
-		else if (entry.is_regular_file())
+		else if (directoryEntry.is_regular_file())
 		{
 			if (_filter & EntryType_File)
 			{
-				continueWalk = _visitor(path.c_str(), EntryType_File);
+				entry.type = EntryType_File;
+				continueWalk = _visitor(entry, _userData);
 			}
 		}
 		if (!continueWalk)
@@ -229,18 +235,30 @@ bool internalWalkDirectory (const char* _path, bool(*_visitor)(const char* _path
 	return continueWalk;
 };
 
-void walkDirectory(const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive, EntryType _filter)
+void walkDirectory(const char* _path, bool(*_visitor)(const Entry& _entry, void* _userData), bool _recursive, EntryType _filter, void* _userData)
 {
 	YAE_ASSERT(_visitor != nullptr);
 
 	if (!std::filesystem::exists(_path))
-	{
-		YAE_ERRORF_CAT("filesystem", "Can't walk \"%s\": Directory does not exists.");
 		return;
-	}
 
-	internalWalkDirectory(_path, _visitor, _recursive, _filter);
+	String256 path = filesystem::normalizePath(_path);
+	internalWalkDirectory(path.c_str(), _visitor, _recursive, _filter, _userData);
 }
+
+void parseDirectoryContent(const char* _path, Array<Entry>& _outContent, bool _recursive, EntryType _filter)
+{
+	walkDirectory(_path, [](const Entry& _entry, void* _userData)
+	{
+		Array<Entry>* outContentPtr = (Array<Entry>*)_userData;
+		outContentPtr->push_back(_entry);
+		return true;
+	}
+	, _recursive
+	, _filter
+	, &_outContent);
+}
+
 
 } // namespace filesystem
 

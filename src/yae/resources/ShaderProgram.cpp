@@ -92,7 +92,7 @@ void ShaderProgram::_doUnload()
 	for(Shader* shader : m_shaderStages)
 	{
 		resourceManager().removeDependency(shader, this);
-		shader->release();
+		shader->unload();
 	}
 }
 

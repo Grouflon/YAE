@@ -88,5 +88,22 @@ void saveToFile(Resource* _resource, const char* _path)
 	file.close();
 }
 
+void deleteResourceFile(Resource* _resource)
+{
+	YAE_ASSERT(_resource != nullptr);
+
+	if (_resource->isTransient())
+	{
+		YAE_WARNINGF_CAT("resource", "Can't delete transient resource \"%s\"", _resource->getName());
+		return;
+	}
+
+	YAE_VERIFY(filesystem::deletePath(_resource->getName()));
+	_resource->_internalUnload();
+	_resource->m_loadCount = 0;
+	resourceManager().unregisterResource(_resource);
+	defaultAllocator().destroy(_resource);
+}
+
 } // namespace resource
 } // namespace yae

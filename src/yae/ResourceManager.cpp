@@ -36,12 +36,12 @@ void ResourceManager::gatherResources(const char* _path)
 
 	YAE_VERBOSEF_CAT("resource", "Gathering resources inside \"%s\"...", path.c_str());
 
-	filesystem::walkDirectory(path.c_str(), [](const char* _path, filesystem::EntryType _type)
+	filesystem::walkDirectory(path.c_str(), [](const filesystem::Entry& _entry, void* _userData)
 	{
-		String extension(filesystem::getExtension(_path), &scratchAllocator());
+		String extension(filesystem::getExtension(_entry.path.c_str()), &scratchAllocator());
 		if (strcmp(extension.c_str(), "res") == 0)
 		{
-			resource::findOrCreateFromFile(_path);
+			resource::findOrCreateFromFile(_entry.path.c_str());
 		}
 		return true;
 	}

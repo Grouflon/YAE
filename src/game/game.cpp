@@ -268,12 +268,12 @@ void beforeShutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
-	gameInstance->meshShader->release();
-	gameInstance->texture->release();
-	gameInstance->ladybugTexture->release();
-	gameInstance->font->release();
-	gameInstance->mesh->release();
-	gameInstance->ladybugMesh->release();
+	gameInstance->meshShader->unload();
+	gameInstance->texture->unload();
+	gameInstance->ladybugTexture->unload();
+	gameInstance->font->unload();
+	gameInstance->mesh->unload();
+	gameInstance->ladybugMesh->unload();
 
 	spatialSystem().destroyNode(gameInstance->node2);
 	spatialSystem().destroyNode(gameInstance->node1);

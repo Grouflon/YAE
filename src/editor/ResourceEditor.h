@@ -2,6 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/containers/HashMap.h>
+#include <yae/resources/ResourceID.h>
 
 #include <mirror/mirror.h>
 
@@ -39,11 +40,14 @@ public:
 	void _unregisterInspectorDefinition(mirror::TypeID _type);
 	ResourceInspectorDefinition _getInspectorDefinition(Resource* _resource) const;
 
-	void _openInspector(Resource* _resource);
+	void _openInspector(Resource* _resource, const Vector2& _position);
 	void _closeInspector(Resource* _resource);
 
-	Resource* m_currentResource = nullptr;
-	RenderTarget* m_renderTarget = nullptr;
+	void _imgui_directoryTree(const char* _path);
+
+	String256 m_baseResourcePath;
+	String256 m_selectedFolder;
+	ResourceID m_selectedResource = ResourceID::INVALID_ID;
 	HashMap<mirror::TypeID, ResourceInspectorDefinition> m_inspectorDefinitions;
 
 	struct ResourceInspector

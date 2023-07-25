@@ -196,10 +196,10 @@ void beforeShutdownApplication(yae::Application* _application)
 
 	editorInstance->resourceEditor.shutdown();
 
-	editorInstance->wireframeShader->release();
+	editorInstance->wireframeShader->unload();
 	editorInstance->wireframeShader = nullptr;
 
-	editorInstance->normalsShader->release();
+	editorInstance->normalsShader->unload();
 	editorInstance->normalsShader = nullptr;
 }
 

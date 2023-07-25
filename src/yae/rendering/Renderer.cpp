@@ -175,10 +175,10 @@ void Renderer::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	m_quad->release();
+	m_quad->unload();
 	m_quad = nullptr;
 
-	m_fontShader->release();
+	m_fontShader->unload();
 	m_fontShader = nullptr;
 
 	_shutdownImGui();

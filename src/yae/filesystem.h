@@ -9,6 +9,7 @@
 namespace yae {
 
 class Allocator;
+template <typename T> class Array;
 
 namespace filesystem {
 
@@ -47,7 +48,14 @@ enum EntryType_
 
 	EntryType_All = EntryType_File|EntryType_Directory|EntryType_Symlink,
 };
-YAE_API void walkDirectory(const char* _path, bool(*_visitor)(const char* _path, EntryType _type), bool _recursive = true, EntryType _filter = EntryType_All);
+struct Entry
+{
+	String256 path;
+	EntryType type;
+};
+
+YAE_API void walkDirectory(const char* _path, bool(*_visitor)(const Entry& _entry, void* _userData), bool _recursive = true, EntryType _filter = EntryType_All, void* _userData = nullptr);
+YAE_API void parseDirectoryContent(const char* _path, Array<Entry>& _outContent, bool _recursive = true, EntryType _filter = EntryType_All);
 
 } // namespace filesystem
 

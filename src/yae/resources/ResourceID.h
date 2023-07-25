@@ -5,7 +5,7 @@
 namespace yae
 {
 
-struct ResourceID
+struct YAE_API ResourceID
 {
 	static const ResourceID INVALID_ID;
 

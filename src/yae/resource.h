@@ -12,6 +12,7 @@ template <typename T> T* findOrCreateFromFile(const char* _path);
 
 YAE_API Resource* findOrCreateFromFile(const char* _path);
 YAE_API void saveToFile(Resource* _resource, const char* _path);
+YAE_API void deleteResourceFile(Resource* _resource);
 
 } // namespace resource
 } // namespace yae

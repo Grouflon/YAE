@@ -37,9 +37,10 @@ public:
 	ResourceID getID() const { return m_id; }
 
 	bool load();
-	void release();
+	void unload();
 
 	bool isLoaded() const { return m_loadCount > 0 && m_errorCount == 0; } // @TODO warning as errors option ?
+	bool isTransient() const { return m_transient; }
 
 	const Array<ResourceLog>& getLogs() const { return m_logs; }
 

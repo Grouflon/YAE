@@ -64,7 +64,7 @@ void Application::init(char** _args, int _argCount)
 	YAE_CAPTURE_FUNCTION();
 
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
-	String resourcePath(string::format("%s/data/", program().getRootDirectory()), &scratchAllocator());
+	String256 resourcePath = string::format("%s/data/", program().getRootDirectory());
 	m_resourceManager->gatherResources(resourcePath.c_str());
 
 	// Init Renderer
