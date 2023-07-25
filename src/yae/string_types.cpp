@@ -22,8 +22,6 @@ String::String(Allocator* _allocator)
 	YAE_ASSERT(m_allocator);
 }
 
-
-
 String::String(const char* _str, Allocator* _allocator)
 	:String(_allocator)
 {
@@ -32,19 +30,17 @@ String::String(const char* _str, Allocator* _allocator)
 		return;
 
 	reserve(len);
-	memcpy(m_buffer, _str, len + 1);
+	memcpy(data(), _str, len + 1);
 	m_length = len;
 }
 
 
-// @NOTE: not sure if replicating the allocator is the right thing to do, but it does solve issues with there are intermediate copies made. If it does the logic should be extended to containers
+// @NOTE: not sure if replicating the allocator is the right thing to do, but it does solve issues when there are intermediate copies made. If it does the logic should be extended to containers
 String::String(const String& _str, Allocator* _allocator)
 	: String(_str.c_str(), _allocator != nullptr ? _allocator : _str.m_allocator)
 {
 
 }
-
-
 
 String::~String()
 {
@@ -55,25 +51,35 @@ String::~String()
 	}
 }
 
-
-
 String::String(String&& _str)
 {
 	m_buffer = _str.m_buffer;
 	m_bufferSize = _str.m_bufferSize;
 	m_length = _str.m_length;
 	m_allocator = _str.m_allocator;
+	m_flags = _str.m_flags;
 	
 	_str.m_buffer = nullptr;
 }
 
-
-
 const char* String::c_str() const
 {
-	return m_buffer != nullptr ? m_buffer : EMPTY_STRING;
+	return m_length > 0 ? data() : EMPTY_STRING;
 }
 
+const char* String::data() const
+{
+	if (m_flags & StringFlags_AppendedBuffer)
+	{
+		return (char*)this + sizeof(String);
+	}
+	return m_buffer;
+}
+
+char* String::data()
+{
+	return const_cast<char*>(const_cast<const String*>(this)->data());
+}
 
 
 void String::reserve(size_t _size)
@@ -83,6 +89,7 @@ void String::reserve(size_t _size)
 	{
 		m_buffer = (char*)m_allocator->reallocate(m_buffer, sizeRequired);
 		m_bufferSize = sizeRequired;
+		m_flags &= ~StringFlags_AppendedBuffer;
 		YAE_ASSERT_MSG(m_buffer != nullptr, "Allocation failed");
 	}
 }
@@ -94,14 +101,14 @@ void String::resize(size_t _size, char _c)
 	if (_size < m_length)
 	{
 		m_length = _size;
-		m_buffer[m_length] = 0;
+		data()[m_length] = 0;
 	}
 	else if (_size > m_length)
 	{
 		reserve(_size);
-		memset(m_buffer + m_length, _c, _size - m_length);
+		memset(data() + m_length, _c, _size - m_length);
 		m_length = _size;
-		m_buffer[m_length] = 0;
+		data()[m_length] = 0;
 	}
 }
 
@@ -109,16 +116,19 @@ void String::resize(size_t _size, char _c)
 
 void String::clear()
 {
-	if (m_buffer != nullptr)
+	if (data() != nullptr)
 	{
 		m_length = 0;
-		m_buffer[m_length] = 0;
+		data()[m_length] = 0;
 	}
 }
 
 
 void String::shrink()
 {
+	if (m_flags & StringFlags_AppendedBuffer)
+		return; // Do nothing if the buffer is inlined in the struct
+
 	// @WARNING: NOT TESTED
 	if (m_length == 0 && m_buffer != nullptr)
 	{
@@ -137,17 +147,17 @@ void String::shrink()
 
 size_t String::find(const char* _str, size_t _startPosition) const
 {
-	if (m_buffer == nullptr || _str == nullptr)
+	if (data() == nullptr || _str == nullptr)
 		return INVALID_POS;
 
 	if (_startPosition >= m_length)
 		return INVALID_POS;
 
-	char* ptr = strstr(m_buffer + _startPosition, _str);
+	const char* ptr = strstr(data() + _startPosition, _str);
 	if (ptr == nullptr)
 		return INVALID_POS;
 
-	return size_t(ptr - m_buffer);
+	return size_t(ptr - data());
 }
 
 
@@ -176,7 +186,7 @@ String String::slice(size_t _startPosition, size_t _count) const
 
 	_count = std::min(_count, m_length - _startPosition);
 	str.resize(_count);
-	memcpy(str.m_buffer, m_buffer + _startPosition, _count);
+	memcpy(str.data(), data() + _startPosition, _count);
 	return str;
 }
 
@@ -196,7 +206,7 @@ String& String::replace(size_t _position, size_t _count, const char* _replacemen
 		resize(baseLength + replacementLen - count);
 	}
 
-	char* bufferPosition = m_buffer + _position;
+	char* bufferPosition = data() + _position;
 	memcpy(bufferPosition + replacementLen, bufferPosition + count, baseLength - (_position + count));
 	memcpy(bufferPosition, _replacement, replacementLen);
 
@@ -212,7 +222,7 @@ String& String::operator=(const char* _str)
 {
 	size_t length = strlen(_str);
 	reserve(length);
-	memcpy(m_buffer, _str, length + 1);
+	memcpy(data(), _str, length + 1);
 	m_length = length;
 	return *this;
 }
@@ -220,7 +230,7 @@ String& String::operator=(const char* _str)
 String& String::operator=(const String& _str)
 {
 	reserve(_str.m_length);
-	memcpy(m_buffer, _str.c_str(), _str.m_length + 1);
+	memcpy(data(), _str.c_str(), _str.m_length + 1);
 	m_length = _str.m_length;
 	return *this;
 }
@@ -254,9 +264,9 @@ String String::operator+(const String& _str) const
 String& String::operator+=(char _char)
 {
 	reserve(m_length + 1);
-	m_buffer[m_length] = _char;
+	data()[m_length] = _char;
 	m_length = m_length + 1;
-	m_buffer[m_length] = 0;
+	data()[m_length] = 0;
 	return *this;
 }
 
@@ -266,8 +276,8 @@ String& String::operator+=(const char* _str)
 	size_t length = strlen(_str);
 	size_t newLength = m_length + length;
 	reserve(newLength);
-	memcpy(m_buffer + m_length, _str, length);
-	m_buffer[newLength] = 0;
+	memcpy(data() + m_length, _str, length);
+	data()[newLength] = 0;
 	m_length = newLength;
 	return *this;
 }
@@ -278,8 +288,8 @@ String& String::operator+=(const String& _str)
 	size_t length = _str.m_length;
 	size_t newLength = m_length + length;
 	reserve(newLength);
-	memcpy(m_buffer + m_length, _str.m_buffer, length);
-	m_buffer[newLength] = 0;
+	memcpy(data() + m_length, _str.data(), length);
+	data()[newLength] = 0;
 	m_length = newLength;
 	return *this;
 }
@@ -289,7 +299,7 @@ char& String::operator[](size_t _pos)
 {
 	YAE_ASSERT(_pos >= 0);
 	YAE_ASSERT(_pos < m_length);
-	return m_buffer[_pos];
+	return data()[_pos];
 }
 
 
@@ -297,19 +307,19 @@ const char& String::operator[](size_t _pos) const
 {
 	YAE_ASSERT(_pos >= 0);
 	YAE_ASSERT(_pos < m_length);
-	return m_buffer[_pos];
+	return data()[_pos];
 }
 
 bool String::operator==(const char* _str) const
 {
 	YAE_ASSERT(_str != nullptr);
 	size_t strLength = strlen(_str);
-	return (m_length == strLength) && (m_length == 0 || strcmp(_str, m_buffer) == 0);
+	return (m_length == strLength) && (m_length == 0 || strcmp(_str, c_str()) == 0);
 }
 
 bool String::operator==(const String& _str) const
 {
-	return (m_length == _str.m_length) && (m_length == 0 || strcmp(_str.m_buffer, m_buffer) == 0);
+	return (m_length == _str.m_length) && (m_length == 0 || strcmp(_str.c_str(), c_str()) == 0);
 }
 
 bool String::operator!=(const char* _str) const
@@ -320,6 +330,21 @@ bool String::operator!=(const char* _str) const
 bool String::operator!=(const String& _str) const
 {
 	return !(*this == _str);
+}
+
+String::String(Allocator* _allocator, size_t _appendedBufferCapacity)
+	: m_bufferSize(_appendedBufferCapacity)
+	, m_allocator(_allocator)
+	, m_flags(StringFlags_AppendedBuffer)
+{
+}
+
+String::String(const char* _str, Allocator* _allocator, size_t _appendedBufferCapacity)
+	: m_bufferSize(_appendedBufferCapacity)
+	, m_allocator(_allocator)
+	, m_flags(StringFlags_AppendedBuffer)
+{
+	*this = _str;
 }
 
 String operator+(const char* _lhs, const String& _rhs)

@@ -8,6 +8,12 @@ namespace yae {
 
 // @TODO: use explicit types of sizes (u32?)
 
+typedef u8 StringFlags;
+enum StringFlags_
+{
+	StringFlags_AppendedBuffer = 1 << 0,
+};
+
 class YAE_API String
 {
 public:
@@ -23,7 +29,8 @@ public:
 	size_t size() const { return m_length; }
 	size_t capacity() const { return m_bufferSize; }
 	const char* c_str() const;
-	char* data() { return m_buffer; }
+	const char* data() const;
+	char* data();
 	Allocator* allocator() const { return m_allocator; }
 
 	void reserve(size_t _size);
@@ -51,11 +58,16 @@ public:
 	bool operator!=(const char* _str) const;
 	bool operator!=(const String& _str) const;
 
+protected:
+	String(Allocator* _allocator, size_t _appendedBufferCapacity);
+	String(const char* _str, Allocator* _allocator, size_t _appendedBufferCapacity);
+
 private:
 	char* m_buffer = nullptr;
 	size_t m_bufferSize = 0;
 	size_t m_length = 0;
 	Allocator* m_allocator = nullptr;
+	u8 m_flags = 0;
 };
 
 YAE_API String operator+(const char* _lhs, const String& _rhs);
@@ -68,5 +80,37 @@ public:
 	MallocString(const char* _str);
 	MallocString(const String& _str);
 };
+
+template <size_t INLINE_SIZE>
+class InlineString : public String
+{
+public:
+	InlineString(Allocator* _allocator = nullptr)
+		:String(_allocator, INLINE_SIZE)
+	{
+		YAE_ASSERT(data() == m_buffer);
+	}
+
+	InlineString(const char* _str, Allocator* _allocator = nullptr)
+		:String(_str, _allocator, INLINE_SIZE)
+	{
+		YAE_ASSERT(capacity() > INLINE_SIZE || data() == m_buffer);
+	}
+
+	InlineString(const String& _str, Allocator* _allocator = nullptr)
+		:String(_str.c_str(), _allocator, INLINE_SIZE)
+	{
+		YAE_ASSERT(capacity() > INLINE_SIZE || data() == m_buffer);
+	}
+
+private:
+	char m_buffer[INLINE_SIZE];
+};
+
+typedef InlineString<32> String32;
+typedef InlineString<64> String64;
+typedef InlineString<128> String128;
+typedef InlineString<256> String256;
+typedef InlineString<512> String512;
 
 } // namespace yae

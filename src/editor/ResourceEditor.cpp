@@ -10,9 +10,10 @@
 #include <yae/resource.h>
 #include <yae/imgui_extension.h>
 #include <yae/InputSystem.h>
-#include <yae/inline_string.h>
 #include <yae/string.h>
 #include <yae/im3d_extension.h>
+#include <yae/program.h>
+#include <yae/filesystem.h>
 
 #include <imgui/imgui.h>
 #include <im3d/im3d.h>
@@ -44,7 +45,9 @@ bool defaultResourceInspectorUpdate(Resource* _resource, void*)
 {
 	String128 str = string::format("%s: %s", _resource->getClass()->getName(), _resource->getName());
 	bool opened = true;
-	ImGui::SetNextWindowSize(ImVec2(300,200), ImGuiCond_FirstUseEver);
+	ImVec2 windowSize = ImVec2(300,200);
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImGui::GetMousePos() - windowSize * .5f, ImGuiCond_FirstUseEver);
 	if (ImGui::Begin(str.c_str(), &opened, ImGuiWindowFlags_NoSavedSettings))
 	{
 		inspectResourceMembers(_resource);
@@ -106,7 +109,9 @@ bool meshInspectorUpdate(Resource* _resource, void* _userData)
 
 	// ImGui
 	String name(string::format("Mesh: %s", mesh->getName()), &scratchAllocator());
-	ImGui::SetNextWindowSize(ImVec2(700.f, 400.f), ImGuiCond_FirstUseEver);
+	ImVec2 windowSize = ImVec2(700.f, 400.f);
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImGui::GetMousePos() - windowSize * .5f, ImGuiCond_FirstUseEver);
 	bool opened = true;
 	if (ImGui::Begin(name.c_str(), &opened, ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_MenuBar))
 	{
@@ -202,12 +207,12 @@ void meshInspectorShutdown(Resource* _resource, void* _userData)
 
 	if (inspector->wireframeShader != nullptr)
 	{
-		inspector->wireframeShader->release();
+		inspector->wireframeShader->unload();
 	}
 
 	if (inspector->normalsShader != nullptr)
 	{
-		inspector->normalsShader->release();
+		inspector->normalsShader->unload();
 	}
 
 	renderer().destroyRenderTarget(inspector->renderTarget);
@@ -218,6 +223,7 @@ void meshInspectorShutdown(Resource* _resource, void* _userData)
 
 void ResourceEditor::init()
 {
+	m_baseResourcePath = string::format("%s/data", program().getRootDirectory());
 	_registerInspectorDefinitions();
 }
 
@@ -244,22 +250,150 @@ void ResourceEditor::update()
 {
 	if (opened)
     {
-    	if (ImGui::Begin("Resources", &opened))
+    	// Resource Explorer
+    	if (ImGui::Begin("Resources Explorer", &opened))
     	{
     		ResourceManager& rm = resourceManager();
-    		for (Resource* resource : rm.getResources())
+    		static const char* transientFolderAlias = "_";
+
+    		// Folder List
+    		ImGui::BeginChild("ResourcesL", ImVec2(200, 0), true);
     		{
-    			char buf[256];
-    			string::format(buf, sizeof(buf), "%010u|%s", resource->getID(), resource->getName());
-	            if (ImGui::Selectable(buf, resource == m_currentResource))
-	            {
-	            	_openInspector(resource);
-	            }
+	    		_imgui_directoryTree(m_baseResourcePath.c_str());
+
+	    		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf|ImGuiTreeNodeFlags_NoTreePushOnOpen;
+				if (m_selectedFolder == transientFolderAlias)
+					nodeFlags |= ImGuiTreeNodeFlags_Selected;
+	    		ImGui::TreeNodeEx("Transient", nodeFlags);
+	    		if (ImGui::IsItemClicked())
+	    		{
+	    			m_selectedFolder = transientFolderAlias;
+	    		}
     		}
-  
+    		ImGui::EndChild();
+    		ImGui::SameLine();
+
+    		// Resources List
+    		ImGui::BeginChild("ResourcesR", ImVec2(0, 0), true);
+    		{
+	    		if (m_selectedFolder == transientFolderAlias)
+	    		{
+	    			for (Resource* resource : rm.getResources())
+	    			{
+	    				if (resource->isTransient())
+	    				{
+	    					String256 name = filesystem::getFileName(resource->getName());
+	    					if (ImGui::Selectable(name.c_str()))
+				            {
+				            	_openInspector(resource, ImGui::GetMousePos());
+				            }
+	    				}
+	    			}
+	    		}
+	    		else
+	    		{
+	    			ImVec2 pos = ImGui::GetCursorPos();
+	    			ImVec2 availableSize = ImGui::GetContentRegionAvail();
+	    			ImGui::Dummy(availableSize);
+	    			if (ImGui::IsItemClicked())
+	    			{
+	    				m_selectedResource = ResourceID::INVALID_ID;
+	    			}
+	    			ImGui::SetCursorPos(pos);
+	    			if (ImGui::BeginPopupContextItem("item context menu"))
+			        {
+	    				m_selectedResource = ResourceID::INVALID_ID;
+			        	if (ImGui::BeginMenu("Create"))
+			        	{
+			        		ImGui::MenuItem("MeshFile");
+			        		ImGui::MenuItem("FontFile");
+			        		ImGui::EndMenu();
+			        	}
+			            ImGui::EndPopup();
+			        }
+
+	    			Array<filesystem::Entry> entries(&scratchAllocator());
+					filesystem::parseDirectoryContent(m_selectedFolder.c_str(), entries, false, filesystem::EntryType_Directory|filesystem::EntryType_File);
+					ImGuiStyle& style = ImGui::GetStyle();
+					float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+					ImVec2 buttonSize = ImVec2(100.f, 100.f);
+					for (u32 i = 0; i < entries.size(); ++i)
+					{
+						const filesystem::Entry& entry = entries[i];
+						String256 name = filesystem::getFileNameWithoutExtension(entry.path.c_str());
+						Resource* resource = nullptr;
+						if (entry.type & filesystem::EntryType_File)
+						{
+							resource = rm.findResource(entry.path.c_str());
+							if (resource == nullptr)
+								continue;
+						}
+
+						ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+						ImGui::BeginChild(name.c_str(), buttonSize, true);
+						ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(.5f, .5f));
+
+						if (entry.type & filesystem::EntryType_Directory)
+						{
+							String256 label = string::format("(Directory)\n%s", name.c_str());
+							if (ImGui::Selectable(label.c_str(), false, 0, buttonSize))
+				            {
+				            	m_selectedResource = ResourceID::INVALID_ID;
+				            }
+				            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				            {
+				            	m_selectedFolder = entry.path;
+				            }
+						}
+						else
+						{
+							String256 label = string::format("(%s)\n%s", resource->getClass()->getName(), name.c_str());
+	    					if (ImGui::Selectable(label.c_str(), resource->getID() == m_selectedResource, 0, buttonSize))
+	    					{
+	    						m_selectedResource = resource->getID();
+	    					}
+	    					if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				            {
+				            	_openInspector(resource, ImGui::GetMousePos());
+				            }
+						}
+
+						ImGui::PopStyleVar();
+			            ImGui::PopStyleVar();
+
+			            if (ImGui::BeginPopupContextItem())
+				        {
+				        	m_selectedResource = resource->getID();
+			        		//ImGui::MenuItem("Rename");
+			        		if (ImGui::MenuItem("Delete"))
+			        		{
+			        			if (resource != nullptr)
+					            {
+				        			resource::deleteResourceFile(resource);
+					            }
+					            else
+					            {
+					            	filesystem::deletePath(entry.path.c_str());
+					            }
+			        		}
+				            ImGui::EndPopup();
+				        }
+
+			            ImGui::EndChild();
+
+			            float last_button_x2 = ImGui::GetItemRectMax().x;
+			            float next_button_x2 = last_button_x2 + style.ItemSpacing.x + buttonSize.x; // Expected position if next button was on same line
+			            if (i + 1 < entries.size() && next_button_x2 < window_visible_x2)
+			                ImGui::SameLine();
+
+					}
+	    		}
+    		}
+    		ImGui::EndChild();
     	}
     	ImGui::End();
 
+    	// Update opened inspector windows
     	DataArray<ResourceInspector> tempArray(m_inspectors, &scratchAllocator());
     	for (const ResourceInspector& inspector : m_inspectors)
     	{
@@ -308,7 +442,7 @@ ResourceInspectorDefinition ResourceEditor::_getInspectorDefinition(Resource* _r
 	return ResourceInspectorDefinition();
 }
 
-void ResourceEditor::_openInspector(Resource* _resource)
+void ResourceEditor::_openInspector(Resource* _resource, const Vector2& _position)
 {
 	YAE_ASSERT(_resource != nullptr);
 	if (m_inspectors.find([](const ResourceInspector& _inspector, void* _resource) { return _inspector.resource == _resource; }, _resource) != nullptr)
@@ -334,6 +468,37 @@ void ResourceEditor::_closeInspector(Resource* _resource)
 	if (definition.shutdownFunction != nullptr) definition.shutdownFunction(_resource, inspectorPtr->userData);
 
 	m_inspectors.erase(inspectorPtr);
+}
+
+void ResourceEditor::_imgui_directoryTree(const char* _path)
+{
+	Array<filesystem::Entry> entries(&scratchAllocator());
+	filesystem::parseDirectoryContent(_path, entries, false, filesystem::EntryType_Directory);
+
+	String256 name = filesystem::getFileName(_path);
+	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
+	bool isSelected = m_selectedFolder == _path;
+	bool hasContent = entries.size() > 0;
+	if (isSelected)
+		nodeFlags |= ImGuiTreeNodeFlags_Selected;
+	if (!hasContent)
+		nodeFlags |= ImGuiTreeNodeFlags_Leaf|ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+	bool nodeOpen = ImGui::TreeNodeEx(_path, nodeFlags, "%s", name.c_str());
+	if (ImGui::IsItemClicked())
+	{
+		m_selectedFolder = _path;
+	}
+
+	if (nodeOpen && hasContent)
+	{
+		for (const auto& entry : entries)
+		{
+			_imgui_directoryTree(entry.path.c_str());
+		}
+		
+		ImGui::TreePop();
+	}
 }
 
 

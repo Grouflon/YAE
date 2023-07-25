@@ -3,7 +3,6 @@
 #include <yae/types.h>
 #include <yae/containers/HashMap.h>
 
-#include <yae/inline_string.h>
 #include <yae/platform.h>
 
 namespace yae {

@@ -2,7 +2,6 @@
 
 #include <yae/memory.h>
 #include <yae/string.h>
-#include <yae/inline_string.h>
 
 namespace yae {
 

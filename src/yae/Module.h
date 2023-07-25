@@ -2,7 +2,6 @@
 
 #include <yae/types.h>
 #include <yae/Date.h>
-#include <yae/inline_string.h>
 
 namespace yae {
 
