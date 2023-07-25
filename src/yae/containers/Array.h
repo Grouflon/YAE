@@ -11,12 +11,29 @@ namespace yae {
 
 class Allocator;
 
+typedef u8 ArrayFlags;
+enum ArrayFlags_
+{
+	ArrayFlags_CallConstructors = 1 << 0,
+};
+
+
 template <typename T>
 class BaseArray
 {
 public:
-	BaseArray(Allocator* _allocator = nullptr);
-	// @TODO: move constructor ?
+	// Edit
+	void resize(u32 _newSize);
+	void resize(u32 _newSize, const T& _initValue);
+	void clear();
+	void shrink();
+	T& push_back(const T& _item);
+	void push_back(const T* _items, u32 _itemCount);
+	void pop_back();
+	void erase(u32 _index, u32 _count);
+	void erase(T* _item);
+	void reserve(u32 _newCapacity);
+	BaseArray<T>& operator=(const BaseArray<T>& _other);
 
 	// Accessors
 	T& operator[](u32 _i);
@@ -42,7 +59,7 @@ public:
 	const T* find(bool (*_predicate)(const T&, void*), void* _data = nullptr) const;
 	T* find(bool (*_predicate)(const T&, void*), void* _data = nullptr);
 
-	// Operators
+	// Comparison
 	bool operator==(const BaseArray<T>& _rhs) const;
 	bool operator!=(const BaseArray<T>& _rhs) const;
 
@@ -50,11 +67,19 @@ public:
 	Allocator* allocator() const;
 
 protected:
+	BaseArray(Allocator* _allocator, ArrayFlags _flags);
+	~BaseArray();
+	// @TODO: move constructor ?
+
+private:
+	void _setCapacity(u32 _newCapacity);
+	void _grow(u32 _minCapacity);
 
 	Allocator* m_allocator = nullptr;
 	u32 m_size = 0;
 	u32 m_capacity = 0;
 	T* m_data = nullptr;
+	const u8 m_flags = 0;
 };
 
 
@@ -66,23 +91,6 @@ class DataArray : public BaseArray<T>
 public:
 	DataArray(Allocator* _allocator = nullptr);
 	DataArray(const DataArray<T> &_other, Allocator* _allocator = nullptr);
-	DataArray<T>& operator=(const DataArray<T>& _other);
-	~DataArray();
-
-	void resize(u32 _newSize);
-	void resize(u32 _newSize, const T& _initValue);
-	void clear();
-	void shrink();
-	T& push_back(const T& _item);
-	void push_back(const T* _items, u32 _itemCount);
-	void pop_back();
-	void erase(u32 _index, u32 _count);
-	void erase(T* _item);
-	void reserve(u32 _newCapacity);
-
-protected:
-	void _setCapacity(u32 _newCapacity);
-	void _grow(u32 _minCapacity);
 };
 
 
@@ -94,21 +102,6 @@ class Array : public BaseArray<T>
 public:
 	Array(Allocator* _allocator = nullptr);
 	Array(const Array<T> &_other, Allocator* _allocator = nullptr);
-	Array<T>& operator=(const Array<T>& _other);
-	~Array();
-
-	void resize(u32 _newSize, const T& _initValue = T());
-	void clear();
-	void shrink();
-	T& push_back(const T& _item);
-	void pop_back();
-	void erase(u32 _index, u32 _count);
-	void erase(T* _item);
-	void reserve(u32 _newCapacity);
-
-protected:
-	void _setCapacity(u32 _newCapacity);
-	void _grow(u32 _minCapacity);
 };
 
 } // namespace yae
