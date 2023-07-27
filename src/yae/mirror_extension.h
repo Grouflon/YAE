@@ -3,9 +3,12 @@
 namespace yae {
 template <typename T> class DataArray;
 template <typename T> class Array;
+template <typename T> class ResourcePtr;
 } // namespace yae
 
 namespace mirror {
+
+// ---- Array
 
 class YAE_API ArrayType : public TypeDesc
 {
@@ -21,10 +24,9 @@ class YAE_API ArrayType : public TypeDesc
 			TypeID _subType,
 			uint32_t(*_getSizeFunction)(void*),
 			void(*_setSizeFunction)(void* , uint32_t),
-			void*(*_getDataFunction)(void*),
-			VirtualTypeWrapper* _virtualTypeWrapper
+			void*(*_getDataFunction)(void*)
 		)
-			: TypeDesc(Type_Custom, "", _virtualTypeWrapper)
+			: TypeDesc(Type_Custom, "")
 			, m_subType(_subType)
 			, m_getSizeFunction(_getSizeFunction)
 			, m_setSizeFunction(_setSizeFunction)
@@ -47,8 +49,6 @@ struct CustomTypeDescFactory<yae::DataArray<T>>
 {
 	static TypeDesc* Create()
 	{
-		GetTypeDesc<T>();
-
 		auto getSize = [](void* _arrayPointer) -> uint32_t
 		{
 			yae::DataArray<T>* arrayPointer = (yae::DataArray<T>*)_arrayPointer;
@@ -67,7 +67,7 @@ struct CustomTypeDescFactory<yae::DataArray<T>>
 			return arrayPointer->data();
 		};
 
-		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData, new TVirtualTypeWrapper<yae::DataArray<T>>());
+		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData);
 	}
 };
 
@@ -94,7 +94,7 @@ struct CustomTypeDescFactory<yae::Array<T>>
 			return arrayPointer->data();
 		};
 
-		GetTypeDesc<T>();
+		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData);
 		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData, new TVirtualTypeWrapper<yae::Array<T>>());
 	}
 };
