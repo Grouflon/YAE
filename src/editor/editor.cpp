@@ -19,6 +19,7 @@
 #include <yae/string.h>
 
 #include <editor/ResourceEditor.h>
+#include <editor/MirrorInspector.h>
 
 #include <imgui/imgui.h>
 #include <im3d/im3d.h>
@@ -46,8 +47,8 @@ struct EditorInstance
 	ShaderProgram* wireframeShader = nullptr;
 	ShaderProgram* normalsShader = nullptr;
 
-	// resource inspector
 	editor::ResourceEditor resourceEditor;
+	editor::MirrorInspector mirrorInspector;
 
 	// input window
 	InputMode inputMode = INPUTMODE_NONE;
@@ -66,6 +67,7 @@ struct EditorInstance
 		MIRROR_MEMBER(showDemoWindow)();
 
 		MIRROR_MEMBER(resourceEditor)();
+		MIRROR_MEMBER(mirrorInspector)();
 	);
 };
 MIRROR_CLASS_DEFINITION(EditorInstance);
@@ -256,6 +258,7 @@ void updateApplication(yae::Application* _application, float _dt)
 
 	        if (ImGui::BeginMenu("Misc"))
 	        {
+	        	changedSettings = ImGui::MenuItem("Mirror Inspector", NULL, &editorInstance->mirrorInspector.opened) || changedSettings;
 	        	changedSettings = ImGui::MenuItem("ImGui Demo Window", NULL, &editorInstance->showDemoWindow) || changedSettings;
 	            ImGui::EndMenu();
 	        }
@@ -267,6 +270,7 @@ void updateApplication(yae::Application* _application, float _dt)
     }
 
     editorInstance->resourceEditor.update();
+    editorInstance->mirrorInspector.update();
 
     if (editorInstance->showMemoryProfiler)
     {

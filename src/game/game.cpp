@@ -22,6 +22,7 @@
 #include <yae/serialization/BinarySerializer.h>
 #include <yae/serialization/JsonSerializer.h>
 #include <yae/serialization/serialization.h>
+#include <yae/string.h>
 
 #include <game/transform.h>
 
@@ -371,11 +372,11 @@ void updateApplication(Application* _app, float _dt)
 	}
 
 	ImGui::Text("camera:");
-	if (ImGui::DragVector3("position", gameCamera->position, .05f))
+	if (ImGui::DragVector("position", &gameCamera->position, .05f))
 	{
 		gameInstance->cameraPosition = gameCamera->position;
 	}
-	if (ImGui::DragRotation("rotation", gameCamera->rotation))
+	if (ImGui::DragRotation("rotation", &gameCamera->rotation))
 	{
 		Vector3 euler = math::euler(gameCamera->rotation);
 		gameInstance->pitch = euler.x * R2D;
@@ -478,8 +479,7 @@ void updateApplication(Application* _app, float _dt)
 	// 	gameInstance->ladybugTexture
 	// );
 
-	ImGui::Text("mesh1:");
-	imgui_matrix4((float*)&gameInstance->mesh1Transform);
+	ImGui::DragMatrix("mesh1", &gameInstance->mesh1Transform);
 	Im3d::PushLayerId(IM3D_DRAWONTOP_LAYER);
 	if (Im3d::Gizmo("mesh1", (float*)&gameInstance->mesh1Transform)) {}
 	renderer().drawMesh(
@@ -505,8 +505,9 @@ void updateApplication(Application* _app, float _dt)
 	// renderer().drawText(gameInstance->fontTransform, gameInstance->font, "Hello World!");
 	//renderer().drawMesh(gameInstance->mesh2Transform, gameInstance->mesh->getMeshHandle());
 
-	ImGui::Text("node %lld:", gameInstance->node2.id);
-	imgui_matrix4(math::data(gameInstance->node2->getWorldMatrix()));
+	String64 buf = string::format("node %lld:", gameInstance->node2.id);
+	Matrix4 matrix = gameInstance->node2->getWorldMatrix();
+	ImGui::DragMatrix(buf.c_str(), &matrix);
 
 	// renderer().drawMesh(
 	// 	gameInstance->node2->getWorldMatrix(),
