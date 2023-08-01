@@ -64,7 +64,7 @@ String::String(String&& _str)
 
 const char* String::c_str() const
 {
-	return m_length > 0 ? data() : EMPTY_STRING;
+	return data() != nullptr ? data() : EMPTY_STRING;
 }
 
 const char* String::data() const
