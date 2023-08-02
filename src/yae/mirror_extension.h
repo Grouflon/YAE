@@ -95,7 +95,37 @@ struct CustomTypeDescFactory<yae::Array<T>>
 		};
 
 		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData);
-		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData, new TVirtualTypeWrapper<yae::Array<T>>());
+	}
+};
+
+
+// ---- ResourcePtr
+
+class YAE_API ResourcePtrType : public TypeDesc
+{
+	public:
+		TypeDesc* getSubType() const { return mirror::FindTypeByID(m_subType); }
+
+	// internal
+		ResourcePtrType(TypeID _subType)
+			: TypeDesc(Type_Custom, "")
+			, m_subType(_subType)
+		{
+			char buf[512];
+			snprintf(buf, sizeof(buf), "ResourcePtr_%s", GetTypeSet().findTypeByID(_subType)->getName());
+			setName(buf);
+			setCustomTypeName("ResourcePtr");
+		}
+
+		TypeID m_subType = UNDEFINED_TYPEID;
+};
+
+template <typename T>
+struct CustomTypeDescFactory<yae::ResourcePtr<T>>
+{
+	static TypeDesc* Create()
+	{
+		return new ResourcePtrType(GetTypeID<T>());
 	}
 };
 
