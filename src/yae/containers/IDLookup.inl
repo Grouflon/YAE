@@ -30,7 +30,7 @@ IndexedPool<T>::IndexedPool(Allocator* _allocator)
 }
 
 template <typename T>
-T* IndexedPool<T>::get(PoolID _id) const
+const T* IndexedPool<T>::get(PoolID _id) const
 {
 	const u32 index = extractIndexFromId(_id);
 	const u32 generation = extractGenerationFromId(_id);
@@ -38,10 +38,18 @@ T* IndexedPool<T>::get(PoolID _id) const
 		return nullptr;
 
 	const Index& i = m_indices[index];
-	Data* data = (Data*)(size_t(i.generation == generation) * size_t(m_data.begin() + i.dataIndex)); // branchless get
-	return data != nullptr ? &data->data : nullptr;
+	if (i.generation != generation)
+		return nullptr;
+	
+	return &(m_data.begin() + i.dataIndex)->data;
 }
 
+template <typename T>
+T* IndexedPool<T>::get(PoolID _id)
+{
+
+	return const_cast<T*>(const_cast<const IndexedPool<T>*>(this)->get(_id));
+}
 
 template <typename T>
 PoolID IndexedPool<T>::add(const T& _item)

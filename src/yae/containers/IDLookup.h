@@ -15,7 +15,9 @@ class IndexedPool
 public:
 	IndexedPool(Allocator* _allocator = nullptr);
 
-	T* get(PoolID _id) const;
+	const T* get(PoolID _id) const;
+	T* get(PoolID _id);
+	
 	PoolID add(const T& _item);
 	bool remove(PoolID _id);
 	void clear();

@@ -251,7 +251,7 @@ void SpatialSystem::unregisterRoot(NodeID _id)
 
 SpatialNode* SpatialSystem::findNode(NodeID _id) const
 {
-	return m_nodes.get(_id.id);
+	return const_cast<SpatialNode*>(m_nodes.get(_id.id));
 }
 
 SpatialSystem& spatialSystem()
