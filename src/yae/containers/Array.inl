@@ -175,6 +175,27 @@ void BaseArray<T>::reserve(u32 _newCapacity)
 
 
 template <typename T>
+void BaseArray<T>::swap(T* _iteratorA, T* _iteratorB)
+{
+	YAE_ASSERT(_iteratorA != nullptr);
+	YAE_ASSERT(_iteratorA >= this->m_data && _iteratorA < (this->m_data + this->m_size));
+	YAE_ASSERT(_iteratorB != nullptr);
+	YAE_ASSERT(_iteratorB >= this->m_data && _iteratorB < (this->m_data + this->m_size));
+
+	T temp = *_iteratorB;
+	*_iteratorB = *_iteratorA;
+	*_iteratorA = temp;
+}
+
+
+template <typename T>
+void BaseArray<T>::swap(u32 _indexA, u32 _indexB)
+{
+	swap(begin() + _indexA, begin() + _indexB);
+}
+
+
+template <typename T>
 BaseArray<T>& BaseArray<T>::operator=(const BaseArray<T>& _other)
 {
 	u32 size = _other.m_size;

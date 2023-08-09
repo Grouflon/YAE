@@ -33,6 +33,8 @@ public:
 	void erase(u32 _index, u32 _count);
 	void erase(T* _item);
 	void reserve(u32 _newCapacity);
+	void swap(T* _iteratorA, T* _iteratorB);
+	void swap(u32 _indexA, u32 _indexB);
 	BaseArray<T>& operator=(const BaseArray<T>& _other);
 
 	// Accessors
