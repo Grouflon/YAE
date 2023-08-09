@@ -130,6 +130,146 @@ bool imgui_mirrorEnumCombo(const char* _name, void* _data, const mirror::Enum* _
 	return modified;
 }
 
+struct ArrayEditFunctions
+{
+	const mirror::TypeDesc* (*getSubType)(const mirror::TypeDesc* _arrayType);
+	u32 (*getSize)(const mirror::TypeDesc* _arrayType, void* _arrayPtr);
+	void (*setSize)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _size);
+	void* (*getDataAt)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index);
+	void (*erase)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index, u32 _count);
+	void (*swap)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB);
+};
+
+bool EditArray(const mirror::TypeDesc* _arrayType, const char* _name, void* _arrayPtr, const ArrayEditFunctions& _functions)
+{
+	YAE_ASSERT(_functions.getSize != nullptr);
+	YAE_ASSERT(_functions.getSubType != nullptr);
+	YAE_ASSERT(_functions.getDataAt != nullptr);
+
+	u32 size = _functions.getSize(_arrayType, _arrayPtr);
+	const mirror::TypeDesc* subType = _functions.getSubType(_arrayType);
+
+	auto move = [_arrayType, _functions, _arrayPtr](u32 _startIndex, u32 _endIndex)
+	{
+		YAE_ASSERT(_functions.swap != nullptr);
+
+		if (_startIndex == _endIndex)
+			return;
+
+		i32 sign = yae::math::sign((i32)_endIndex - (i32)_startIndex);
+
+		for (i32 i = (i32)_startIndex; i != (i32)_endIndex; i += sign)
+		{
+			_functions.swap(_arrayType, _arrayPtr, i, i+sign);
+		}
+	};
+
+	bool result = false;
+	if (ImGui::TreeNodeEx(_arrayPtr, 0, "%s[%d]", _name, size))
+	{
+		int flags = 0;
+		float tableWidth = GetContentRegionAvail().x;
+		float dropIntervalHeight = 8.0f;
+		if (ImGui::BeginTable(_name, 2, flags))
+        {
+            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 25.0f);
+            ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch);
+
+            if (size > 0 && _functions.swap != nullptr)
+            {
+            	ImGui::TableNextRow();
+	            ImGui::TableSetColumnIndex(0);
+	            ImGui::Dummy(ImVec2(tableWidth, dropIntervalHeight));
+	            if (ImGui::BeginDragDropTarget())
+	            {
+	            	if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(_name))
+	                {
+	                    YAE_ASSERT(payload->DataSize == sizeof(u32));
+	                    u32 sourceIndex = *(u32*)payload->Data;
+	                    move(sourceIndex, 0);
+	                }
+	                ImGui::EndDragDropTarget();
+	            }	
+            }
+
+            i32 shouldErase = -1;
+            for (u32 row = 0; row < size; row++)
+    		{
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("[%d]", row);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                }
+
+                if (_functions.swap != nullptr)
+                {
+                	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+	                {
+	                    ImGui::SetDragDropPayload(_name, &row, sizeof(row));
+	                    ImGui::Text("Move [%d]", row);
+	                	ImGui::EndDragDropSource();
+	                }
+                }
+
+                if (_functions.erase != nullptr)
+                {
+                	ImGui::PushID(row);
+                	if (ImGui::Button("-"))
+                	{
+                		shouldErase = (i32)row;
+                	}
+                	ImGui::PopID();
+                }
+                ImGui::TableSetColumnIndex(1);
+                void* data = _functions.getDataAt(_arrayType, _arrayPtr, row);
+                ImGui::PushID(data);
+                result = EditMirrorType("", data, subType) || result;
+                ImGui::PopID();
+
+                if (_functions.swap != nullptr)
+	            {
+	            	ImGui::TableNextRow();
+		            ImGui::TableSetColumnIndex(0);
+		            ImGui::Dummy(ImVec2(tableWidth, dropIntervalHeight));
+		            if (ImGui::BeginDragDropTarget())
+		            {
+		            	if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(_name))
+		                {
+		                    YAE_ASSERT(payload->DataSize == sizeof(u32));
+		                    u32 sourceIndex = *(u32*)payload->Data;
+		                    u32 targetIndex = sourceIndex > row ? row + 1 : row;
+		                    move(sourceIndex, targetIndex);
+		                }
+		                ImGui::EndDragDropTarget();
+		            }	
+	            }
+            }
+
+            if (shouldErase >= 0)
+            {
+                _functions.erase(_arrayType, _arrayPtr, shouldErase, 1);
+            }
+
+            if (_functions.setSize != nullptr)
+            {
+            	ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+            	if (ImGui::Button("+"))
+            	{
+            		_functions.setSize(_arrayType, _arrayPtr, size + 1);
+            	}
+            }
+
+            ImGui::EndTable();
+        }
+
+		ImGui::TreePop();
+	}
+	return result;
+}
+
 
 bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _type)
 {
@@ -169,6 +309,40 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 	{
 		yae::Matrix4* matrixPtr = (yae::Matrix4*)_data;
 		return ImGui::DragMatrix(_name, matrixPtr, v_speed);
+	}
+	else if (_type == mirror::GetTypeDesc<yae::Matrix4>())
+	{
+		yae::Matrix4* matrixPtr = (yae::Matrix4*)_data;
+		return ImGui::DragMatrix(_name, matrixPtr, v_speed);
+	}
+	else if (_type->isCustomType("Array"))
+	{
+		ArrayEditFunctions functions = {};
+		functions.getSubType = [](const mirror::TypeDesc* _arrayType) -> const mirror::TypeDesc*
+		{
+			return ((mirror::ArrayType*)_arrayType)->getSubType();
+		};
+		functions.getSize = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr)
+		{
+			return (u32)((mirror::ArrayType*)_arrayType)->getSize(_arrayPtr);
+		};
+		functions.setSize = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _size)
+		{
+			((mirror::ArrayType*)_arrayType)->setSize(_arrayPtr, _size);
+		};
+		functions.getDataAt = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index)
+		{
+			return ((mirror::ArrayType*)_arrayType)->getDataAt(_arrayPtr, _index);
+		};
+		functions.erase = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index, u32 _count)
+		{
+			((mirror::ArrayType*)_arrayType)->erase(_arrayPtr, _index, _count);
+		};
+		functions.swap = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
+		{
+			((mirror::ArrayType*)_arrayType)->swap(_arrayPtr, _indexA, _indexB);
+		};
+		return EditArray(_type, _name, _data, functions);
 	}
 
 	switch(_type->getType())
@@ -316,37 +490,30 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 
 	case mirror::Type_FixedSizeArray:
 		{
-			const mirror::FixedSizeArray* arrayType = _type->asFixedSizeArray();
-			const mirror::TypeDesc* subType = arrayType->getSubType();
-			const int elementCount = (int)arrayType->getElementCount();
-			YAE_ASSERT(subType != nullptr);
-
-			bool result = false;
-			if (ImGui::TreeNodeEx(_data, 0, "%s(%d)", _name, elementCount))
+			ArrayEditFunctions functions = {};
+			functions.getSubType = [](const mirror::TypeDesc* _arrayType) -> const mirror::TypeDesc*
 			{
-				int flags = 0;
-				if (ImGui::BeginTable(_name, 2, flags))
-		        {
-		            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 25.0f);
-		            ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch);
-
-		            for (int row = 0; row < elementCount; row++)
-            		{
-		                ImGui::TableNextRow();
-		                ImGui::TableSetColumnIndex(0);
-		                ImGui::Text("[%d]", row);
-		                ImGui::TableSetColumnIndex(1);
-		                void* data = arrayType->getDataAt(_data, row);
-		                ImGui::PushID(data);
-		                result = EditMirrorType("", data, subType) || result;
-		                ImGui::PopID();
-		            }
-		            ImGui::EndTable();
-		        }
-
-				ImGui::TreePop();
-			}
-			return result;
+				return _arrayType->asFixedSizeArray()->getSubType();
+			};
+			functions.getSize = [](const mirror::TypeDesc* _arrayType, void*)
+			{
+				return (u32)_arrayType->asFixedSizeArray()->getElementCount();
+			};
+			functions.getDataAt = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index)
+			{
+				return _arrayType->asFixedSizeArray()->getDataAt(_arrayPtr, _index);
+			};
+			functions.swap = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
+			{
+				const mirror::FixedSizeArray* fixedSizeArrayType = _arrayType->asFixedSizeArray();
+				size_t elementSize = fixedSizeArrayType->getSubType()->getSize();
+				void* tempBuffer = yae::scratchAllocator().allocate(elementSize);
+				memcpy(tempBuffer, fixedSizeArrayType->getDataAt(_arrayPtr, _indexB), elementSize);
+				memcpy(fixedSizeArrayType->getDataAt(_arrayPtr, _indexB), fixedSizeArrayType->getDataAt(_arrayPtr, _indexA), elementSize);
+				memcpy(fixedSizeArrayType->getDataAt(_arrayPtr, _indexA), tempBuffer, elementSize);
+				yae::scratchAllocator().deallocate(tempBuffer);
+			};
+			return EditArray(_type, _name, _data, functions);
 		}
 		break;
 

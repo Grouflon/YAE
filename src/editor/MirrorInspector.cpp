@@ -1,6 +1,7 @@
 #include "MirrorInspector.h"
 
 #include <yae/imgui_extension.h>
+#include <yae/containers/Array.h>
 
 #include <imgui/imgui.h>
 
@@ -71,7 +72,8 @@ struct TestData
 	Matrix3 matrix3 = Matrix3::IDENTITY;
 	Matrix4 matrix4 = Matrix4::IDENTITY;
 
-	Matrix4 matrixArray[4];
+	Matrix4 matrixFixedArray[4];
+	DataArray<Matrix4> matrixDataArray;
 
 	MIRROR_CLASS_NOVIRTUAL(yae::editor::TestData)
 	(
@@ -105,20 +107,23 @@ struct TestData
 		MIRROR_MEMBER(matrix3)();
 		MIRROR_MEMBER(matrix4)();
 
-		MIRROR_MEMBER(matrixArray)();
+		MIRROR_MEMBER(matrixFixedArray)();
+		MIRROR_MEMBER(matrixDataArray)();
 	);
 };
 MIRROR_CLASS_DEFINITION(yae::editor::TestData);
 
 void MirrorInspector::update()
 {
-	static TestData s_testData;
-
-	if (ImGui::Begin("MirrorInspector", &opened))
+	if (opened)
 	{
-		ImGui::EditMirrorClassInstance(&s_testData, s_testData.getClass());
+		if (ImGui::Begin("MirrorInspector", &opened))
+		{
+			static TestData s_testData;
+			ImGui::EditMirrorClassInstance(&s_testData, s_testData.getClass());
+		}
+		ImGui::End();
 	}
-	ImGui::End();
 }
 
 } // namespace editor
