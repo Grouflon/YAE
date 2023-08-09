@@ -34,6 +34,13 @@ i64    max(i64 _a, i64 _b)       { return std::max(_a, _b); }
 float  max(float _a, float _b)   { return std::max(_a, _b); }
 double max(double _a, double _b) { return std::max(_a, _b); }
 
+i8 sign(i8 _value) { if (_value == 0) return 0; else if (_value > 0) return 1; else return -1; }
+i16 sign(i16 _value) { if (_value == 0) return 0; else if (_value > 0) return 1; else return -1; }
+i32 sign(i32 _value) { if (_value == 0) return 0; else if (_value > 0) return 1; else return -1; }
+i64 sign(i64 _value) { if (_value == 0) return 0; else if (_value > 0) return 1; else return -1; }
+float sign(float _value) { if (_value == 0.0f) return 0.0f; else if (_value > 0.0f) return 1.0f; else return -1.0f; }
+double sign(double _value) { if (_value == 0.0) return 0.0; else if (_value > 0.0) return 1.0; else return -1.0; }
+
 float clamp(float _value, float _min, float _max)
 {
 	YAE_ASSERT(_min <= _max);

@@ -35,6 +35,13 @@ inline i64    max(i64 _a, i64 _b);
 inline float  max(float _a, float _b);
 inline double max(double _a, double _b);
 
+inline i8 sign(i8 _value);
+inline i16 sign(i16 _value);
+inline i32 sign(i32 _value);
+inline i64 sign(i64 _value);
+inline float sign(float _value);
+inline double sign(double _value);
+
 inline float clamp(float _value, float _min, float _max);
 
 inline float mod(float _a, float _b);
