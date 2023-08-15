@@ -1,9 +1,22 @@
 #include "render_types.h"
 
-namespace yae {
+#include <mirror/mirror.h>
 
-MIRROR_ENUM_CLASS_DEFINITION(ShaderType);
-MIRROR_ENUM_CLASS_DEFINITION(TextureFilter);
-MIRROR_CLASS_DEFINITION(TextureParameters);
+MIRROR_CLASS(yae::TextureParameters)
+(
+	MIRROR_MEMBER(filter);
+);
 
-} // namespace yae
+MIRROR_ENUM(yae::TextureFilter)
+(
+	MIRROR_ENUM_VALUE(yae::TextureFilter::LINEAR);
+	MIRROR_ENUM_VALUE(yae::TextureFilter::NEAREST);
+);
+
+MIRROR_ENUM(yae::ShaderType)
+(
+	MIRROR_ENUM_VALUE(yae::ShaderType::UNDEFINED);
+	MIRROR_ENUM_VALUE(yae::ShaderType::VERTEX);
+	MIRROR_ENUM_VALUE(yae::ShaderType::GEOMETRY);
+	MIRROR_ENUM_VALUE(yae::ShaderType::FRAGMENT);
+);

@@ -12,4 +12,10 @@ T* ResourceManager::findResource(const char* _name) const
 	return mirror::Cast<T*>(resource);
 }
 
+template <typename T>
+const DataArray<Resource*>& ResourceManager::getResourcesByType() const
+{
+	return getResourcesByType(T::GetClass());
+}
+
 } // namespace yae

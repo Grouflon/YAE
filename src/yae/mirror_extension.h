@@ -3,17 +3,17 @@
 namespace yae {
 template <typename T> class DataArray;
 template <typename T> class Array;
-template <typename T> class ResourcePtr;
+template <typename T> struct ResourcePtr;
 } // namespace yae
 
 namespace mirror {
 
 // ---- Array
 
-class YAE_API ArrayType : public TypeDesc
+class YAE_API ArrayType : public Type
 {
 	public:
-		TypeDesc* getSubType() const { return mirror::FindTypeByID(m_subType); }
+		Type* getSubType() const { return mirror::GetType(m_subType); }
 
 		// Type agnostic methods
 		uint32_t getSize(void* _arrayPointer) const { return m_getSizeFunction(_arrayPointer); }
@@ -32,7 +32,7 @@ class YAE_API ArrayType : public TypeDesc
 			void(*_eraseFunction)(void*, uint32_t, uint32_t),
 			void(*_swapFunction)(void*, uint32_t, uint32_t)
 		)
-			: TypeDesc(Type_Custom, "")
+			: Type(TypeInfo_Custom, "")
 			, m_subType(_subType)
 			, m_getSizeFunction(_getSizeFunction)
 			, m_setSizeFunction(_setSizeFunction)
@@ -40,8 +40,14 @@ class YAE_API ArrayType : public TypeDesc
 			, m_eraseFunction(_eraseFunction)
 			, m_swapFunction(_swapFunction)
 		{
+		}
+
+		virtual void init() override
+		{
+			// TypeID should not be resolved until the init phase as it is possible that the type does not exists yet.
+			// That's why we are only solving the name here at init time
 			char buf[512];
-			snprintf(buf, sizeof(buf), "Array_%s", GetTypeSet().findTypeByID(_subType)->getName());
+			snprintf(buf, sizeof(buf), "Array_%s", GetType(m_subType)->getName());
 			setName(buf);
 			setCustomTypeName("Array");
 		}
@@ -55,9 +61,9 @@ class YAE_API ArrayType : public TypeDesc
 };
 
 template <typename T>
-struct CustomTypeDescFactory<yae::DataArray<T>>
+struct CustomTypeFactory<yae::DataArray<T>>
 {
-	static TypeDesc* Create()
+	static Type* Create()
 	{
 		auto getSize = [](void* _arrayPointer) -> uint32_t
 		{
@@ -89,14 +95,15 @@ struct CustomTypeDescFactory<yae::DataArray<T>>
 			arrayPointer->swap(_indexA, _indexB);
 		};
 
+		GetType<T>();
 		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData, erase, swap);
 	}
 };
 
 template <typename T>
-struct CustomTypeDescFactory<yae::Array<T>>
+struct CustomTypeFactory<yae::Array<T>>
 {
-	static TypeDesc* Create()
+	static Type* Create()
 	{
 		auto getSize = [](void* _arrayPointer) -> uint32_t
 		{
@@ -128,6 +135,7 @@ struct CustomTypeDescFactory<yae::Array<T>>
 			arrayPointer->swap(_indexA, _indexB);
 		};
 
+		GetType<T>();
 		return new ArrayType(GetTypeID<T>(), getSize, setSize, getData, erase, swap);
 	}
 };
@@ -135,14 +143,14 @@ struct CustomTypeDescFactory<yae::Array<T>>
 
 // ---- ResourcePtr
 
-class YAE_API ResourcePtrType : public TypeDesc
+class YAE_API ResourcePtrType : public Type
 {
 	public:
-		TypeDesc* getSubType() const { return mirror::FindTypeByID(m_subType); }
+		Type* getSubType() const { return mirror::FindTypeByID(m_subType); }
 
 	// internal
 		ResourcePtrType(TypeID _subType)
-			: TypeDesc(Type_Custom, "")
+			: Type(TypeInfo_Custom, "")
 			, m_subType(_subType)
 		{
 			char buf[512];
@@ -155,9 +163,9 @@ class YAE_API ResourcePtrType : public TypeDesc
 };
 
 template <typename T>
-struct CustomTypeDescFactory<yae::ResourcePtr<T>>
+struct CustomTypeFactory<yae::ResourcePtr<T>>
 {
-	static TypeDesc* Create()
+	static Type* Create()
 	{
 		return new ResourcePtrType(GetTypeID<T>());
 	}

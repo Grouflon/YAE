@@ -9,12 +9,8 @@ namespace yae {
 
 class YAE_API Shader : public Resource
 {
-	MIRROR_CLASS(Shader)
-	(
-		MIRROR_PARENT(Resource);
-
-		MIRROR_MEMBER(m_shaderType)();
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	Shader();

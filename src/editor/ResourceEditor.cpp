@@ -6,6 +6,7 @@
 #include <yae/resources/Resource.h>
 #include <yae/resources/Mesh.h>
 #include <yae/resources/ShaderProgram.h>
+#include <yae/resources/Shader.h>
 #include <yae/rendering/Renderer.h>
 #include <yae/resource.h>
 #include <yae/imgui_extension.h>
@@ -18,10 +19,14 @@
 #include <imgui/imgui.h>
 #include <im3d/im3d.h>
 
+
+MIRROR_CLASS(yae::editor::ResourceEditor)
+(
+	MIRROR_MEMBER(opened);
+);
+
 namespace yae {
 namespace editor {
-
-MIRROR_CLASS_DEFINITION(ResourceEditor);
 
 bool inspectResourceMembers(Resource* _resource)
 {
@@ -246,11 +251,13 @@ void ResourceEditor::reload()
 	_registerInspectorDefinitions();
 }
 
-void ResourceEditor::update()
+bool ResourceEditor::update()
 {
+	bool changedSettings = false;
 	if (opened)
     {
     	// Resource Explorer
+    	bool previousOpened = opened;
     	if (ImGui::Begin("Resources Explorer", &opened))
     	{
     		ResourceManager& rm = resourceManager();
@@ -392,21 +399,24 @@ void ResourceEditor::update()
     		ImGui::EndChild();
     	}
     	ImGui::End();
-
-    	// Update opened inspector windows
-    	DataArray<ResourceInspector> tempArray(m_inspectors, &scratchAllocator());
-    	for (const ResourceInspector& inspector : m_inspectors)
-    	{
-    		ResourceInspectorDefinition definition = _getInspectorDefinition(inspector.resource);
-    		if (definition.updateFunction != nullptr)
-    		{
-    			if (!definition.updateFunction(inspector.resource, inspector.userData))
-    			{
-    				_closeInspector(inspector.resource);
-    			}
-    		}
-    	}
+    	changedSettings = changedSettings || (previousOpened != opened);
     }
+
+    // Update opened inspector windows
+	DataArray<ResourceInspector> tempArray(m_inspectors, &scratchAllocator());
+	for (const ResourceInspector& inspector : m_inspectors)
+	{
+		ResourceInspectorDefinition definition = _getInspectorDefinition(inspector.resource);
+		if (definition.updateFunction != nullptr)
+		{
+			if (!definition.updateFunction(inspector.resource, inspector.userData))
+			{
+				_closeInspector(inspector.resource);
+			}
+		}
+	}
+
+	return changedSettings;
 }
 
 void ResourceEditor::_registerInspectorDefinitions()
@@ -436,7 +446,7 @@ ResourceInspectorDefinition ResourceEditor::_getInspectorDefinition(Resource* _r
 		if (definition != nullptr)
 			return *definition;
 
-		clss = mirror::AsClass(clss->getParent());
+		clss = clss->getParent();
 	} while (clss != nullptr);
 
 	return ResourceInspectorDefinition();

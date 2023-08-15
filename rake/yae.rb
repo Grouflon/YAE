@@ -3,7 +3,6 @@ namespace "yae" do
 def settings()
 	_settings = default_settings()
 	_settings[:source_files] |= FileList[
-			"src/yae/MirrorImplementation.cpp", # this needs to be compiled first (because initialization order. I'll fix that someday)
 			"src/yae/**/*.cpp",
 			"extern/imgui/*.cpp",
 			"extern/im3d/*.cpp",

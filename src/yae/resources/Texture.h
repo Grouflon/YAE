@@ -9,12 +9,8 @@ namespace yae {
 
 class YAE_API Texture : public Resource
 {
-	MIRROR_CLASS(Texture)
-	(
-		MIRROR_PARENT(Resource)
-
-		MIRROR_MEMBER(m_parameters)();
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	Texture();

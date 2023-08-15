@@ -2,9 +2,11 @@
 
 #include <yae/math/glm_conversion.h>
 
-#include <cfloat>
+#include <mirror/mirror.h>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include <cfloat>
 
 namespace yae {
 
@@ -141,3 +143,49 @@ Matrix4 Matrix4::FromMatrix3(const Matrix3& _m)
 }
 
 } // namespace yae
+
+MIRROR_CLASS(yae::Vector2, SerializeType = float, SerializeArraySize = 2)
+(
+	MIRROR_MEMBER(x);
+	MIRROR_MEMBER(y);
+);
+
+MIRROR_CLASS(yae::Vector3, SerializeType = float, SerializeArraySize = 3)
+(
+	MIRROR_MEMBER(x);
+	MIRROR_MEMBER(y);
+	MIRROR_MEMBER(z);
+);
+
+MIRROR_CLASS(yae::Vector4, SerializeType = float, SerializeArraySize = 4)
+(
+	MIRROR_MEMBER(x);
+	MIRROR_MEMBER(y);
+	MIRROR_MEMBER(z);
+	MIRROR_MEMBER(w);
+);
+
+MIRROR_CLASS(yae::Quaternion, SerializeType = float, SerializeArraySize = 4)
+(
+	MIRROR_MEMBER(x);
+	MIRROR_MEMBER(y);
+	MIRROR_MEMBER(z);
+	MIRROR_MEMBER(w);
+);
+
+MIRROR_CLASS(yae::Matrix3)
+(
+	MIRROR_MEMBER(m);
+);
+
+MIRROR_CLASS(yae::Matrix4)
+(
+	MIRROR_MEMBER(m);
+);
+
+MIRROR_CLASS(yae::Transform)
+(
+	MIRROR_MEMBER(position);
+	MIRROR_MEMBER(rotation);
+	MIRROR_MEMBER(scale);
+);

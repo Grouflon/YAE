@@ -8,12 +8,8 @@ namespace yae {
 
 class YAE_API ShaderFile : public Shader
 {
-	MIRROR_CLASS(ShaderFile)
-	(
-		MIRROR_PARENT(Shader);
-
-		MIRROR_MEMBER(m_path)();
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	ShaderFile();

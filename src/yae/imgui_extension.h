@@ -7,7 +7,7 @@
 namespace mirror
 {
 	class Class;
-	class TypeDesc;
+	class Type;
 }
 
 namespace ImGui
@@ -22,6 +22,6 @@ YAE_API bool DragMatrix(const char* _label, yae::Matrix3* _m, float _speed = 1.f
 YAE_API bool DragMatrix(const char* _label, yae::Matrix4* _m, float _speed = 1.f);
 
 YAE_API bool EditMirrorClassInstance(void* _instance, const mirror::Class* _class);
-YAE_API bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _type);
+YAE_API bool EditMirrorType(const char* _name, void* _data, const mirror::Type* _type);
 
 } // namespace ImGui

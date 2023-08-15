@@ -86,6 +86,7 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 }
 
 #define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error %s(0x%04x) -> " #_instruction, glErrorToString(___error), ___error); }
+#define YAE_GL_TEST(_instruction) [&](){ _instruction; GLint ___error = glGetError(); if (___error != GL_NO_ERROR) { YAE_ERRORF_CAT("renderer", "GL Error %s(0x%04x) -> ", #_instruction, glErrorToString(___error), ___error); } return ___error == GL_NO_ERROR; }()
 
 namespace yae {
 
@@ -367,15 +368,16 @@ bool OpenGLRenderer::createShaderProgram(ShaderHandle* _shaderHandles, u16 _shad
 	YAE_CAPTURE_FUNCTION();
 
 	GLuint programId = glCreateProgram();
+	bool error = false;
 	for (u16 i = 0; i < _shaderHandleCount; ++i)
 	{
 		YAE_ASSERT(_shaderHandles[i] != 0);
 		GLint compiled;
-        YAE_GL_VERIFY(glGetShaderiv((GLuint)_shaderHandles[i], GL_COMPILE_STATUS, &compiled));
-        YAE_ASSERT(compiled != 0);
-    	YAE_GL_VERIFY(glAttachShader(programId, (GLuint)_shaderHandles[i]));
+        error = error || !YAE_GL_TEST(glGetShaderiv((GLuint)_shaderHandles[i], GL_COMPILE_STATUS, &compiled));
+        error = error || compiled == 0;
+    	error = error || !YAE_GL_TEST(glAttachShader(programId, (GLuint)_shaderHandles[i]));
 	}
-	YAE_GL_VERIFY(glLinkProgram(programId));
+	error = error || !YAE_GL_TEST(glLinkProgram(programId));
 
 	GLint status = 0, logLength = 0;
     YAE_GL_VERIFY(glGetProgramiv(programId, GL_LINK_STATUS, &status));
@@ -396,6 +398,11 @@ bool OpenGLRenderer::createShaderProgram(ShaderHandle* _shaderHandles, u16 _shad
         YAE_GL_VERIFY(glGetProgramInfoLog(programId, logLength, NULL, (GLchar*)buf.data()));
     	YAE_ERRORF("Shader program linking result:\n%s", buf.c_str());
     }
+    if (error)
+	{
+		glDeleteProgram(programId);
+		return false;
+	}
 
 	YAE_GL_VERIFY(glBindVertexArray(m_vao)); // It fixes the issue of location not being right at draw time, but I'm really sure we need to do that here. I should definitely read about Vertex Arrays
 

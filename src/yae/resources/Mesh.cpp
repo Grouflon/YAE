@@ -1,8 +1,11 @@
 #include "Mesh.h"
 
-namespace yae {
+MIRROR_CLASS(yae::Mesh)
+(
+	MIRROR_PARENT(yae::Resource)
+);
 
-MIRROR_CLASS_DEFINITION(Mesh);
+namespace yae {
 
 Mesh::Mesh()
 {

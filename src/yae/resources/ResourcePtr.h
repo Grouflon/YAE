@@ -13,9 +13,13 @@ struct ResourcePtr
 {
 	ResourceID id;
 
-	Resource* get() const
+	ResourcePtr() : id(ResourceID::INVALID_ID) {}
+	ResourcePtr(ResourceID _id) : id(_id) {}
+	ResourcePtr(const T* _resource) { YAE_ASSERT(_resource != nullptr); id = _resource->getID(); }
+
+	T* get() const
 	{
-		return id.get();
+		return mirror::Cast<T*>(id.get());
 	}
 
 	mirror::Class* getClass() const

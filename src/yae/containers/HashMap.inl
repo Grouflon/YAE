@@ -27,6 +27,17 @@ const T* HashMap<Key, T>::get(Key _key) const
 
 
 template<typename Key, typename T>
+T* HashMap<Key, T>::getOrInsert(Key _key, const T& _value)
+{
+	T* result = get(_key);
+	if (result != nullptr)
+		return result;
+
+	return &set(_key, _value);
+}
+
+
+template<typename Key, typename T>
 T* HashMap<Key, T>::get(Key _key)
 {
 	FindResult result = _find(_key);

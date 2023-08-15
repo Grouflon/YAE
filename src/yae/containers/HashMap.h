@@ -26,6 +26,7 @@ public:
 	bool has(Key _key) const;
 	const T* get(Key _key) const;
 	T* get(Key _key);
+	T* getOrInsert(Key _key, const T& _value);
 	T& set(Key _key, const T& _value);
 	void remove(Key _key);
 	u32 size() const;

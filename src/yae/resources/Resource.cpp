@@ -1,8 +1,11 @@
 #include "Resource.h"
 
-namespace yae {
+MIRROR_CLASS(yae::Resource)
+(
+	MIRROR_MEMBER(m_id);
+);
 
-MIRROR_CLASS_DEFINITION(Resource);
+namespace yae {
 
 Resource::Resource()
 {

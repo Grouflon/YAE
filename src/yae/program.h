@@ -20,9 +20,9 @@ public:
 	Program();
 	~Program();
 
-	void registerModule(const char* _moduleName);
+	Module* registerModule(const char* _moduleName);
 
-	void init(char** _args, int _argCount);
+	void init(const char** _args, int _argCount);
 	void shutdown();
 
 	void run();
@@ -68,13 +68,11 @@ public:
 	Logger* m_logger = nullptr;
 	Profiler* m_profiler = nullptr;
 
-	Array<Application*> m_applications;
+	DataArray<Application*> m_applications;
 	Application* m_currentApplication = nullptr;
 
 	int m_argCount = 0;
-	char** m_args = nullptr;
-	// NOTE: don't forget to initialize those string's allocator in the constructor.
-	// The program isn't ready yet so they can't do it themselves.
+	const char** m_args = nullptr;
 	String m_exePath;
 	String m_binDirectory;
 	String m_rootDirectory;

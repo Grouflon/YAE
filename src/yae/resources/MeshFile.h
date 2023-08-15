@@ -7,14 +7,9 @@ namespace yae {
 
 class YAE_API MeshFile : public Mesh
 {
-	MIRROR_CLASS(MeshFile)
-	(
-		MIRROR_PARENT(Mesh);
-
-		MIRROR_MEMBER(m_path)();
-		MIRROR_MEMBER(m_offset)();
-	);
-
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
+	
 public:
 	MeshFile();
 	virtual ~MeshFile();

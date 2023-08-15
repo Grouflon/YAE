@@ -17,14 +17,14 @@ enum SerializationFlags
 
 const u32 DEFAULT_SERIALIZATION_FLAGS = SF_IGNORE_MISSING_KEYS|SF_ENUM_BY_NAME;
 
-YAE_API bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::TypeDesc* _type, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
+YAE_API bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Type* _type, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
 YAE_API bool serializeClassInstance(Serializer* _serializer, void* _instance, const mirror::Class* _class, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
 YAE_API bool serializeClassInstanceMembers(Serializer* _serializer, void* _instance, const mirror::Class* _class, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
 
 template <typename T>
 bool serializeMirrorType(Serializer* _serializer, T& _value, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
 {
-	mirror::TypeDesc* type = mirror::GetTypeDesc(_value);
+	mirror::Type* type = mirror::GetType(_value);
 	if (type == nullptr)
 		return false;
 	

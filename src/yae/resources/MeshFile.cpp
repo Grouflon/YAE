@@ -8,9 +8,16 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
-namespace yae {
+MIRROR_CLASS(yae::MeshFile)
+(
+	MIRROR_PARENT(yae::Mesh);
 
-MIRROR_CLASS_DEFINITION(MeshFile);
+	MIRROR_MEMBER(m_path);
+	MIRROR_MEMBER(m_offset);
+);
+
+
+namespace yae {
 
 MeshFile::MeshFile()
 {

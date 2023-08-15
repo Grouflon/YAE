@@ -45,25 +45,22 @@ void DoProgramFrame()
 // !anonymous functions
 
 
-namespace yae {
-
 struct ProgramSettings
 {
 	i32 consoleWindowWidth = -1;
 	i32 consoleWindowHeight = -1;
 	i32 consoleWindowX = -1;
-	i32 consoleWindowY = -1;
-
-	MIRROR_CLASS_NOVIRTUAL(ProgramSettings)
-	(
-		MIRROR_MEMBER(consoleWindowWidth)();
-		MIRROR_MEMBER(consoleWindowHeight)();
-		MIRROR_MEMBER(consoleWindowX)();
-		MIRROR_MEMBER(consoleWindowY)();
-	);
+	i32 consoleWindowY = -1;	
 };
-MIRROR_CLASS_DEFINITION(ProgramSettings);
+MIRROR_CLASS(ProgramSettings)
+(
+	MIRROR_MEMBER(consoleWindowWidth);
+	MIRROR_MEMBER(consoleWindowHeight);
+	MIRROR_MEMBER(consoleWindowX);
+	MIRROR_MEMBER(consoleWindowY);
+);
 
+namespace yae {
 Program* Program::s_programInstance = nullptr;
 
 Program::Program()
@@ -97,7 +94,7 @@ Program::~Program()
 	s_programInstance = nullptr;
 }
 
-void Program::registerModule(const char* _moduleName)
+Module* Program::registerModule(const char* _moduleName)
 {
 	YAE_ASSERT_MSG(!m_isInitialized, "Modules but be registered before the program is initialized");
 
@@ -110,9 +107,11 @@ void Program::registerModule(const char* _moduleName)
 	Module* module = defaultAllocator().create<Module>();
 	module->name = _moduleName;
 	m_modules.push_back(module);
+
+	return module;
 }
 
-void Program::init(char** _args, int _argCount)
+void Program::init(const char** _args, int _argCount)
 {
 	YAE_ASSERT(s_programInstance == this);
 
@@ -237,24 +236,7 @@ void Program::run()
 	for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
-
-		for (Module* module : m_modules)
-		{
-			if (module->beforeInitApplicationFunction != nullptr)
-			{
-				module->beforeInitApplicationFunction(application);
-			}
-		}
-
 		application->init(m_args, m_argCount);
-
-		for (Module* module : m_modules)
-		{
-			if (module->afterInitApplicationFunction != nullptr)
-			{
-				module->afterInitApplicationFunction(application);
-			}
-		}
 	}
 	m_currentApplication = nullptr;
     YAE_CAPTURE_STOP("init");
@@ -288,28 +270,7 @@ void Program::run()
     for (Application* application : m_applications)
 	{
 		m_currentApplication = application;
-
-		for (int i = m_modules.size() - 1; i >= 0; --i)
-		{
-			// @NOTE(remi): shutdown modules in reverse order to preserve symetry
-			Module* module = m_modules[i];
-			if (module->beforeShutdownApplicationFunction != nullptr)
-			{
-				module->beforeShutdownApplicationFunction(application);
-			}
-		}
-
 		application->shutdown();
-
-		for (int i = m_modules.size() - 1; i >= 0; --i)
-		{
-			// @NOTE(remi): shutdown modules in reverse order to preserve symetry
-			Module* module = m_modules[i];
-			if (module->afterShutdownApplicationFunction != nullptr)
-			{
-				module->afterShutdownApplicationFunction(application);
-			}
-		}
 	}
 	m_currentApplication = nullptr;
 
@@ -634,12 +595,10 @@ void Program::_loadModule(Module* _module, const char* _dllPath)
 	_module->onModuleReloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleReloaded");
 	_module->initModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "initModule");
 	_module->shutdownModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "shutdownModule");
-	_module->beforeInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeInitApplication");
-	_module->afterInitApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterInitApplication");
-	_module->onApplicationModuleReloadedFunction = (void (*)(Application*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onApplicationModuleReloaded");
+	_module->initApplicationFunction = (void (*)(Application*, const char**, int))platform::getProcedureAddress(_module->libraryHandle, "initApplication");
 	_module->updateApplicationFunction = (void (*)(Application*, float))platform::getProcedureAddress(_module->libraryHandle, "updateApplication");
-	_module->beforeShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "beforeShutdownApplication");
-	_module->afterShutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "afterShutdownApplication");
+	_module->shutdownApplicationFunction = (void (*)(Application*))platform::getProcedureAddress(_module->libraryHandle, "shutdownApplication");
+	_module->onApplicationModuleReloadedFunction = (void (*)(Application*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onApplicationModuleReloaded");
 	_module->onSerializeApplicationSettingsFunction = (bool (*)(Application*, Serializer*))platform::getProcedureAddress(_module->libraryHandle, "onSerializeApplicationSettings");
 
 	if (_module->onModuleLoadedFunction != nullptr)
@@ -666,11 +625,9 @@ void Program::_unloadModule(Module* _module)
 	_module->onModuleUnloadedFunction = nullptr;
 	_module->initModuleFunction = nullptr;
 	_module->shutdownModuleFunction = nullptr;
-	_module->beforeInitApplicationFunction = nullptr;
-	_module->afterInitApplicationFunction = nullptr;
+	_module->initApplicationFunction = nullptr;
 	_module->updateApplicationFunction = nullptr;
-	_module->beforeShutdownApplicationFunction = nullptr;
-	_module->afterShutdownApplicationFunction = nullptr;
+	_module->shutdownApplicationFunction = nullptr;
 	_module->onSerializeApplicationSettingsFunction = nullptr;
 
 	platform::unloadDynamicLibrary(_module->libraryHandle);

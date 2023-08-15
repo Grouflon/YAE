@@ -3,6 +3,8 @@
 #include <yae/math.h>
 #include <yae/string.h>
 
+#include <mirror/mirror.h>
+
 namespace yae {
 namespace string {
 
@@ -17,3 +19,8 @@ size_t safeCopyToBuffer(char* _destination, const char* _source, size_t _destina
 
 } // namespace string
 } // namespace yae
+
+
+MIRROR_CLASS(yae::String)
+(
+);

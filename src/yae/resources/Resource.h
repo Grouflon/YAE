@@ -24,10 +24,8 @@ struct YAE_API ResourceLog
 
 class YAE_API Resource
 {
-	MIRROR_CLASS(Resource)
-	(
-		MIRROR_MEMBER(m_id)();
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	Resource();

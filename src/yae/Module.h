@@ -21,13 +21,11 @@ public:
 	void (*initModuleFunction)(Program* _program, Module* _module) = nullptr;
 	void (*shutdownModuleFunction)(Program* _program, Module* _module) = nullptr;
 
-	void (*beforeInitApplicationFunction)(Application* _app) = nullptr;
-	void (*afterInitApplicationFunction)(Application* _app) = nullptr;
-	void (*onApplicationModuleReloadedFunction)(Application* _app, Module* _module) = nullptr;
+	void (*initApplicationFunction)(Application* _app, const char** _args, int _argCount) = nullptr;
 	void (*updateApplicationFunction)(Application* _app, float _dt) = nullptr;
+	void (*shutdownApplicationFunction)(Application* _app) = nullptr;
+	void (*onApplicationModuleReloadedFunction)(Application* _app, Module* _module) = nullptr;
 	bool (*onSerializeApplicationSettingsFunction)(Application* _app, Serializer* _serializer) = nullptr;
-	void (*beforeShutdownApplicationFunction)(Application* _app) = nullptr;
-	void (*afterShutdownApplicationFunction)(Application* _app) = nullptr;
 };
 
 } // namespace yae

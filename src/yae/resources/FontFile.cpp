@@ -8,9 +8,12 @@
 
 // this is helpful: https://github.com/0xc0dec/demos
 
-namespace yae {
+MIRROR_CLASS(yae::FontFile)
+(
+	MIRROR_PARENT(yae::Resource)
+);
 
-MIRROR_CLASS_DEFINITION(FontFile);
+namespace yae {
 
 FontFile::FontFile()
 {

@@ -2,9 +2,14 @@
 
 #include <yae/rendering/Renderer.h>
 
-namespace yae {
+MIRROR_CLASS(yae::Shader)
+(
+	MIRROR_PARENT(yae::Resource);
 
-MIRROR_CLASS_DEFINITION(Shader);
+	MIRROR_MEMBER(m_shaderType);
+);
+
+namespace yae {
 
 Shader::Shader()
 {

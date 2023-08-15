@@ -4,9 +4,14 @@
 #include <yae/ResourceManager.h>
 #include <yae/string.h>
 
-namespace yae {
+MIRROR_CLASS(yae::ShaderFile)
+(
+	MIRROR_PARENT(yae::Shader);
 
-MIRROR_CLASS_DEFINITION(ShaderFile);
+	MIRROR_MEMBER(m_path);
+);
+
+namespace yae {
 
 ShaderFile::ShaderFile()
 {

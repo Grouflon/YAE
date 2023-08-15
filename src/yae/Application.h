@@ -22,7 +22,8 @@ public:
 	Application(const char* _name, u32 _width, u32 _height);
 	~Application();
 
-	void init(char** _args, int _argCount);
+	void addModule(Module* _module);
+	void init(const char** _args, int _argCount);
 	void shutdown();
 	void pushEvent(const SDL_Event& _event);
 	bool doFrame();
@@ -78,6 +79,7 @@ public:
 	float m_dt = 0.f;
 	float m_time = 0.f;
 
+	DataArray<Module*> m_modules;
 	HashMap<StringHash, void*> m_userData;
 
 	bool m_saveSettingsRequested = false;

@@ -2,6 +2,9 @@
 
 #include <yae/math_3d.h>
 #include <yae/containers/Array.h>
+#include <yae/resources/Resource.h>
+#include <yae/ResourceManager.h>
+#include <yae/filesystem.h>
 
 #include <imgui/imgui.h>
 #include <mirror/mirror.h>
@@ -132,22 +135,22 @@ bool imgui_mirrorEnumCombo(const char* _name, void* _data, const mirror::Enum* _
 
 struct ArrayEditFunctions
 {
-	const mirror::TypeDesc* (*getSubType)(const mirror::TypeDesc* _arrayType);
-	u32 (*getSize)(const mirror::TypeDesc* _arrayType, void* _arrayPtr);
-	void (*setSize)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _size);
-	void* (*getDataAt)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index);
-	void (*erase)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index, u32 _count);
-	void (*swap)(const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB);
+	const mirror::Type* (*getSubType)(const mirror::Type* _arrayType);
+	u32 (*getSize)(const mirror::Type* _arrayType, void* _arrayPtr);
+	void (*setSize)(const mirror::Type* _arrayType, void* _arrayPtr, u32 _size);
+	void* (*getDataAt)(const mirror::Type* _arrayType, void* _arrayPtr, u32 _index);
+	void (*erase)(const mirror::Type* _arrayType, void* _arrayPtr, u32 _index, u32 _count);
+	void (*swap)(const mirror::Type* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB);
 };
 
-bool EditArray(const mirror::TypeDesc* _arrayType, const char* _name, void* _arrayPtr, const ArrayEditFunctions& _functions)
+bool EditArray(const mirror::Type* _arrayType, const char* _name, void* _arrayPtr, const ArrayEditFunctions& _functions)
 {
 	YAE_ASSERT(_functions.getSize != nullptr);
 	YAE_ASSERT(_functions.getSubType != nullptr);
 	YAE_ASSERT(_functions.getDataAt != nullptr);
 
 	u32 size = _functions.getSize(_arrayType, _arrayPtr);
-	const mirror::TypeDesc* subType = _functions.getSubType(_arrayType);
+	const mirror::Type* subType = _functions.getSubType(_arrayType);
 
 	auto move = [_arrayType, _functions, _arrayPtr](u32 _startIndex, u32 _endIndex)
 	{
@@ -172,7 +175,7 @@ bool EditArray(const mirror::TypeDesc* _arrayType, const char* _name, void* _arr
 		float dropIntervalHeight = 8.0f;
 		if (ImGui::BeginTable(_name, 2, flags))
         {
-            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 25.0f);
+            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 50.0f);
             ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch);
 
             if (size > 0 && _functions.swap != nullptr)
@@ -215,6 +218,7 @@ bool EditArray(const mirror::TypeDesc* _arrayType, const char* _name, void* _arr
 
                 if (_functions.erase != nullptr)
                 {
+                	ImGui::SameLine();
                 	ImGui::PushID(row);
                 	if (ImGui::Button("-"))
                 	{
@@ -271,89 +275,120 @@ bool EditArray(const mirror::TypeDesc* _arrayType, const char* _name, void* _arr
 }
 
 
-bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _type)
+bool EditMirrorType(const char* _name, void* _data, const mirror::Type* _type)
 {
+	using namespace yae;
 	const float v_speed = 0.2f;
 
-	if (_type == mirror::GetTypeDesc<yae::String>())
+	if (_type == mirror::GetType<String>())
 	{
-		yae::String* stringPtr = (yae::String*)_data;
+		String* stringPtr = (String*)_data;
 		return ImGui::InputText(_name, stringPtr);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Vector2>())
+	else if (_type == mirror::GetType<Vector2>())
 	{
-		yae::Vector2* vectorPtr = (yae::Vector2*)_data;
+		Vector2* vectorPtr = (Vector2*)_data;
 		return ImGui::DragVector(_name, vectorPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Vector3>())
+	else if (_type == mirror::GetType<Vector3>())
 	{
-		yae::Vector3* vectorPtr = (yae::Vector3*)_data;
+		Vector3* vectorPtr = (Vector3*)_data;
 		return ImGui::DragVector(_name, vectorPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Vector4>())
+	else if (_type == mirror::GetType<Vector4>())
 	{
-		yae::Vector4* vectorPtr = (yae::Vector4*)_data;
+		Vector4* vectorPtr = (Vector4*)_data;
 		return ImGui::DragVector(_name, vectorPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Quaternion>())
+	else if (_type == mirror::GetType<Quaternion>())
 	{
-		yae::Quaternion* quatPtr = (yae::Quaternion*)_data;
+		Quaternion* quatPtr = (Quaternion*)_data;
 		return ImGui::DragRotation(_name, quatPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Matrix3>())
+	else if (_type == mirror::GetType<Matrix3>())
 	{
-		yae::Matrix3* matrixPtr = (yae::Matrix3*)_data;
+		Matrix3* matrixPtr = (Matrix3*)_data;
 		return ImGui::DragMatrix(_name, matrixPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Matrix4>())
+	else if (_type == mirror::GetType<Matrix4>())
 	{
-		yae::Matrix4* matrixPtr = (yae::Matrix4*)_data;
+		Matrix4* matrixPtr = (Matrix4*)_data;
 		return ImGui::DragMatrix(_name, matrixPtr, v_speed);
 	}
-	else if (_type == mirror::GetTypeDesc<yae::Matrix4>())
+	else if (_type == mirror::GetType<Matrix4>())
 	{
-		yae::Matrix4* matrixPtr = (yae::Matrix4*)_data;
+		Matrix4* matrixPtr = (Matrix4*)_data;
 		return ImGui::DragMatrix(_name, matrixPtr, v_speed);
 	}
 	else if (_type->isCustomType("Array"))
 	{
 		ArrayEditFunctions functions = {};
-		functions.getSubType = [](const mirror::TypeDesc* _arrayType) -> const mirror::TypeDesc*
+		functions.getSubType = [](const mirror::Type* _arrayType) -> const mirror::Type*
 		{
 			return ((mirror::ArrayType*)_arrayType)->getSubType();
 		};
-		functions.getSize = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr)
+		functions.getSize = [](const mirror::Type* _arrayType, void* _arrayPtr)
 		{
 			return (u32)((mirror::ArrayType*)_arrayType)->getSize(_arrayPtr);
 		};
-		functions.setSize = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _size)
+		functions.setSize = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _size)
 		{
 			((mirror::ArrayType*)_arrayType)->setSize(_arrayPtr, _size);
 		};
-		functions.getDataAt = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index)
+		functions.getDataAt = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _index)
 		{
 			return ((mirror::ArrayType*)_arrayType)->getDataAt(_arrayPtr, _index);
 		};
-		functions.erase = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index, u32 _count)
+		functions.erase = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _index, u32 _count)
 		{
 			((mirror::ArrayType*)_arrayType)->erase(_arrayPtr, _index, _count);
 		};
-		functions.swap = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
+		functions.swap = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
 		{
 			((mirror::ArrayType*)_arrayType)->swap(_arrayPtr, _indexA, _indexB);
 		};
 		return EditArray(_type, _name, _data, functions);
 	}
-
-	switch(_type->getType())
+	else if (_type->isCustomType("ResourcePtr"))
 	{
-	case mirror::Type_bool:
+		ResourceID* valuePtr = (ResourceID*) _data;
+		const mirror::ResourcePtrType* resourcePtrType = (const mirror::ResourcePtrType*)_type;
+		const mirror::Class* resourceClass = resourcePtrType->getSubType()->asClass();
+		Resource* resource = valuePtr->get();
+		String256 currentValueString = (resource == nullptr) ? "None" : filesystem::getFileName(resource->getName());
+
+		bool modified = false;
+		if (ImGui::BeginCombo(_name, currentValueString.c_str()))
+		{
+			if (ImGui::Selectable("None", resource == nullptr))
+			{
+				*valuePtr = ResourceID::INVALID_ID;
+				modified = true;
+			}
+			const DataArray<Resource*>& resources = resourceManager().getResourcesByType(resourceClass);
+			for (Resource* selectableResource : resources)
+			{
+	    		String256 name = filesystem::getFileName(selectableResource->getName());
+				if (ImGui::Selectable(name.c_str(), selectableResource == resource))
+				{
+					*valuePtr = selectableResource->getID();
+					modified = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
+		return modified;
+	}
+
+	switch(_type->getTypeInfo())
+	{
+	case mirror::TypeInfo_bool:
 		{
 			return ImGui::Checkbox(_name, (bool*)_data);
 		}
 		break;
 
-	case mirror::Type_char:
+	case mirror::TypeInfo_char:
 		{
 			char* charPtr = (char*)_data;
 			char buf[2] = {*charPtr, 0};
@@ -363,7 +398,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_int8:
+	case mirror::TypeInfo_int8:
 		{
 			i8* dataPtr = (i8*)_data;
 			int value = *dataPtr;
@@ -373,7 +408,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_int16:
+	case mirror::TypeInfo_int16:
 		{
 			i16* dataPtr = (i16*)_data;
 			int value = *dataPtr;
@@ -383,7 +418,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_int32:
+	case mirror::TypeInfo_int32:
 		{
 			i32* dataPtr = (i32*)_data;
 			int value = *dataPtr;
@@ -393,7 +428,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_int64:
+	case mirror::TypeInfo_int64:
 		{
 			i64* dataPtr = (i64*)_data;
 			int value = *dataPtr;
@@ -403,7 +438,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_uint8:
+	case mirror::TypeInfo_uint8:
 		{
 			u8* dataPtr = (u8*)_data;
 			int value = *dataPtr;
@@ -413,7 +448,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_uint16:
+	case mirror::TypeInfo_uint16:
 		{
 			u16* dataPtr = (u16*)_data;
 			int value = *dataPtr;
@@ -423,7 +458,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_uint32:
+	case mirror::TypeInfo_uint32:
 		{
 			u32* dataPtr = (u32*)_data;
 			int value = *dataPtr;
@@ -433,7 +468,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_uint64:
+	case mirror::TypeInfo_uint64:
 		{
 			u64* dataPtr = (u64*)_data;
 			int value = *dataPtr;
@@ -443,7 +478,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_float:
+	case mirror::TypeInfo_float:
 		{
 			float* dataPtr = (float*)_data;
 			float value = *dataPtr;
@@ -453,7 +488,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_double:
+	case mirror::TypeInfo_double:
 		{
 			double* dataPtr = (double*)_data;
 			float value = *dataPtr;
@@ -463,61 +498,61 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 		}
 		break;
 
-	case mirror::Type_Enum:
+	case mirror::TypeInfo_Enum:
 		{
 			const mirror::Enum* enumType = _type->asEnum();
-			const mirror::TypeDesc* subType = enumType->getSubType();
+			const mirror::Type* subType = enumType->getSubType();
 			if (subType == nullptr)
 			{
-				subType = mirror::GetTypeDesc<int>();
+				subType = mirror::GetType<int>();
 			}
 			YAE_ASSERT(subType != nullptr);
 
-			switch(subType->getType())
+			switch(subType->getTypeInfo())
 			{
-				case mirror::Type_int8: return imgui_mirrorEnumCombo<i8>(_name, _data, enumType);
-				case mirror::Type_int16: return imgui_mirrorEnumCombo<i16>(_name, _data, enumType);
-				case mirror::Type_int32: return imgui_mirrorEnumCombo<i32>(_name, _data, enumType);
-				case mirror::Type_int64: return imgui_mirrorEnumCombo<i64>(_name, _data, enumType);
-				case mirror::Type_uint8: return imgui_mirrorEnumCombo<u8>(_name, _data, enumType);
-				case mirror::Type_uint16: return imgui_mirrorEnumCombo<u16>(_name, _data, enumType);
-				case mirror::Type_uint32: return imgui_mirrorEnumCombo<u32>(_name, _data, enumType);
-				case mirror::Type_uint64: return imgui_mirrorEnumCombo<u64>(_name, _data, enumType);
+				case mirror::TypeInfo_int8: return imgui_mirrorEnumCombo<i8>(_name, _data, enumType);
+				case mirror::TypeInfo_int16: return imgui_mirrorEnumCombo<i16>(_name, _data, enumType);
+				case mirror::TypeInfo_int32: return imgui_mirrorEnumCombo<i32>(_name, _data, enumType);
+				case mirror::TypeInfo_int64: return imgui_mirrorEnumCombo<i64>(_name, _data, enumType);
+				case mirror::TypeInfo_uint8: return imgui_mirrorEnumCombo<u8>(_name, _data, enumType);
+				case mirror::TypeInfo_uint16: return imgui_mirrorEnumCombo<u16>(_name, _data, enumType);
+				case mirror::TypeInfo_uint32: return imgui_mirrorEnumCombo<u32>(_name, _data, enumType);
+				case mirror::TypeInfo_uint64: return imgui_mirrorEnumCombo<u64>(_name, _data, enumType);
 				default: YAE_ASSERT("Not an enum type"); return false;
 			}
 		}
 		break;
 
-	case mirror::Type_FixedSizeArray:
+	case mirror::TypeInfo_FixedSizeArray:
 		{
 			ArrayEditFunctions functions = {};
-			functions.getSubType = [](const mirror::TypeDesc* _arrayType) -> const mirror::TypeDesc*
+			functions.getSubType = [](const mirror::Type* _arrayType) -> const mirror::Type*
 			{
 				return _arrayType->asFixedSizeArray()->getSubType();
 			};
-			functions.getSize = [](const mirror::TypeDesc* _arrayType, void*)
+			functions.getSize = [](const mirror::Type* _arrayType, void*)
 			{
 				return (u32)_arrayType->asFixedSizeArray()->getElementCount();
 			};
-			functions.getDataAt = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _index)
+			functions.getDataAt = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _index)
 			{
 				return _arrayType->asFixedSizeArray()->getDataAt(_arrayPtr, _index);
 			};
-			functions.swap = [](const mirror::TypeDesc* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
+			functions.swap = [](const mirror::Type* _arrayType, void* _arrayPtr, u32 _indexA, u32 _indexB)
 			{
 				const mirror::FixedSizeArray* fixedSizeArrayType = _arrayType->asFixedSizeArray();
 				size_t elementSize = fixedSizeArrayType->getSubType()->getSize();
-				void* tempBuffer = yae::scratchAllocator().allocate(elementSize);
+				void* tempBuffer = scratchAllocator().allocate(elementSize);
 				memcpy(tempBuffer, fixedSizeArrayType->getDataAt(_arrayPtr, _indexB), elementSize);
 				memcpy(fixedSizeArrayType->getDataAt(_arrayPtr, _indexB), fixedSizeArrayType->getDataAt(_arrayPtr, _indexA), elementSize);
 				memcpy(fixedSizeArrayType->getDataAt(_arrayPtr, _indexA), tempBuffer, elementSize);
-				yae::scratchAllocator().deallocate(tempBuffer);
+				scratchAllocator().deallocate(tempBuffer);
 			};
 			return EditArray(_type, _name, _data, functions);
 		}
 		break;
 
-	case mirror::Type_Class:
+	case mirror::TypeInfo_Class:
 		{
 			if (_type->asClass()->getMembersCount() != 0)
 			{
@@ -534,7 +569,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::TypeDesc* _typ
 
 	default:
 		{
-			ImGui::Text("%s: Unsupported type %s", _name, mirror::TypeToString(_type->getType()));
+			ImGui::Text("%s: Unsupported type %s", _name, mirror::TypeInfoToString(_type->getTypeInfo()));
 		}
 		break;
 	}

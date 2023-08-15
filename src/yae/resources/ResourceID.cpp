@@ -2,6 +2,8 @@
 
 #include <yae/ResourceManager.h>
 
+#include <mirror/mirror.h>
+
 namespace yae {
 
 const ResourceID ResourceID::INVALID_ID = ResourceID(-1);
@@ -32,3 +34,7 @@ ResourceID::operator u32() const
 }
 
 } // namespace yae
+
+MIRROR_CLASS(yae::ResourceID, SerializeType = u32)
+(
+);

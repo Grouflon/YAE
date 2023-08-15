@@ -7,27 +7,27 @@
 namespace yae {
 namespace serialization {
 
-bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::TypeDesc* _type, const char* _key, u32 _flags)
+bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Type* _type, const char* _key, u32 _flags)
 {
 	YAE_ASSERT(_type != nullptr);
 	YAE_ASSERT(_value != nullptr);
 
-	switch(_type->getType())
+	switch(_type->getTypeInfo())
 	{
-		case mirror::Type_bool:   return _serializer->serialize(*(bool*)_value, _key);
-		case mirror::Type_char:   return _serializer->serialize(*(u8*)_value, _key);
-		case mirror::Type_int8:   return _serializer->serialize(*(i8*)_value, _key);
-		case mirror::Type_int16:  return _serializer->serialize(*(i16*)_value, _key);
-		case mirror::Type_int32:  return _serializer->serialize(*(i32*)_value, _key);
-		case mirror::Type_int64:  return _serializer->serialize(*(i64*)_value, _key);
-		case mirror::Type_uint8:  return _serializer->serialize(*(u8*)_value, _key);
-		case mirror::Type_uint16: return _serializer->serialize(*(u16*)_value, _key);
-		case mirror::Type_uint32: return _serializer->serialize(*(u32*)_value, _key);
-		case mirror::Type_uint64: return _serializer->serialize(*(u64*)_value, _key);
-		case mirror::Type_float:  return _serializer->serialize(*(float*)_value, _key);
-		case mirror::Type_double: return _serializer->serialize(*(double*)_value, _key);
+		case mirror::TypeInfo_bool:   return _serializer->serialize(*(bool*)_value, _key);
+		case mirror::TypeInfo_char:   return _serializer->serialize(*(u8*)_value, _key);
+		case mirror::TypeInfo_int8:   return _serializer->serialize(*(i8*)_value, _key);
+		case mirror::TypeInfo_int16:  return _serializer->serialize(*(i16*)_value, _key);
+		case mirror::TypeInfo_int32:  return _serializer->serialize(*(i32*)_value, _key);
+		case mirror::TypeInfo_int64:  return _serializer->serialize(*(i64*)_value, _key);
+		case mirror::TypeInfo_uint8:  return _serializer->serialize(*(u8*)_value, _key);
+		case mirror::TypeInfo_uint16: return _serializer->serialize(*(u16*)_value, _key);
+		case mirror::TypeInfo_uint32: return _serializer->serialize(*(u32*)_value, _key);
+		case mirror::TypeInfo_uint64: return _serializer->serialize(*(u64*)_value, _key);
+		case mirror::TypeInfo_float:  return _serializer->serialize(*(float*)_value, _key);
+		case mirror::TypeInfo_double: return _serializer->serialize(*(double*)_value, _key);
 
-		case mirror::Type_Class:
+		case mirror::TypeInfo_Class:
 		{
 			const mirror::Class* clss = _type->asClass();
 			YAE_ASSERT(clss);
@@ -42,7 +42,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			const mirror::MetaData* serializeTypeMetaData = clss->getMetaDataSet().findMetaData("SerializeType");
 			if (serializeTypeMetaData != nullptr)
 			{
-				const mirror::TypeDesc* serializeType = mirror::FindTypeByName(serializeTypeMetaData->asString());
+				const mirror::Type* serializeType = mirror::FindTypeByName(serializeTypeMetaData->asString());
 				if (serializeType == nullptr)
 					return false;
 
@@ -76,46 +76,46 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			return serializeClassInstance(_serializer, _value, clss, _key, _flags);
 		}
 
-		case mirror::Type_Enum:
+		case mirror::TypeInfo_Enum:
 		{
 			const mirror::Enum* enm = _type->asEnum();
 			YAE_ASSERT(enm);
 
-			mirror::TypeDesc* subType = enm->getSubType();
+			mirror::Type* subType = enm->getSubType();
 			if (subType == nullptr)
 			{
-				subType = mirror::GetTypeDesc<int>();
+				subType = mirror::GetType<int>();
 			}
 
 			if (_flags & SF_ENUM_BY_NAME) // Serialize string instead of integer value
 			{
-				auto getValue = [](void* _value, const mirror::TypeDesc* _type)
+				auto getValue = [](void* _value, const mirror::Type* _type)
 				{
-					switch(_type->getType())
+					switch(_type->getTypeInfo())
 					{
-						case mirror::Type_int8:   return (i64)(*(i8*)_value);
-						case mirror::Type_int16:  return (i64)(*(i16*)_value);
-						case mirror::Type_int32:  return (i64)(*(i32*)_value);
-						case mirror::Type_int64:  return (i64)(*(i64*)_value);
-						case mirror::Type_uint8:  return (i64)(*(u8*)_value);
-						case mirror::Type_uint16: return (i64)(*(u16*)_value);
-						case mirror::Type_uint32: return (i64)(*(u32*)_value);
-						case mirror::Type_uint64: return (i64)(*(u64*)_value);
+						case mirror::TypeInfo_int8:   return (i64)(*(i8*)_value);
+						case mirror::TypeInfo_int16:  return (i64)(*(i16*)_value);
+						case mirror::TypeInfo_int32:  return (i64)(*(i32*)_value);
+						case mirror::TypeInfo_int64:  return (i64)(*(i64*)_value);
+						case mirror::TypeInfo_uint8:  return (i64)(*(u8*)_value);
+						case mirror::TypeInfo_uint16: return (i64)(*(u16*)_value);
+						case mirror::TypeInfo_uint32: return (i64)(*(u32*)_value);
+						case mirror::TypeInfo_uint64: return (i64)(*(u64*)_value);
 						default: return i64(0);
 					}
 				};
-				auto setValue = [](void* _value, const mirror::TypeDesc* _type, i64 _newValue)
+				auto setValue = [](void* _value, const mirror::Type* _type, i64 _newValue)
 				{
-					switch(_type->getType())
+					switch(_type->getTypeInfo())
 					{
-						case mirror::Type_int8:   (*(i8*)(_value)) = (i8)_newValue;
-						case mirror::Type_int16:  (*(i16*)(_value)) = (i16)_newValue;
-						case mirror::Type_int32:  (*(i32*)(_value)) = (i32)_newValue;
-						case mirror::Type_int64:  (*(i64*)(_value)) = (i64)_newValue;
-						case mirror::Type_uint8:  (*(u8*)(_value)) = (u8)_newValue;
-						case mirror::Type_uint16: (*(u16*)(_value)) = (u16)_newValue;
-						case mirror::Type_uint32: (*(u32*)(_value)) = (u32)_newValue;
-						case mirror::Type_uint64: (*(u64*)(_value)) = (u64)_newValue;
+						case mirror::TypeInfo_int8:   (*(i8*)(_value)) = (i8)_newValue;
+						case mirror::TypeInfo_int16:  (*(i16*)(_value)) = (i16)_newValue;
+						case mirror::TypeInfo_int32:  (*(i32*)(_value)) = (i32)_newValue;
+						case mirror::TypeInfo_int64:  (*(i64*)(_value)) = (i64)_newValue;
+						case mirror::TypeInfo_uint8:  (*(u8*)(_value)) = (u8)_newValue;
+						case mirror::TypeInfo_uint16: (*(u16*)(_value)) = (u16)_newValue;
+						case mirror::TypeInfo_uint32: (*(u32*)(_value)) = (u32)_newValue;
+						case mirror::TypeInfo_uint64: (*(u64*)(_value)) = (u64)_newValue;
 						default: return;
 					}
 				};
@@ -162,7 +162,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 		}
 		break;
 
-		case mirror::Type_FixedSizeArray:
+		case mirror::TypeInfo_FixedSizeArray:
 		{
 			const mirror::FixedSizeArray* fixedSizeArrayType = _type->asFixedSizeArray();
 			YAE_ASSERT(fixedSizeArrayType != nullptr);
@@ -170,7 +170,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			if (!_serializer->beginSerializeArray(arraySize, _key))
 				return _flags & SF_IGNORE_MISSING_KEYS;
 
-			const mirror::TypeDesc* subType = fixedSizeArrayType->getSubType();
+			const mirror::Type* subType = fixedSizeArrayType->getSubType();
 			for (u32 i = 0; i < arraySize; ++i)
 			{
 				void* valuePointer = (void*)(size_t(_value) + (i * subType->getSize()));
@@ -184,7 +184,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 		}
 		break;
 
-		case mirror::Type_Custom:
+		case mirror::TypeInfo_Custom:
 		{
 			if (strcmp(_type->getCustomTypeName(), "Array") == 0)
 			{
@@ -195,7 +195,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 					return _flags & SF_IGNORE_MISSING_KEYS;
 				arrayType->setSize(_value, arraySize);
 
-				const mirror::TypeDesc* subType = arrayType->getSubType();
+				const mirror::Type* subType = arrayType->getSubType();
 				for (u32 i = 0; i < arraySize; ++i)
 				{
 					void* valuePointer = (void*)(size_t(arrayType->getData(_value)) + (i * subType->getSize()));

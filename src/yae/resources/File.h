@@ -9,10 +9,8 @@ namespace yae {
 
 class YAE_API File : public Resource
 {
-	MIRROR_CLASS(File)
-	(
-		MIRROR_PARENT(Resource)
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	File();

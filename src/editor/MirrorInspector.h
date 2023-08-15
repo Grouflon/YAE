@@ -10,16 +10,9 @@ namespace editor {
 class MirrorInspector
 {
 public:
-
-	void update();
+	bool update();
 
 	bool opened = false;
-//private:
-
-	MIRROR_CLASS_NOVIRTUAL(MirrorInspector)
-	(
-		MIRROR_MEMBER(opened)();
-	);
 };
 
 } // namespace editor

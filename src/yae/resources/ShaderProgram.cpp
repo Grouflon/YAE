@@ -4,9 +4,14 @@
 #include <yae/rendering/Renderer.h>
 #include <yae/ResourceManager.h>
 
-namespace yae {
+MIRROR_CLASS(yae::ShaderProgram)
+(
+	MIRROR_PARENT(yae::Resource);
 
-MIRROR_CLASS_DEFINITION(ShaderProgram);
+	MIRROR_MEMBER(m_shaderStages);
+);
+
+namespace yae {
 
 ShaderProgram::ShaderProgram()
 {
@@ -23,10 +28,13 @@ void ShaderProgram::setShaderStages(Shader** _shaders, u32 _shaderCount)
 	YAE_ASSERT(m_shaderProgramHandle == 0);
 
 	m_shaderStages.resize(_shaderCount);
-	memcpy(m_shaderStages.data(), _shaders, sizeof(*_shaders) * _shaderCount);
+	for (u32 i = 0; i < _shaderCount; ++i)
+	{
+		m_shaderStages[i] = _shaders[i];
+	}
 }
 
-const DataArray<Shader*>& ShaderProgram::getShaderStages()
+const DataArray<ResourcePtr<Shader>>& ShaderProgram::getShaderStages()
 {
 	return m_shaderStages;
 }
@@ -54,8 +62,9 @@ void ShaderProgram::_doLoad()
 
 	// Load shaders
 	bool allShadersLoaded = true;
-	for(Shader* shader : m_shaderStages)
+	for(ResourcePtr<Shader> shaderPtr : m_shaderStages)
 	{
+		Shader* shader = shaderPtr.get();
 		shader->load();
 		resourceManager().addDependency(shader, this);
 		allShadersLoaded = allShadersLoaded && shader->isLoaded();
@@ -69,9 +78,11 @@ void ShaderProgram::_doLoad()
 
 	DataArray<ShaderHandle> handles(&scratchAllocator());
 	handles.reserve(m_shaderStages.size());
-	for(Shader* shader : m_shaderStages)
+	for(ResourcePtr<Shader> shaderPtr : m_shaderStages)
 	{
+		Shader* shader = shaderPtr.get();
 		handles.push_back(shader->getShaderHandle());
+		m_loadedShaders.push_back(shader);
 	}
 
 	if (!renderer().createShaderProgram(handles.data(), handles.size(), m_shaderProgramHandle))
@@ -89,11 +100,12 @@ void ShaderProgram::_doUnload()
 	m_shaderProgramHandle = 0;
 
 	// Release shaders
-	for(Shader* shader : m_shaderStages)
+	for(Shader* shader : m_loadedShaders)
 	{
 		resourceManager().removeDependency(shader, this);
 		shader->unload();
 	}
+	m_loadedShaders.clear();
 }
 
 } // namespace yae

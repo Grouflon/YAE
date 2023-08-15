@@ -9,10 +9,8 @@ namespace yae {
 
 class YAE_API Mesh : public Resource
 {
-	MIRROR_CLASS(Mesh)
-	(
-		MIRROR_PARENT(Resource)
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	Mesh();

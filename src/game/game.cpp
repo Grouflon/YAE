@@ -158,15 +158,7 @@ public:
 	NodeID node2;
 	NodeID node3;
 	NodeID node4;
-
-	MIRROR_CLASS_NOVIRTUAL(GameInstance)
-	(
-		MIRROR_MEMBER(pitch)();
-		MIRROR_MEMBER(yaw)();
-		MIRROR_MEMBER(cameraPosition)();
-	);
 };
-MIRROR_CLASS_DEFINITION(GameInstance);
 
 void onModuleLoaded(yae::Program* _program, yae::Module* _module)
 {
@@ -184,17 +176,11 @@ void shutdownModule(yae::Program* _program, yae::Module* _module)
 {
 }
 
-void beforeInitApplication(Application* _app)
+void initApplication(yae::Application* _application, const char** _args, int _argCount)
 {
 	GameInstance* gameInstance = defaultAllocator().create<GameInstance>();
 	YAE_ASSERT(gameInstance != nullptr);
 	app().setUserData("game", gameInstance);
-}
-
-void afterInitApplication(Application* _app)
-{
-	GameInstance* gameInstance = (GameInstance*)_app->getUserData("game");
-	YAE_ASSERT(gameInstance != nullptr);
 
 	//app().setCameraPosition(Vector3(0.f, 0.f, 3.f));
 
@@ -265,7 +251,7 @@ void afterInitApplication(Application* _app)
 	defaultScene->addCamera(gameCamera);
 }
 
-void beforeShutdownApplication(Application* _app)
+void shutdownApplication(Application* _app)
 {
 	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 
@@ -282,11 +268,7 @@ void beforeShutdownApplication(Application* _app)
 	SpatialSystem* spatialSystemPtr = (SpatialSystem*)(app().getUserData("spatialSystem"));
 	defaultAllocator().destroy(spatialSystemPtr);
 	app().setUserData("spatialSystem", nullptr);
-}
 
-void afterShutdownApplication(Application* _app)
-{
-	GameInstance* gameInstance = (GameInstance*)app().getUserData("game");
 	defaultAllocator().destroy(gameInstance);
 	app().setUserData("game", nullptr);
 }
@@ -540,5 +522,18 @@ void updateApplication(Application* _app, float _dt)
 bool onSerializeApplicationSettings(Application* _application, Serializer* _serializer)
 {
 	GameInstance* gameInstance = (GameInstance*)_application->getUserData("game");
-	return serialization::serializeMirrorType(_serializer, *gameInstance, "game");
+	bool result = serialization::serializeMirrorType(_serializer, *gameInstance, "game");
+
+	RenderCamera* gameCamera = renderer().getCamera("game");
+	gameCamera->position = gameInstance->cameraPosition;
+	gameCamera->rotation = Quaternion::FromEuler(D2R * gameInstance->pitch, D2R * gameInstance->yaw, 0.f);
+
+	return result;
 }
+
+MIRROR_CLASS(GameInstance)
+(
+	MIRROR_MEMBER(pitch);
+	MIRROR_MEMBER(yaw);
+	MIRROR_MEMBER(cameraPosition);
+);

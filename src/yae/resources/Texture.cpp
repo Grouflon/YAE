@@ -4,9 +4,14 @@
 
 #include <stb/stb_image.h>
 
-namespace yae {
+MIRROR_CLASS(yae::Texture)
+(
+	MIRROR_PARENT(yae::Resource)
 
-MIRROR_CLASS_DEFINITION(Texture);
+	MIRROR_MEMBER(m_parameters);
+);
+
+namespace yae {
 
 Texture::Texture()
 {

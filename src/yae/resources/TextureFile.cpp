@@ -6,9 +6,14 @@
 
 #include <stb/stb_image.h>
 
-namespace yae {
+MIRROR_CLASS(yae::TextureFile)
+(
+	MIRROR_PARENT(yae::Texture);
 
-MIRROR_CLASS_DEFINITION(TextureFile);
+	MIRROR_MEMBER(m_path);
+);
+
+namespace yae {
 
 TextureFile::TextureFile()
 {

@@ -57,12 +57,14 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 
 	YAE_VERIFY(string::safeCopyToBuffer(_resource->m_name, _name, countof(_resource->m_name)) < countof(_resource->m_name));
 
+	// Register by name
 	{
 		StringHash nameHash = StringHash(_resource->m_name);	
 		YAE_ASSERT(m_resourcesByName.get(nameHash) == nullptr);
 		m_resourcesByName.set(nameHash, _resource);	
 	}
 	
+	// Register by id
 	{
 		if (_resource->getID() == ResourceID::INVALID_ID)
 		{
@@ -83,7 +85,17 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 		YAE_ASSERT(m_resourcesByID.get(_resource->getID()) == nullptr);
 		m_resourcesByID.set(_resource->getID(), _resource);
 	}
-	
+
+	// Register by type
+	{
+		const mirror::Class* clss = _resource->getClass();
+		while (clss != nullptr)
+		{
+			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.getOrInsert(clss, DataArray<Resource*>());
+			resourceArrayPtr->push_back(_resource);
+			clss = clss->getParent();
+		} 
+	}
 
 	m_resources.push_back(_resource);
 	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"(%s)...", _resource->m_name, _resource->getClass()->getName());
@@ -93,18 +105,35 @@ void ResourceManager::unregisterResource(Resource* _resource)
 {
 	YAE_ASSERT(_resource != nullptr);
 
+	// unregister
 	{
 		auto it = std::find(m_resources.begin(), m_resources.end(), _resource);
 		YAE_ASSERT(it != m_resources.end());
 		m_resources.erase(it);
 	}
 
+	// unregister by type
+	{
+		const mirror::Class* clss = _resource->getClass();
+		while (clss != nullptr)
+		{
+			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.get(clss);
+			YAE_ASSERT(resourceArrayPtr != nullptr);
+			Resource** resourcePtr = resourceArrayPtr->find(_resource);
+			YAE_ASSERT(resourcePtr != nullptr);
+			resourceArrayPtr->erase(resourcePtr);
+			clss = clss->getParent();
+		}
+	}
+
+	// unregister by name
 	{
 		StringHash nameHash = StringHash(_resource->m_name);	
 		YAE_ASSERT(m_resourcesByName.get(nameHash) != nullptr);
 		m_resourcesByName.remove(nameHash);
 	}
 
+	// unregister by id
 	{
 		YAE_ASSERT(m_resourcesByID.get(_resource->getID()) != nullptr);
 		m_resourcesByID.remove(_resource->getID());
@@ -154,9 +183,16 @@ void ResourceManager::flushResources()
 	toDeleteResources.clear();
 }
 
-const DataArray<Resource*> ResourceManager::getResources() const
+const DataArray<Resource*>& ResourceManager::getResources() const
 {
 	return m_resources;
+}
+
+const DataArray<Resource*>& ResourceManager::getResourcesByType(const mirror::Class* _class) const
+{
+	YAE_ASSERT(_class != nullptr);
+	YAE_ASSERT(_class->isChildOf(mirror::GetClass<Resource>()));
+	return *m_resourcesByType.get(_class);
 }
 
 void ResourceManager::flagResourceForReload(Resource* _resource)
@@ -238,7 +274,7 @@ void ResourceManager::removeDependency(Resource* _dependencyResource, Resource* 
 	DataArray<Resource*>* dependentResourcesPtr = m_dependencies.get(_dependencyResource);
 	YAE_ASSERT(dependentResourcesPtr != nullptr);
 	auto it = dependentResourcesPtr->find(_dependentResource);
-	YAE_ASSERT(it != dependentResourcesPtr->end());
+	YAE_ASSERT(it != nullptr);
 	dependentResourcesPtr->erase(it);
 }
 

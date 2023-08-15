@@ -30,7 +30,7 @@ public:
 	void shutdown();
 	void reload();
 
-	void update();
+	bool update();
 
 	bool opened = false;
 //private:
@@ -56,11 +56,6 @@ public:
 		void* userData;
 	};
 	DataArray<ResourceInspector> m_inspectors;
-
-	MIRROR_CLASS_NOVIRTUAL(ResourceEditor)
-	(
-		MIRROR_MEMBER(opened)();
-	);
 };
 
 } // namespace editor

@@ -26,25 +26,22 @@
 
 #define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)
 
-namespace yae {
-
 struct ApplicationSettings
 {
 	i32 windowWidth = -1;
 	i32 windowHeight = -1;
 	i32 windowX = -1;
 	i32 windowY = -1;
-
-	MIRROR_CLASS_NOVIRTUAL(ApplicationSettings)
-	(
-		MIRROR_MEMBER(windowWidth)();
-		MIRROR_MEMBER(windowHeight)();
-		MIRROR_MEMBER(windowX)();
-		MIRROR_MEMBER(windowY)();
-	);
 };
+MIRROR_CLASS(ApplicationSettings)
+(
+	MIRROR_MEMBER(windowWidth);
+	MIRROR_MEMBER(windowHeight);
+	MIRROR_MEMBER(windowX);
+	MIRROR_MEMBER(windowY);
+);
 
-MIRROR_CLASS_DEFINITION(ApplicationSettings);
+namespace yae {
 
 Application::Application(const char* _name, u32 _width, u32 _height)
 	: m_name(_name)
@@ -59,7 +56,13 @@ Application::~Application()
 
 }
 
-void Application::init(char** _args, int _argCount)
+void Application::addModule(Module* _module)
+{
+	YAE_ASSERT(m_modules.find(_module) == nullptr);
+	m_modules.push_back(_module);
+}
+
+void Application::init(const char** _args, int _argCount)
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -113,6 +116,14 @@ void Application::init(char** _args, int _argCount)
 
 	m_clock.reset();
 
+	for (Module* module : m_modules)
+	{
+		if (module->initApplicationFunction != nullptr)
+		{
+			module->initApplicationFunction(this, _args, _argCount);
+		}
+	}
+
 	loadSettings();
 
 	ImGui::SetCurrentContext(nullptr);
@@ -121,6 +132,17 @@ void Application::init(char** _args, int _argCount)
 void Application::shutdown()
 {
 	YAE_CAPTURE_FUNCTION();
+
+
+	for (int i = m_modules.size() - 1; i >= 0; --i)
+	{
+		// @NOTE(remi): shutdown modules in reverse order to preserve symetry
+		Module* module = m_modules[i];
+		if (module->shutdownApplicationFunction != nullptr)
+		{
+			module->shutdownApplicationFunction(this);
+		}
+	}
 
 	ImGui::SetCurrentContext(m_imguiContext);
 	renderer().waitIdle();
@@ -217,7 +239,7 @@ bool Application::doFrame()
 		ImGui::NewFrame();
 	}
 
-	for (Module* module : program().getModules())
+	for (Module* module : m_modules)
 	{
 		if (module->updateApplicationFunction != nullptr)
 		{
@@ -298,12 +320,12 @@ static String getSettingsFilePath(const Application* _app)
 	return path;
 }
 
-static bool serializeSettings(Serializer* _serializer, ApplicationSettings* _settings)
+static bool serializeSettings(Serializer* _serializer, const DataArray<Module*>& _modules, ApplicationSettings* _settings)
 {
 	YAE_VERIFY(_serializer->beginSerializeObject());
 
 	serialization::serializeMirrorType(_serializer, *_settings, "application");
-	for (Module* module : program().getModules())
+	for (Module* module : _modules)
 	{
 		if (module->onSerializeApplicationSettingsFunction != nullptr)
 		{
@@ -335,7 +357,7 @@ void Application::loadSettings()
 
 	ApplicationSettings settings;
 	serializer.beginRead();
-	serializeSettings(&serializer, &settings);
+	serializeSettings(&serializer, m_modules, &settings);
 	serializer.endRead();
 
 	if (settings.windowWidth > 0 && settings.windowHeight > 0)
@@ -361,7 +383,7 @@ void Application::saveSettings()
 
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
-	serializeSettings(&serializer, &settings);
+	serializeSettings(&serializer, m_modules, &settings);
 	serializer.endWrite();
 
 	String filePath = getSettingsFilePath(this);

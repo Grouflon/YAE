@@ -3,9 +3,12 @@
 #include <yae/filesystem.h>
 #include <yae/string.h>
 
-namespace yae {
+MIRROR_CLASS(yae::File)
+(
+	MIRROR_PARENT(yae::Resource)
+);
 
-MIRROR_CLASS_DEFINITION(File);
+namespace yae {
 
 File::File()
 {

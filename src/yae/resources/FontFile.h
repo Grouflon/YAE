@@ -14,10 +14,8 @@ class File;
 
 class YAE_API FontFile : public Resource
 {
-	MIRROR_CLASS(FontFile)
-	(
-		MIRROR_PARENT(Resource)
-	);
+	MIRROR_GETCLASS_VIRTUAL();
+	MIRROR_FRIEND();
 
 public:
 	FontFile();

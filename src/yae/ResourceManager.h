@@ -6,6 +6,10 @@
 
 #include <mutex>
 
+namespace mirror {
+class Class;
+}
+
 namespace yae {
 
 class Resource;
@@ -27,12 +31,15 @@ public:
 	Resource* findResource(ResourceID _id) const;
 	template <typename T> T* findResource(const char* _name) const;
 
-	const DataArray<Resource*> getResources() const;
+	const DataArray<Resource*>& getResources() const;
+	const DataArray<Resource*>& getResourcesByType(const mirror::Class* _class) const;
+	template <typename T> const DataArray<Resource*>& getResourcesByType() const;
 
 	void flagResourceForReload(Resource* _resource);
 	void startReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void stopReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void reloadChangedResources();
+	// TODO: The naming of arguments here is terrible, I need to find something clearer
 	void addDependency(Resource* _dependencyResource, Resource* _dependentResource);
 	void removeDependency(Resource* _dependencyResource, Resource* _dependentResource);
 
@@ -42,6 +49,7 @@ public:
 	DataArray<Resource*> m_resources;
 	HashMap<StringHash, Resource*> m_resourcesByName;
 	HashMap<ResourceID, Resource*> m_resourcesByID;
+	mutable HashMap<const mirror::Class*, DataArray<Resource*>> m_resourcesByType;
 
 	HashMap<StringHash, void*> m_fileWatchers;
 
