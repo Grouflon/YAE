@@ -21,6 +21,7 @@ public:
 	~Program();
 
 	Module* registerModule(const char* _moduleName);
+	Module* getModule(const char* _moduleName) const;
 
 	void init(const char** _args, int _argCount);
 	void shutdown();

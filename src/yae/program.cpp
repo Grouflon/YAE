@@ -22,6 +22,7 @@
 #include <imgui/imgui.h>
 #include <yae/yae_sdl.h>
 
+#include <cstring>
 
 // anonymous functions
 
@@ -109,6 +110,18 @@ Module* Program::registerModule(const char* _moduleName)
 	m_modules.push_back(module);
 
 	return module;
+}
+
+Module* Program::getModule(const char* _moduleName) const
+{
+	for (Module* module : m_modules)
+	{
+		if (strcmp(module->name.c_str(), _moduleName) == 0)
+		{
+			return module;
+		}
+	}
+	return nullptr;
 }
 
 void Program::init(const char** _args, int _argCount)

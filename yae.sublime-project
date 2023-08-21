@@ -10,16 +10,16 @@
 				".vs",
 				"lib",
 				"bin"
-			]
+			],
 		},
 		{
 			"name": "VulkanSDK_162.1",
-			"path": "C:/VulkanSDK/1.2.162.1/Include"
+			"path": "C:\\VulkanSDK\\1.2.162.1\\Include",
 		},
 		{
 			"name": "VulkanSDK_189.0",
-			"path": "C:/VulkanSDK/1.2.189.0/Include"
-		}
+			"path": "C:\\VulkanSDK\\1.2.189.0\\Include",
+		},
 	],
 	"build_systems":
 	[
@@ -53,50 +53,50 @@
 				},*/
 				{
 					"name" : "clean Win64",
-					"shell_cmd" : "rake clean PLATFORM=Win64 CONFIG=Debug && rake clean PLATFORM=Win64 CONFIG=DebugOptimized && rake clean PLATFORM=Win64 CONFIG=Release"
+					"shell_cmd" : "rake clean PLATFORM=Win64 CONFIG=Debug && rake clean PLATFORM=Win64 CONFIG=DebugOptimized && rake clean PLATFORM=Win64 CONFIG=Release",
 				},
 
 				{
 					"name" : "compile Win64_Debug",
-					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Debug"
+					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Debug",
 				},
 				{
 					"name" : "compile Win64_DebugOptimized",
-					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=DebugOptimized"
+					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=DebugOptimized",
 				},
 				{
 					"name" : "compile Win64_Release",
-					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Release"
+					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Release",
 				},
 				{
 					"name" : "clean Web_Debug",
-					"shell_cmd" : "rake clean PLATFORM=Web CONFIG=Debug"
+					"shell_cmd" : "rake clean PLATFORM=Web CONFIG=Debug",
 				},
 				{
 					"name" : "compile Web_Debug",
-					"shell_cmd" : "rake main:build PLATFORM=Web CONFIG=Debug"
+					"shell_cmd" : "rake main:build PLATFORM=Web CONFIG=Debug",
 				},
 				{
 					"name": "debug",
-					"shell_cmd": "start remedybg session.rdbg"
+					"shell_cmd": "start remedybg session.rdbg",
 				},
 				{
 					"name": "debug Web",
-					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/main.html"
+					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/main.html",
 				},
 				{
 					"name": "debug visual Debug",
-					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe\""
+					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe\"",
 				},
 				{
 					"name": "debug visual DebugOptimized",
-					"shell_cmd": "devenv /debugexe \"bin/Win64_DebugOptimized/main.exe\""
+					"shell_cmd": "devenv /debugexe \"bin/Win64_DebugOptimized/main.exe\"",
 				},
 				{
 					"name": "debug visual Release",
-					"shell_cmd": "devenv /debugexe \"bin/Win64_Release/main.exe\""
+					"shell_cmd": "devenv /debugexe \"bin/Win64_Release/main.exe\"",
 				}
-			]
+			],
 		},
-	]
+	],
 }
