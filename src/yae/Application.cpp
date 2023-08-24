@@ -1,18 +1,20 @@
 #include "Application.h"
 
-#include <yae/platform.h>
-#include <yae/program.h>
-#include <yae/Module.h>
-#include <yae/time.h>
-#include <yae/memory.h>
-#include <yae/string.h>
+#include <core/platform.h>
+#include <core/program.h>
+#include <core/Module.h>
+#include <core/time.h>
+#include <core/memory.h>
+#include <core/string.h>
+#include <core/filesystem.h>
+#include <core/serialization/serialization.h>
+#include <core/serialization/JsonSerializer.h>
+
+#include <yae/ApplicationRegistry.h>
 #include <yae/InputSystem.h>
 #include <yae/math_3d.h>
 #include <yae/resource.h>
 #include <yae/resources/File.h>
-#include <yae/filesystem.h>
-#include <yae/serialization/serialization.h>
-#include <yae/serialization/JsonSerializer.h>
 
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
@@ -22,24 +24,9 @@
 #endif
 
 #include <imgui/backends/imgui_impl_sdl.h>
-#include <yae/yae_sdl.h>
+#include <core/yae_sdl.h>
 
 #define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)
-
-struct ApplicationSettings
-{
-	i32 windowWidth = -1;
-	i32 windowHeight = -1;
-	i32 windowX = -1;
-	i32 windowY = -1;
-};
-MIRROR_CLASS(ApplicationSettings)
-(
-	MIRROR_MEMBER(windowWidth);
-	MIRROR_MEMBER(windowHeight);
-	MIRROR_MEMBER(windowX);
-	MIRROR_MEMBER(windowY);
-);
 
 namespace yae {
 
@@ -56,13 +43,22 @@ Application::~Application()
 
 }
 
-void Application::addModule(Module* _module)
+void Application::start()
 {
-	YAE_ASSERT(m_modules.find(_module) == nullptr);
-	m_modules.push_back(_module);
+	ApplicationRegistry::StartApplication(this);
 }
 
-void Application::init(const char** _args, int _argCount)
+void Application::stop()
+{
+	ApplicationRegistry::StopApplication(this);
+}
+
+void Application::requestStop()
+{
+	m_isStopRequested = true;
+}
+
+void Application::_start()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -116,33 +112,20 @@ void Application::init(const char** _args, int _argCount)
 
 	m_clock.reset();
 
-	for (Module* module : m_modules)
-	{
-		if (module->initApplicationFunction != nullptr)
-		{
-			module->initApplicationFunction(this, _args, _argCount);
-		}
-	}
-
 	loadSettings();
 
+	_onStart();
+
 	ImGui::SetCurrentContext(nullptr);
+	m_isRunning = true;
 }
 
-void Application::shutdown()
+void Application::_stop()
 {
 	YAE_CAPTURE_FUNCTION();
 
-
-	for (int i = m_modules.size() - 1; i >= 0; --i)
-	{
-		// @NOTE(remi): shutdown modules in reverse order to preserve symetry
-		Module* module = m_modules[i];
-		if (module->shutdownApplicationFunction != nullptr)
-		{
-			module->shutdownApplicationFunction(this);
-		}
-	}
+	m_isRunning = false;
+	_onStop();
 
 	ImGui::SetCurrentContext(m_imguiContext);
 	renderer().waitIdle();
@@ -169,12 +152,12 @@ void Application::shutdown()
 	m_resourceManager = nullptr;
 }
 
-void Application::pushEvent(const SDL_Event& _event)
+void Application::_pushEvent(const SDL_Event& _event)
 {
 	m_events.push_back(_event);
 }
 
-bool Application::doFrame()
+void Application::_doFrame()
 {
 	YAE_CAPTURE_FUNCTION();
 
@@ -197,7 +180,7 @@ bool Application::doFrame()
 		    	{
 		    		case SDL_QUIT:
 		    		{
-		    			requestExit();
+		    			requestStop();
 		    		}
 		    		break;
 
@@ -239,13 +222,7 @@ bool Application::doFrame()
 		ImGui::NewFrame();
 	}
 
-	for (Module* module : m_modules)
-	{
-		if (module->updateApplicationFunction != nullptr)
-		{
-			module->updateApplicationFunction(this, m_dt);
-		}
-	}
+	_onUpdate(m_dt);
 
     // Rendering
 	ImGui::Render();
@@ -261,13 +238,6 @@ bool Application::doFrame()
 
 	// Reload changed resources
 	m_resourceManager->reloadChangedResources();
-
-	return isRunning();
-}
-
-void Application::requestExit()
-{
-	m_isRunning = false;
 }
 
 bool Application::isRunning() const
@@ -320,23 +290,6 @@ static String getSettingsFilePath(const Application* _app)
 	return path;
 }
 
-static bool serializeSettings(Serializer* _serializer, const DataArray<Module*>& _modules, ApplicationSettings* _settings)
-{
-	YAE_VERIFY(_serializer->beginSerializeObject());
-
-	serialization::serializeMirrorType(_serializer, *_settings, "application");
-	for (Module* module : _modules)
-	{
-		if (module->onSerializeApplicationSettingsFunction != nullptr)
-		{
-			YAE_VERIFY(module->onSerializeApplicationSettingsFunction(&app(), _serializer));
-		}
-	}
-
-	YAE_VERIFY(_serializer->endSerializeObject());
-	return true;
-}
-
 void Application::loadSettings()
 {
 #if YAE_USE_SETTINGS_FILE
@@ -354,21 +307,14 @@ void Application::loadSettings()
 		YAE_ERRORF_CAT("application", "Failed to parse json settings file \"%s\"", filePath.c_str());
 		return;	
 	}
-
-	ApplicationSettings settings;
 	serializer.beginRead();
-	serializeSettings(&serializer, m_modules, &settings);
+	YAE_VERIFY(serializer.beginSerializeObject());
+	if (!_onSerialize(&serializer))
+	{
+		YAE_ERRORF_CAT("application", "Failed to serialize application.");
+	}
+	YAE_VERIFY(serializer.endSerializeObject());
 	serializer.endRead();
-
-	if (settings.windowWidth > 0 && settings.windowHeight > 0)
-	{
-		setWindowSize(settings.windowWidth, settings.windowHeight);
-	}
-	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
-	if (settings.windowX != -1 && settings.windowY != -1)
-	{
-		setWindowPosition(settings.windowX, settings.windowY);
-	}
 
 	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
 #endif
@@ -377,13 +323,14 @@ void Application::loadSettings()
 void Application::saveSettings()
 {
 #if YAE_USE_SETTINGS_FILE
-	ApplicationSettings settings;
-	getWindowSize(&settings.windowWidth, &settings.windowHeight);
-	getWindowPosition(&settings.windowX, &settings.windowY);
-
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
-	serializeSettings(&serializer, m_modules, &settings);
+	YAE_VERIFY(serializer.beginSerializeObject());
+	if (!_onSerialize(&serializer))
+	{
+		YAE_ERRORF_CAT("application", "Failed to serialize application.");
+	}
+	YAE_VERIFY(serializer.endSerializeObject());
 	serializer.endWrite();
 
 	String filePath = getSettingsFilePath(this);
@@ -463,9 +410,61 @@ Vector2 Application::getWindowPosition() const
 	return Vector2(x, y);
 }
 
+void Application::_onStart()
+{
+
+}
+
+void Application::_onStop()
+{
+
+}
+
+void Application::_onUpdate(float _dt)
+{
+
+}
+
+struct WindowSettings
+{
+	i32 windowWidth = -1;
+	i32 windowHeight = -1;
+	i32 windowX = -1;
+	i32 windowY = -1;
+};
+
+bool Application::_onSerialize(Serializer* _serializer)
+{
+	WindowSettings settings;
+	getWindowSize(&settings.windowWidth, &settings.windowHeight);
+	getWindowPosition(&settings.windowX, &settings.windowY);
+
+	if (!serialization::serializeMirrorType(_serializer, settings, "application"))
+		return false;
+
+	if (settings.windowWidth > 0 && settings.windowHeight > 0)
+	{
+		setWindowSize(settings.windowWidth, settings.windowHeight);
+	}
+	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
+	if (settings.windowX != -1 && settings.windowY != -1)
+	{
+		setWindowPosition(settings.windowX, settings.windowY);
+	}
+	return true;
+}
+
 void Application::_requestSaveSettings()
 {
 	m_saveSettingsRequested = true;
 }
 
 } // namespace yae
+
+MIRROR_CLASS(yae::WindowSettings)
+(
+	MIRROR_MEMBER(windowWidth);
+	MIRROR_MEMBER(windowHeight);
+	MIRROR_MEMBER(windowX);
+	MIRROR_MEMBER(windowY);
+);

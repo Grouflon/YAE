@@ -1,11 +1,12 @@
 #include "ResourceManager.h"
 
-#include <yae/string.h>
-#include <yae/resource.h>
+#include <core/string.h>
+#include <core/time.h>
+#include <core/hash.h>
+#include <core/filesystem.h>
+
 #include <yae/resources/Resource.h>
-#include <yae/time.h>
-#include <yae/hash.h>
-#include <yae/filesystem.h>
+#include <yae/resource.h>
 
 #define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
 

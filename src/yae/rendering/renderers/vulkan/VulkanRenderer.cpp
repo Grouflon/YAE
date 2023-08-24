@@ -5,7 +5,7 @@
 #include "im3d_impl_vulkan.h"
 #include <yae/resources/ShaderResource.h>
 #include <yae/resources/TextureResource.h>
-#include <yae/math.h>
+#include <core/math.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <im3d.h>

@@ -1,5 +1,41 @@
 namespace yae {
 
+// CONSTANTS
+inline Vector2 Vector2::ZERO() { return Vector2(0.f); }
+inline Vector2 Vector2::ONE() { return Vector2(1.f); }
+inline Vector2 Vector2::RIGHT() { return Vector2(1.f, 0.f); }
+inline Vector2 Vector2::UP() { return Vector2(0.f, 1.f); }
+
+inline Vector3 Vector3::ZERO() { return Vector3(0.f); }
+inline Vector3 Vector3::ONE() { return Vector3(1.f); }
+inline Vector3 Vector3::RIGHT() { return Vector3(1.f, 0.f, 0.f); }
+inline Vector3 Vector3::UP() { return Vector3(0.f, 1.f, 0.f); }
+inline Vector3 Vector3::FORWARD() { return Vector3(0.f, 0.f, 1.f); }
+
+inline Vector4 Vector4::ZERO() { return Vector4(0.f); }
+inline Vector4 Vector4::ONE() { return Vector4(1.f); }
+
+inline Quaternion Quaternion::IDENTITY() { return Quaternion(0.f, 0.f, 0.f, 1.f); }
+
+inline Matrix3 Matrix3::ZERO() { return Matrix3(0.f); }
+inline Matrix3 Matrix3::IDENTITY() { return Matrix3(
+	1.f, 0.f, 0.f,
+	0.f, 1.f, 0.f,
+	0.f, 0.f, 1.f
+);
+}
+
+inline Matrix4 Matrix4::ZERO() { return Matrix4(0.f); }
+inline Matrix4 Matrix4::IDENTITY() { return Matrix4(
+	1.f, 0.f, 0.f, 0.f,
+	0.f, 1.f, 0.f ,0.f,
+	0.f, 0.f, 1.f ,0.f,
+	0.f, 0.f, 0.f ,1.f
+);
+}
+
+inline Transform Transform::IDENTITY() { return Transform(Vector3::ZERO(), Quaternion::IDENTITY(), Vector3::ONE()); }
+
 // - Vector2 -
 // Ctors
 inline Vector2::Vector2() {}

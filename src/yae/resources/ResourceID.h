@@ -7,7 +7,7 @@ namespace yae
 
 struct YAE_API ResourceID
 {
-	static const ResourceID INVALID_ID;
+	static const u32 INVALID_ID = -1;
 
 	u32 id;
 

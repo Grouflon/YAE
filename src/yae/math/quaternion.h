@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/math.h>
+#include <core/math.h>
 
 namespace yae {
 namespace math {

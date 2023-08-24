@@ -1,6 +1,6 @@
 #include <yae/types.h>
 
-#include <yae/memory.h>
+#include <core/memory.h>
 
 void* yae_stb_malloc(size_t _sz)
 {

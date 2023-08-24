@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/math_types.h>
-#include <yae/memory.h>
+#include <core/memory.h>
 
 // User-defined assertion handler (default is cassert assert()).
 #define IM3D_ASSERT(e) YAE_ASSERT(e)

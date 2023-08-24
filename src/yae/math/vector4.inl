@@ -1,4 +1,4 @@
-#include <yae/math.h>
+#include <core/math.h>
 
 #include <cmath>
 

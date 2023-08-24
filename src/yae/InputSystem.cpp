@@ -1,8 +1,8 @@
 #include "InputSystem.h"
 
-#include <yae/math.h>
+#include <core/math.h>
 
-#include <yae/yae_sdl.h>
+#include <core/yae_sdl.h>
 
 namespace yae {
 
@@ -41,7 +41,7 @@ void InputSystem::beginFrame()
 	}
 	m_mouseXAxis.delta = 0.f;
 	m_mouseYAxis.delta = 0.f;
-	m_mouseScrollDelta = Vector2::ZERO;
+	m_mouseScrollDelta = Vector2::ZERO();
 }
 
 void InputSystem::processEvent(const SDL_Event& _event)

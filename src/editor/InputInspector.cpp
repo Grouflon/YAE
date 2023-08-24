@@ -1,8 +1,9 @@
 #include "InputInspector.h"
 
+#include <core/containers/Array.h>
+#include <core/string.h>
+
 #include <yae/InputSystem.h>
-#include <yae/containers/Array.h>
-#include <yae/string.h>
 
 #include <imgui/imgui.h>
 

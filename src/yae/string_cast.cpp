@@ -1,6 +1,6 @@
 #include "string_cast.h"
 
-#include <yae/string.h>
+#include <core/string.h>
 
 namespace yae {
 

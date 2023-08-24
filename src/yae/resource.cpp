@@ -1,9 +1,9 @@
 #include "resource.h"
 
-#include <yae/filesystem.h>
+#include <core/filesystem.h>
 #include <yae/resources/Resource.h>
-#include <yae/serialization/JsonSerializer.h>
-#include <yae/serialization/serialization.h>
+#include <core/serialization/JsonSerializer.h>
+#include <core/serialization/serialization.h>
 
 #include <mirror.h>
 

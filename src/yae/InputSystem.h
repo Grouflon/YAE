@@ -83,7 +83,7 @@ public:
 	KeyState m_mouseButtonStates[MOUSEBUTTON_COUNT];
 	AxisState m_mouseXAxis;
 	AxisState m_mouseYAxis;
-	Vector2 m_mouseScrollDelta = Vector2::ZERO;
+	Vector2 m_mouseScrollDelta = Vector2::ZERO();
 
 	CursorMode m_cursorMode = CursorMode::NORMAL;
 };

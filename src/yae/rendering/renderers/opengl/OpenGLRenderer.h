@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/rendering/Renderer.h>
-#include <yae/containers/HashMap.h>
+#include <core/containers/HashMap.h>
 
 #include <im3d/im3d.h>
 namespace yae {

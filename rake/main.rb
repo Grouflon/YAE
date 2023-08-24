@@ -10,7 +10,7 @@ def settings()
 		_settings[:bin] = "main.exe"
 
 		_settings[:libs] |= [
-			"yae",
+			"core",
 		]
 
 	elsif _settings[:platform] == "Web"
@@ -43,10 +43,10 @@ if PLATFORM == "Win64"
 	end
 elsif PLATFORM == "Web"
 	# relink when any of the other modules changes so that the program takes the modification (all files are embedded in the program)
-	file binary_file(main_settings) => ["#{BIN_DIR}/yae.wasm", "#{BIN_DIR}/test.wasm", "#{BIN_DIR}/editor.wasm", "#{BIN_DIR}/game.wasm"]
+	file binary_file(main_settings) => [ "#{BIN_DIR}/core.wasm", "#{BIN_DIR}/yae.wasm", "#{BIN_DIR}/test.wasm", "#{BIN_DIR}/editor.wasm", "#{BIN_DIR}/game.wasm"]
 end
 
-task :link => ["yae:build", "editor:build", "game:build", "test:build", :copy_files]
+task :link => ["core:build", "yae:build", "editor:build", "game:build", "test:build", :copy_files]
 define_module_tasks(main_settings)
 
 end # namespace main

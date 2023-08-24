@@ -1,8 +1,9 @@
 #include "MeshFile.h"
 
-#include <yae/filesystem.h>
-#include <yae/hash.h>
-#include <yae/containers/HashMap.h>
+#include <core/filesystem.h>
+#include <core/hash.h>
+#include <core/containers/HashMap.h>
+
 #include <yae/ResourceManager.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION

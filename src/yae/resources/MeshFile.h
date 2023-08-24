@@ -25,7 +25,7 @@ public:
 	virtual void _doUnload() override;
 
 	String m_path;
-	Transform m_offset = Transform::IDENTITY;
+	Transform m_offset = Transform::IDENTITY();
 };
 
 } // namespace yae

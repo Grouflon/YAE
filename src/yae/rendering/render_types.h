@@ -1,6 +1,7 @@
 #pragma once
 
-#include <yae/containers/Array.h>
+#include <yae/types.h>
+#include <core/containers/Array.h>
 
 #ifndef YAE_IMPLEMENTS_RENDERER_OPENGL
 	#define YAE_IMPLEMENTS_RENDERER_OPENGL 0

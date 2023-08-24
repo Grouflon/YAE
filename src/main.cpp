@@ -1,7 +1,6 @@
-#include <yae/memory.h>
-#include <yae/program.h>
-#include <yae/logger.h>
-#include <yae/Application.h>
+#include <core/memory.h>
+#include <core/program.h>
+#include <core/logger.h>
 
 #include <mirror.h>
 #include <stdio.h>
@@ -12,7 +11,7 @@
 int main(int _argc, char** _argv)
 {
     // Init mirror reflection
-    mirror::InitTypes();
+    mirror::InitNewTypes();
     mirror::GetTypeSet().addTypeName(mirror::GetType<u8>(), "u8");
     mirror::GetTypeSet().addTypeName(mirror::GetType<u16>(), "u16");
     mirror::GetTypeSet().addTypeName(mirror::GetType<u32>(), "u32");
@@ -37,18 +36,19 @@ int main(int _argc, char** _argv)
         //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("SDL", yae::LogVerbosity_Verbose);
 
+        program.registerModule("yae");
 #if YAE_RELEASE == 0
         program.registerModule("test");
 #endif
 
 #if YAE_EDITOR
-        yae::Module* editorModule = program.registerModule("editor");
+        program.registerModule("editor");
 #endif
-        yae::Module* gameModule = program.registerModule("game");
+        program.registerModule("game");
 
         program.init((const char**)_argv, _argc);
 
-#if YAE_EDITOR
+/*#if YAE_EDITOR
         yae::Application app = yae::Application("yae Editor | " YAE_CONFIG, 800u, 600u);
         app.addModule(editorModule);
         (void)gameModule;
@@ -56,9 +56,9 @@ int main(int _argc, char** _argv)
         yae::Application app = yae::Application("yae Game | " YAE_CONFIG, 800u, 600u);
         app.addModule(gameModule);
 #endif
-        program.registerApplication(&app);
+        program.registerApplication(&app);*/
         program.run();
-        program.unregisterApplication(&app);
+        //program.unregisterApplication(&app);
 
         program.shutdown();
     }

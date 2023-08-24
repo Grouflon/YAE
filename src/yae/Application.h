@@ -1,9 +1,9 @@
 #pragma once
 
 #include <yae/types.h>
-#include <yae/time.h>
+#include <core/time.h>
 #include <yae/math_types.h>
-#include <yae/containers/HashMap.h>
+#include <core/containers/HashMap.h>
 
 #include <SDL_events.h>
 
@@ -22,16 +22,12 @@ public:
 	Application(const char* _name, u32 _width, u32 _height);
 	~Application();
 
-	void addModule(Module* _module);
-	void init(const char** _args, int _argCount);
-	void shutdown();
-	void pushEvent(const SDL_Event& _event);
-	bool doFrame();
+	void start();
+	void stop();
+	void requestStop(); // if within the application update, this should be called instead of stop()
 
-	void run();
-
-	void requestExit();
 	bool isRunning() const;
+	bool isStopRequested() const;
 
 	const char* getName() const;
 
@@ -59,6 +55,16 @@ public:
 	Vector2 getWindowPosition() const;
 
 //private:
+	void _start();
+	void _stop();
+
+	void _pushEvent(const SDL_Event& _event);
+	void _doFrame();
+
+	virtual void _onStart();
+	virtual void _onStop();
+	virtual void _onUpdate(float _dt);
+	virtual bool _onSerialize(Serializer* _serializer);
 
 	void _requestSaveSettings();
 
@@ -66,6 +72,7 @@ public:
 	u32 m_baseWidth = 0;
 	u32 m_baseHeight = 0;
 	bool m_isRunning = true;
+	bool m_isStopRequested = false;
 
 	ResourceManager* m_resourceManager = nullptr;
 	InputSystem* m_inputSystem = nullptr;
@@ -79,7 +86,6 @@ public:
 	float m_dt = 0.f;
 	float m_time = 0.f;
 
-	DataArray<Module*> m_modules;
 	HashMap<StringHash, void*> m_userData;
 
 	bool m_saveSettingsRequested = false;

@@ -1,10 +1,10 @@
 #include "FontFile.h"
 
-#include <yae/filesystem.h>
+#include <core/filesystem.h>
 #include <yae/rendering/Renderer.h>
 #include <yae/resource.h>
 #include <yae/resources/File.h>
-#include <yae/string.h>
+#include <core/string.h>
 
 // this is helpful: https://github.com/0xc0dec/demos
 

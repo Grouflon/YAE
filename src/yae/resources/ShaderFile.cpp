@@ -1,8 +1,8 @@
 #include "ShaderFile.h"
 
-#include <yae/filesystem.h>
+#include <core/filesystem.h>
 #include <yae/ResourceManager.h>
-#include <yae/string.h>
+#include <core/string.h>
 
 MIRROR_CLASS(yae::ShaderFile)
 (

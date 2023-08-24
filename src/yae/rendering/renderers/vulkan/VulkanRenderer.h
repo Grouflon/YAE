@@ -4,7 +4,7 @@
 
 #include <yae/rendering/render_types.h>
 #include <yae/math_types.h>
-#include <yae/containers/Array.h>
+#include <core/containers/Array.h>
 #include <yae/rendering/Renderer.h>
 
 typedef struct GLFWwindow GLFWwindow;

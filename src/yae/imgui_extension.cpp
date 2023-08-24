@@ -1,10 +1,10 @@
 #include "imgui_extension.h"
 
 #include <yae/math_3d.h>
-#include <yae/containers/Array.h>
+#include <core/containers/Array.h>
 #include <yae/resources/Resource.h>
 #include <yae/ResourceManager.h>
-#include <yae/filesystem.h>
+#include <core/filesystem.h>
 
 #include <imgui/imgui.h>
 #include <mirror/mirror.h>
@@ -71,9 +71,9 @@ bool DragVector(const char* _label, yae::Vector4* _v, float _speed, float _min, 
 bool DragRotation(const char* _label, yae::Quaternion* _q, float _speed)
 {
 	YAE_ASSERT(_q != nullptr);
-	yae::Vector3 euler = yae::math::euler(*_q) * yae::R2D;
+	yae::Vector3 euler = yae::math::euler(*_q) * R2D;
 	bool result = DragVector(_label, &euler, _speed);
-	*_q = yae::Quaternion::FromEuler(euler * yae::D2R);
+	*_q = yae::Quaternion::FromEuler(euler * D2R);
 	return result;
 }
 

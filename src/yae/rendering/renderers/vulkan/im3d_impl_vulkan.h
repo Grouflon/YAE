@@ -3,7 +3,7 @@
 #include <yae/types.h>
 #include <yae/math_types.h>
 #include <yae/rendering/render_types.h>
-#include <yae/containers/Array.h>
+#include <core/containers/Array.h>
 #include <im3d.h>
 
 namespace yae

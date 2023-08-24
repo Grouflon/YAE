@@ -1,6 +1,6 @@
 #include "TextureFile.h"
 
-#include <yae/filesystem.h>
+#include <core/filesystem.h>
 #include <yae/rendering/Renderer.h>
 #include <yae/ResourceManager.h>
 

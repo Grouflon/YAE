@@ -1,7 +1,8 @@
 #pragma once
 
+#include <core/containers/HashMap.h>
+
 #include <yae/types.h>
-#include <yae/containers/HashMap.h>
 #include <yae/resources/ResourceID.h>
 
 #include <mirror/mirror.h>

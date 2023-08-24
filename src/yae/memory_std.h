@@ -1,6 +1,6 @@
 #pragma once
 
-#include <yae/memory.h>
+#include <core/memory.h>
 #include <yae/context.h>
 
 namespace yae {

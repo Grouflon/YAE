@@ -1,66 +1,50 @@
 #include "editor_module.h"
 
+#include <core/Module.h>
+
 #include <yae/Application.h>
 
-#include <editor/Editor.h>
+#include <editor/EditorApplication.h>
 
 using namespace yae;
 
-void onModuleLoaded(yae::Program* _program, yae::Module* _module)
-{
-
-}
-
-void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
-{
-
-}
-
 void initModule(yae::Program* _program, yae::Module* _module)
 {
+	yae::editor::EditorApplication* application = toolAllocator().create<yae::editor::EditorApplication>("yae Editor | " YAE_CONFIG, 800u, 600u);
+	_module->userData = application;
 
+	application->start();
 }
 
 void shutdownModule(yae::Program* _program, yae::Module* _module)
 {
+	yae::editor::EditorApplication* application = (yae::editor::EditorApplication*)_module->userData;
+	application->stop();
 
+	toolAllocator().destroy(application);
+	_module->userData = nullptr;
 }
 
-void initApplication(yae::Application* _application, const char** _args, int _argCount)
+void onModuleReloaded(yae::Program* _program, yae::Module* _module)
 {
-	editor::Editor* editor = toolAllocator().create<editor::Editor>();
-	_application->setUserData("Editor", editor);
-
-	editor->init();
+	yae::editor::EditorApplication* application = (yae::editor::EditorApplication*)_module->userData;
+	application->reload();
 }
 
-void shutdownApplication(yae::Application* _application)
+void startProgram(yae::Program* _program, yae::Module* _module)
 {
-	editor::Editor* editor = (editor::Editor*)_application->getUserData("Editor");
-
-	editor->shutdown();
-
-	_application->setUserData("Editor", nullptr);
-	toolAllocator().destroy(editor);	
 }
 
-void onApplicationModuleReloaded(yae::Application* _application, yae::Module* _module)
+void stopProgram(yae::Program* _program, yae::Module* _module)
 {
-	editor::Editor* editor = (editor::Editor*)_application->getUserData("Editor");
-
-	editor->reload();
 }
 
-void updateApplication(yae::Application* _application, float _dt)
+void getDependencies(const char*** _outModuleNames, int* _outModuleCount)
 {
-	editor::Editor* editor = (editor::Editor*)_application->getUserData("Editor");
-
-	editor->update(_dt);
-}
-
-bool onSerializeApplicationSettings(Application* _application, Serializer* _serializer)
-{
-	editor::Editor* editor = (editor::Editor*)_application->getUserData("Editor");
-
-	return editor->serialize(_serializer);
+	static const char* s_dependencies[] = {
+		"yae",
+		"game"
+	};
+	*_outModuleNames = s_dependencies;
+	*_outModuleCount = countof(s_dependencies); 
 }

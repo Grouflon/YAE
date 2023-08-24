@@ -3,7 +3,7 @@
 #include <yae/types.h>
 #include <yae/rendering/render_types.h>
 #include <yae/math_types.h>
-#include <yae/containers/HashMap.h>
+#include <core/containers/HashMap.h>
 
 
 struct SDL_Window;
@@ -65,8 +65,8 @@ public:
 	Vector3 project(const Vector3& _worldPosition) const;
 	void unproject(const Vector2& _screenPosition, Vector3& _outRayOrigin, Vector3& _outRayDirection) const;
 
-	Vector3 position = Vector3::ZERO;
-	Quaternion rotation = Quaternion::IDENTITY;
+	Vector3 position = Vector3::ZERO();
+	Quaternion rotation = Quaternion::IDENTITY();
 	float fov = 45.f;
 	float nearPlane = .1f;
 	float farPlane = 100.f;

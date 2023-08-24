@@ -9,11 +9,11 @@
 #include <yae/resources/ShaderFile.h>
 #include <yae/resources/ShaderProgram.h>
 #include <yae/resources/Texture.h>
-#include <yae/string.h>
+#include <core/string.h>
 
 #include <im3d/im3d.h>
 #include <imgui/imgui.h>
-#include <yae/yae_sdl.h>
+#include <core/yae_sdl.h>
 
 namespace yae {
 
@@ -67,7 +67,7 @@ RenderCamera::~RenderCamera()
 
 Matrix4 RenderCamera::computeViewMatrix() const
 {
-	Matrix4 cameraTransform = Matrix4::FromTransform(position, rotation, Vector3::ONE);
+	Matrix4 cameraTransform = Matrix4::FromTransform(position, rotation, Vector3::ONE());
 	return math::inverse(cameraTransform);
 }
 
@@ -152,10 +152,10 @@ bool Renderer::init(SDL_Window* _window)
 	{
 		m_quad = resource::findOrCreate<Mesh>("quad");
 		Vertex vertices[] = {
-			Vertex(Vector3(-1.0f, -1.0f, 0.f), Vector2(0.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
-			Vertex(Vector3(1.0f, -1.0f, 0.f), Vector2(1.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
-			Vertex(Vector3(-1.0f, 1.0f, 0.f), Vector2(0.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE),
-			Vertex(Vector3(1.0f, 1.0f, 0.f), Vector2(1.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE)
+			Vertex(Vector3(-1.0f, -1.0f, 0.f), Vector2(0.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE()),
+			Vertex(Vector3(1.0f, -1.0f, 0.f), Vector2(1.f, 0.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE()),
+			Vertex(Vector3(-1.0f, 1.0f, 0.f), Vector2(0.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE()),
+			Vertex(Vector3(1.0f, 1.0f, 0.f), Vector2(1.f, 1.f), Vector3(0.f, 0.f, 1.f), Vector3::ONE())
 		};
 		u32 indices[] = {
 			0, 1, 2,
@@ -229,7 +229,7 @@ void Renderer::beginFrame()
 
 		// View
 		Vector2 viewportSize = im3dCamera->getViewportSize();
-		Matrix4 worldMatrix = Matrix4::FromTransform(im3dCamera->position, im3dCamera->rotation, Vector3::ONE);
+		Matrix4 worldMatrix = Matrix4::FromTransform(im3dCamera->position, im3dCamera->rotation, Vector3::ONE());
 		Matrix4 viewMatrix = math::inverse(worldMatrix);
 		Matrix4 projectionMatrix = im3dCamera->computeProjectionMatrix();
 
@@ -242,7 +242,7 @@ void Renderer::beginFrame()
 		ad.m_viewportSize  = viewportSize;
 		ad.m_viewOrigin    = im3dCamera->position; // for VR use the head position
 		ad.m_viewDirection = math::forward(im3dCamera->rotation);
-		ad.m_worldUp       = Vector3::UP; // used internally for generating orthonormal bases
+		ad.m_worldUp       = Vector3::UP(); // used internally for generating orthonormal bases
 		ad.m_projOrtho     = false; // TODO
 		
 		// m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height

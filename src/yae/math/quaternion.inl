@@ -128,17 +128,17 @@ Quaternion inverse(const Quaternion& _q)
 
 Vector3 forward(const Quaternion& _q)
 {
-	return rotate(_q, Vector3::FORWARD);
+	return rotate(_q, Vector3::FORWARD());
 }
 
 Vector3 right(const Quaternion& _q)
 {
-	return rotate(_q, Vector3::RIGHT);
+	return rotate(_q, Vector3::RIGHT());
 }
 
 Vector3 up(const Quaternion& _q)
 {
-	return rotate(_q, Vector3::UP);
+	return rotate(_q, Vector3::UP());
 }
 
 float roll(const Quaternion& _q)

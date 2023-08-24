@@ -1,5 +1,9 @@
 #include "ResourceEditor.h"
 
+#include <core/string.h>
+#include <core/program.h>
+#include <core/filesystem.h>
+
 #include <yae/Application.h>
 #include <yae/math_3d.h>
 #include <yae/ResourceManager.h>
@@ -11,10 +15,7 @@
 #include <yae/resource.h>
 #include <yae/imgui_extension.h>
 #include <yae/InputSystem.h>
-#include <yae/string.h>
 #include <yae/im3d_extension.h>
-#include <yae/program.h>
-#include <yae/filesystem.h>
 
 #include <imgui/imgui.h>
 #include <im3d/im3d.h>
@@ -170,7 +171,7 @@ bool meshInspectorUpdate(Resource* _resource, void* _userData)
 	renderer().pushScene(inspector->scene);
 	{
 		Im3d::SetSize(4.0f);
-		Im3d::DrawRotation(Quaternion::IDENTITY, 1.5f);
+		Im3d::DrawRotation(Quaternion::IDENTITY(), 1.5f);
 
 		static int gridSize = 20;
 		const float gridHalf = (float)gridSize * 0.5f;
@@ -189,17 +190,17 @@ bool meshInspectorUpdate(Resource* _resource, void* _userData)
 			}
 		Im3d::End();
 
-		renderer().drawMesh(Matrix4::IDENTITY, mesh, inspector->wireframeShader, nullptr);
+		renderer().drawMesh(Matrix4::IDENTITY(), mesh, inspector->wireframeShader, nullptr);
 
 		if (inspector->showNormals)
 		{
-			renderer().drawMesh(Matrix4::IDENTITY, mesh, inspector->normalsShader, nullptr);
+			renderer().drawMesh(Matrix4::IDENTITY(), mesh, inspector->normalsShader, nullptr);
 		}
 	}
 	renderer().popScene();
 
 	inspector->camera->rotation = Quaternion::FromEuler(D2R * inspector->cameraPitch, D2R * inspector->cameraYaw, 0.0f);
-	inspector->camera->position = -(inspector->camera->rotation * (Vector3::FORWARD * inspector->armLength));
+	inspector->camera->position = -(inspector->camera->rotation * (Vector3::FORWARD() * inspector->armLength));
 
 	return opened;
 }

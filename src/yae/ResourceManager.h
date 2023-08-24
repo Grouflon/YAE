@@ -2,7 +2,7 @@
 
 #include <yae/types.h>
 #include <yae/resources/ResourceID.h>
-#include <yae/containers/HashMap.h>
+#include <core/containers/HashMap.h>
 
 #include <mutex>
 

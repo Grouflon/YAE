@@ -66,9 +66,9 @@ void testQuaternion()
 {
     // Test for named axes
     {
-        Vector3 forward = yae::math::forward(Quaternion::IDENTITY);
-        Vector3 up = yae::math::up(Quaternion::IDENTITY);
-        Vector3 right = yae::math::right(Quaternion::IDENTITY);
+        Vector3 forward = yae::math::forward(Quaternion::IDENTITY());
+        Vector3 up = yae::math::up(Quaternion::IDENTITY());
+        Vector3 right = yae::math::right(Quaternion::IDENTITY());
         TEST(yae::math::isEqual(forward, {0.f, 0.f, 1.f}));
         TEST(yae::math::isEqual(up, {0.f, 1.f, 0.f}));
         TEST(yae::math::isEqual(right, {1.f, 0.f, 0.f}));
@@ -120,7 +120,7 @@ void testQuaternion()
         Quaternion y = qa * i;
         glm::quat g = g_qa * g_i;
         TEST(yae::math::isEqual(y, toYae(g)));
-        TEST(yae::math::isIdentical(y, Quaternion::IDENTITY));
+        TEST(yae::math::isIdentical(y, Quaternion::IDENTITY()));
     }
 
     {

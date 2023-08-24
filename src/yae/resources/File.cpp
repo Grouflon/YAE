@@ -1,7 +1,7 @@
 #include "File.h"
 
-#include <yae/filesystem.h>
-#include <yae/string.h>
+#include <core/filesystem.h>
+#include <core/string.h>
 
 MIRROR_CLASS(yae::File)
 (

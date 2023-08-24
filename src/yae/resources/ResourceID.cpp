@@ -6,8 +6,6 @@
 
 namespace yae {
 
-const ResourceID ResourceID::INVALID_ID = ResourceID(-1);
-
 Resource* ResourceID::get() const
 {
 	return resourceManager().findResource(*this);

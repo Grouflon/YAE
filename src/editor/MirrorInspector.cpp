@@ -1,7 +1,7 @@
 #include "MirrorInspector.h"
 
 #include <yae/imgui_extension.h>
-#include <yae/containers/Array.h>
+#include <core/containers/Array.h>
 
 #include <imgui/imgui.h>
 
@@ -53,8 +53,8 @@ struct TestData
 	Vector3 vector3;
 	Vector4 vector4;
 	Quaternion quaternion;
-	Matrix3 matrix3 = Matrix3::IDENTITY;
-	Matrix4 matrix4 = Matrix4::IDENTITY;
+	Matrix3 matrix3 = Matrix3::IDENTITY();
+	Matrix4 matrix4 = Matrix4::IDENTITY();
 
 	Matrix4 matrixFixedArray[4];
 	DataArray<Matrix4> matrixDataArray;

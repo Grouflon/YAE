@@ -1,7 +1,7 @@
 #include "test.h"
 
-#include <yae/memory.h>
-#include <yae/Module.h>
+#include <core/memory.h>
+#include <core/Module.h>
 
 #include <test/TestSystem.h>
 #include <test/serialization_test.h>
@@ -10,7 +10,7 @@
 
 using namespace yae;
 
-void onModuleLoaded(yae::Program* _program, yae::Module* _module)
+void initModule(yae::Program* _program, yae::Module* _module)
 {
     TestSystem* testSystem = toolAllocator().create<TestSystem>();
     _module->userData = testSystem;
@@ -30,7 +30,7 @@ void onModuleLoaded(yae::Program* _program, yae::Module* _module)
     testSystem->runAllTests();
 }
 
-void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
+void shutdownModule(yae::Program* _program, yae::Module* _module)
 {
     TestSystem* testSystem = (TestSystem*)_module->userData;
 
@@ -38,12 +38,11 @@ void onModuleUnloaded(yae::Program* _program, yae::Module* _module)
     _module->userData = nullptr;
 }
 
-void initModule(yae::Program* _program, yae::Module* _module)
+void getDependencies(const char*** _outModuleNames, int* _outModuleCount)
 {
-    TestSystem* testSystem = (TestSystem*)_module->userData;
-}
-
-void shutdownModule(yae::Program* _program, yae::Module* _module)
-{
-
+    static const char* s_dependencies[] = {
+        "yae",
+    };
+    *_outModuleNames = s_dependencies;
+    *_outModuleCount = countof(s_dependencies); 
 }

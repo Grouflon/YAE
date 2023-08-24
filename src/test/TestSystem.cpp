@@ -1,6 +1,6 @@
 #include "TestSystem.h"
 
-#include <yae/logger.h>
+#include <core/logger.h>
 
 namespace yae {
 

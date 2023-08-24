@@ -1,7 +1,8 @@
 #include "OpenGLRenderer.h"
 
-#include <yae/filesystem.h>
-#include <yae/program.h>
+#include <core/filesystem.h>
+#include <core/program.h>
+
 #include <yae/resources/ShaderFile.h>
 #include <yae/resources/FontFile.h>
 #include <yae/resources/File.h>
@@ -20,7 +21,7 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <im3d/im3d.h>
 
-#include <yae/yae_sdl.h>
+#include <core/yae_sdl.h>
 
 #if YAE_PLATFORM_WEB == 0
 const int OPENGL_VERSION_MAJOR = 4;
@@ -151,7 +152,15 @@ bool OpenGLRenderer::_init()
 	*/
 
 #if YAE_PLATFORM_WEB == 0
-	program().initGl3w();
+	// @NOTE(remi): this needs to be done once, after a window has been created
+	static bool s_isGl3wInitialized = false;
+	if (!s_isGl3wInitialized)
+	{
+		YAE_CAPTURE_SCOPE("gl3wInit");
+		int result = gl3wInit();
+		YAE_ASSERT(result == GL3W_OK);
+		s_isGl3wInitialized = true;
+	}
     
 	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) == false)
 	{

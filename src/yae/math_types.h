@@ -1,6 +1,6 @@
 #pragma once
 
-#include <yae/types.h>
+#include <core/types.h>
 
 namespace yae {
 
@@ -19,12 +19,9 @@ Coordinate System: Left-Handed
 
 
 // CONSTANTS
-YAE_API extern const float PI;
-YAE_API extern const float D2R;
-YAE_API extern const float R2D;
-
-YAE_API extern const float SMALL_NUMBER;
-YAE_API extern const float VERY_SMALL_NUMBER;
+#define PI (3.14159265358979323846)
+#define R2D (180.f / PI)
+#define D2R (PI / 180.f)
 
 // TYPES
 struct Vector2;
@@ -47,10 +44,10 @@ struct YAE_API Vector2
 	Vector2(float _x, float _y);
 
 	// Constants
-	static const Vector2 ZERO;
-	static const Vector2 ONE;
-	static const Vector2 RIGHT;
-	static const Vector2 UP;
+	static Vector2 ZERO();
+	static Vector2 ONE();
+	static Vector2 RIGHT();
+	static Vector2 UP();
 
 	// Operators
 	// -- Component accesses --
@@ -103,11 +100,11 @@ struct YAE_API Vector3
 	Vector3(const Vector2& _xy, float _z = 0.f);
 
 	// Constants
-	static const Vector3 ZERO;
-	static const Vector3 ONE;
-	static const Vector3 RIGHT;
-	static const Vector3 UP;
-	static const Vector3 FORWARD;
+	static Vector3 ZERO();
+	static Vector3 ONE();
+	static Vector3 RIGHT();
+	static Vector3 UP();
+	static Vector3 FORWARD();
 
 	// Operators
 	// -- Component accesses --
@@ -162,8 +159,8 @@ struct YAE_API Vector4
 	Vector4(const Vector3& _xyz, float _w = 0.f);
 
 	// Constants
-	static const Vector4 ZERO;
-	static const Vector4 ONE;
+	static Vector4 ZERO();
+	static Vector4 ONE();
 
 	// Operators
 	// -- Component accesses --
@@ -221,7 +218,7 @@ struct YAE_API Quaternion
 	static Quaternion FromMatrix4(const Matrix4& _m);
 
 	// Constants
-	static const Quaternion IDENTITY;
+	static Quaternion IDENTITY();
 
 	// Operators
 	// -- Component accesses --
@@ -260,8 +257,8 @@ struct YAE_API Matrix3
 	static Matrix3 FromRotation(const Quaternion& _rotation);
 
 	// Constants
-	static const Matrix3 ZERO;
-	static const Matrix3 IDENTITY;
+	static Matrix3 ZERO();
+	static Matrix3 IDENTITY();
 
 	// Operators
 	// -- Component accesses --
@@ -324,12 +321,12 @@ struct YAE_API Matrix4
 	static Matrix4 FromTransform(const Vector3& _position, const Quaternion& _rotation, const Vector3& _scale);
 	static Matrix4 FromTransform(const Transform& _transform);
 	static Matrix4 FromPerspective(float _fov, float _aspectRatio, float _nearPlane, float _farPlane);
-	static Matrix4 FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up = Vector3::UP);
+	static Matrix4 FromLookAt(const Vector3& _center, const Vector3& _target, const Vector3& _up = Vector3::UP());
 	static Matrix4 FromMatrix3(const Matrix3& _m);
 
 	// Constants
-	static const Matrix4 ZERO;
-	static const Matrix4 IDENTITY;
+	static Matrix4 ZERO();
+	static Matrix4 IDENTITY();
 
 	// Operators
 	// -- Component accesses --
@@ -382,11 +379,11 @@ struct YAE_API Transform
 	// Ctors
 	Transform(); // leaves uninitialized
 	Transform(const Vector3& _position,
-			  const Quaternion& _rotation = Quaternion::IDENTITY,
-			  const Vector3& _scale = Vector3::ONE);
+			  const Quaternion& _rotation = Quaternion::IDENTITY(),
+			  const Vector3& _scale = Vector3::ONE());
 
 	// Constants
-	static const Transform IDENTITY;
+	static Transform IDENTITY();
 };
 
 // -- Binary operators --

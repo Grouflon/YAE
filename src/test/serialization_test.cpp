@@ -1,8 +1,8 @@
 #include "serialization_test.h"
 
-#include <yae/serialization/JsonSerializer.h>
-#include <yae/serialization/BinarySerializer.h>
-#include <yae/containers/Array.h>
+#include <core/serialization/JsonSerializer.h>
+#include <core/serialization/BinarySerializer.h>
+#include <core/containers/Array.h>
 #include <test/test_macros.h>
 
 using namespace yae;
