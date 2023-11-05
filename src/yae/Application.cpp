@@ -23,7 +23,7 @@
 #include <yae/rendering/renderers/opengl/OpenGLRenderer.h>
 #endif
 
-#include <imgui/backends/imgui_impl_sdl.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
 #include <core/yae_sdl.h>
 
 #define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)

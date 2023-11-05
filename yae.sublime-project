@@ -85,7 +85,7 @@
 				},
 				{
 					"name": "debug",
-					"shell_cmd": "start remedybg session.rdbg",
+					"shell_cmd": "start remedybg yae.rdbg",
 				},
 				{
 					"name": "debug Web",

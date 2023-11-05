@@ -28,15 +28,15 @@ void testRandom()
 	TEST(yae::random::range01(generator) == 0.384381711483001708984375f);
 
 	yae::random::setSeed(generator, 1);
-	TEST(yae::random::range(generator, 0, 1) == 1);
-	TEST(yae::random::range(generator, 0, 1) == 1);
-	TEST(yae::random::range(generator, 0, 1) == 0);
 	TEST(yae::random::range(generator, 0, 1) == 0);
 	TEST(yae::random::range(generator, 0, 1) == 1);
 	TEST(yae::random::range(generator, 0, 1) == 1);
 	TEST(yae::random::range(generator, 0, 1) == 1);
+	TEST(yae::random::range(generator, 0, 1) == 0);
+	TEST(yae::random::range(generator, 0, 1) == 0);
+	TEST(yae::random::range(generator, 0, 1) == 0);
 	TEST(yae::random::range(generator, 0, 1) == 1);
-	TEST(yae::random::range(generator, 0, 1) == 1);
+	TEST(yae::random::range(generator, 0, 1) == 0);
 	TEST(yae::random::range(generator, 0, 1) == 0);
 	TEST(yae::random::range(generator, 0, 1) == 0);
 }

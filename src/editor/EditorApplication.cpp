@@ -277,7 +277,7 @@ void EditorApplication::_onUpdate(float _dt)
     	bool previousOpen = showMirrorDebugWindow;
 		if (ImGui::Begin("Mirror", &showMirrorDebugWindow))
     	{
-    		ImVec2 regionSize = ImVec2(ImGui::GetWindowContentRegionWidth(), 0);
+    		ImVec2 regionSize = ImVec2(ImGui::GetContentRegionAvail().x, 0);
     		ImGui::BeginChild("MirrorChildL", ImVec2(regionSize.x * 0.5f, regionSize.y), false);
     		for (mirror::Type* type : mirror::GetTypeSet().getTypes())
     		{

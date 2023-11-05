@@ -3,7 +3,7 @@ YAE
 
 ## Dependencies
 Ruby/Rake
-LLVM/Clang 13.0.0
+LLVM/Clang 17.0.1
 emscripten
 
 ## Installation

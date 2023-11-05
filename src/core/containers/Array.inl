@@ -490,7 +490,6 @@ DataArray<T>::DataArray(const DataArray<T> &_other, Allocator* _allocator)
 	*this = _other;
 }
 
-
 // Array
 template <typename T>
 Array<T>::Array(Allocator* _allocator)

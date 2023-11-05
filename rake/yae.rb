@@ -6,7 +6,7 @@ def settings()
 			"src/yae/**/*.cpp",
 			"extern/imgui/*.cpp",
 			"extern/im3d/*.cpp",
-			"extern/imgui/backends/imgui_impl_sdl.cpp",
+			"extern/imgui/backends/imgui_impl_sdl2.cpp",
 			"extern/imgui/backends/imgui_impl_opengl3.cpp",
 		]
 		.exclude("src/yae/rendering/renderers/**/*.*")
