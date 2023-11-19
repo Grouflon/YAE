@@ -89,7 +89,7 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 		const mirror::Class* clss = _resource->getClass();
 		while (clss != nullptr)
 		{
-			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.getOrInsert(clss, DataArray<Resource*>());
+			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.getOrInsert(clss->getTypeID(), DataArray<Resource*>());
 			resourceArrayPtr->push_back(_resource);
 			clss = clss->getParent();
 		} 
@@ -120,7 +120,7 @@ void ResourceManager::unregisterResource(Resource* _resource)
 		const mirror::Class* clss = _resource->getClass();
 		while (clss != nullptr)
 		{
-			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.get(clss);
+			DataArray<Resource*>* resourceArrayPtr = m_resourcesByType.get(clss->getTypeID());
 			YAE_ASSERT(resourceArrayPtr != nullptr);
 			Resource** resourcePtr = resourceArrayPtr->find(_resource);
 			YAE_ASSERT(resourcePtr != nullptr);
@@ -191,11 +191,12 @@ const DataArray<Resource*>& ResourceManager::getResources() const
 	return m_resources;
 }
 
-const DataArray<Resource*>& ResourceManager::getResourcesByType(const mirror::Class* _class) const
+const DataArray<Resource*>& ResourceManager::getResourcesByType(mirror::TypeID _type) const
 {
-	YAE_ASSERT(_class != nullptr);
-	YAE_ASSERT(_class->isChildOf(mirror::GetClass<Resource>()));
-	return *m_resourcesByType.get(_class);
+	const mirror::Class* class_ = mirror::AsClass(_type);
+	YAE_ASSERT(class_ != nullptr);
+	YAE_ASSERT(class_->isChildOf(mirror::GetClass<Resource>()));
+	return *m_resourcesByType.get(_type);
 }
 
 void ResourceManager::flagResourceForReload(Resource* _resource)

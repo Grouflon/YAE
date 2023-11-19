@@ -4,6 +4,8 @@
 #include <yae/resources/ResourceID.h>
 #include <core/containers/HashMap.h>
 
+#include <mirror/mirror.h>
+
 #include <mutex>
 
 namespace mirror {
@@ -32,7 +34,7 @@ public:
 	template <typename T> T* findResource(const char* _name) const;
 
 	const DataArray<Resource*>& getResources() const;
-	const DataArray<Resource*>& getResourcesByType(const mirror::Class* _class) const;
+	const DataArray<Resource*>& getResourcesByType(mirror::TypeID _type) const;
 	template <typename T> const DataArray<Resource*>& getResourcesByType() const;
 
 	void flagResourceForReload(Resource* _resource);
@@ -43,13 +45,15 @@ public:
 	void addDependency(Resource* _dependencyResource, Resource* _dependentResource);
 	void removeDependency(Resource* _dependencyResource, Resource* _dependentResource);
 
+	void sanityCheck();
+
 //private:
 	void _processReloadDependencies();
 
 	DataArray<Resource*> m_resources;
 	HashMap<StringHash, Resource*> m_resourcesByName;
 	HashMap<ResourceID, Resource*> m_resourcesByID;
-	mutable HashMap<const mirror::Class*, DataArray<Resource*>> m_resourcesByType;
+	mutable HashMap<mirror::TypeID, DataArray<Resource*>> m_resourcesByType;
 
 	HashMap<StringHash, void*> m_fileWatchers;
 

@@ -15,7 +15,7 @@ T* ResourceManager::findResource(const char* _name) const
 template <typename T>
 const DataArray<Resource*>& ResourceManager::getResourcesByType() const
 {
-	return getResourcesByType(T::GetClass());
+	return getResourcesByType(mirror::GetTypeID<T>());
 }
 
 } // namespace yae

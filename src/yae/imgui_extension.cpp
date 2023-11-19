@@ -365,7 +365,7 @@ bool EditMirrorType(const char* _name, void* _data, const mirror::Type* _type)
 				*valuePtr = ResourceID::INVALID_ID;
 				modified = true;
 			}
-			const DataArray<Resource*>& resources = resourceManager().getResourcesByType(resourceClass);
+			const DataArray<Resource*>& resources = resourceManager().getResourcesByType(resourceClass->getTypeID());
 			for (Resource* selectableResource : resources)
 			{
 	    		String256 name = filesystem::getFileName(selectableResource->getName());
