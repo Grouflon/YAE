@@ -13,6 +13,7 @@ class Logger;
 class Profiler;
 class Module;
 
+// @TODO: Rename as Core
 class CORE_API Program
 {
 public:
@@ -22,6 +23,8 @@ public:
 	Module* registerModule(const char* _moduleName);
 	Module* findModule(const char* _moduleName) const;
 	Module* findModule(StringHash _moduleNameHash) const;
+	void reloadModule(const char* _moduleName);
+	void reloadModule(Module* _module);
 
 	void init(const char** _args, int _argCount);
 	void shutdown();
@@ -47,11 +50,6 @@ public:
 	// Settings
 	void loadSettings();
 	void saveSettings();
-
-#if YAE_PLATFORM_WEB == 0
-	// Rendering
-	void initGl3w();
-#endif
 
 	// Modules
 	const DataArray<Module*>& getModules() const;
@@ -79,10 +77,10 @@ public:
 	String m_settingsDirectory;
 	String m_hotReloadDirectory;
 	bool m_isInitialized = false;
-	bool m_isGl3wInitialized = false;
 	bool m_hotReloadEnabled = false;
 	DataArray<Module*> m_modules;
 	HashMap<StringHash, Module*> m_modulesByName;
+	DataArray<Module*> m_modulesToReload;
 	bool m_exitRequested = false;
 
 	i32 m_previousConsoleWindowX = 0;

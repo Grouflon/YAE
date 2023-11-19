@@ -57,7 +57,7 @@ void TextureFile::_doLoad()
 	setPixelData(pixels, width, height, channelCount);
 	Texture::_doLoad();
 
-	resourceManager().startReloadOnFileChanged(m_path.c_str(), this);
+	m_manager->registerReloadOnFileChanged(m_path.c_str(), this);
 }
 
 
@@ -65,7 +65,7 @@ void TextureFile::_doUnload()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	resourceManager().stopReloadOnFileChanged(m_path.c_str(), this);
+	m_manager->unregisterReloadOnFileChanged(m_path.c_str(), this);
 
 	Texture::_doUnload();
 

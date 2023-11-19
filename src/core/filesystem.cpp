@@ -1,3 +1,4 @@
+
 #include "filesystem.h"
 
 #include <core/program.h>
@@ -188,6 +189,10 @@ bool copy(const char* _from, const char* _to, CopyMode _mode)
 
 	std::error_code errorCode;
 	std::filesystem::copy(_from, _to, copyOptions, errorCode);
+	if (errorCode.value() != 0)
+	{
+		YAE_ERRORF_CAT("filesystem", "copy %s -> %s failed: %s", _from, _to, errorCode.message().c_str());
+	}
 	return errorCode.value() == 0;
 }
 
@@ -404,7 +409,6 @@ bool FileReader::load()
 	FileHandle file(m_path.c_str());
 	if (!file.open(FileHandle::OPENMODE_READ))
 	{
-		YAE_ERRORF("failed to open file \"%s\".", m_path.c_str());
 		return false;
 	}
 

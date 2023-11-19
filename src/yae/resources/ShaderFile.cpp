@@ -37,7 +37,9 @@ void ShaderFile::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	resourceManager().startReloadOnFileChanged(m_path.c_str(), this);
+	YAE_LOG("HA");
+
+	m_manager->registerReloadOnFileChanged(m_path.c_str(), this);
 
 	FileReader reader(m_path.c_str(), &scratchAllocator());
 	if (!reader.load())
@@ -58,7 +60,7 @@ void ShaderFile::_doUnload()
 
 	setShaderData(nullptr, 0);
 
-	resourceManager().stopReloadOnFileChanged(m_path.c_str(), this);
+	m_manager->unregisterReloadOnFileChanged(m_path.c_str(), this);
 }
 
 } // namespace yae

@@ -1,5 +1,7 @@
 #include "Resource.h"
 
+#include <yae/ResourceManager.h>
+
 MIRROR_CLASS(yae::Resource)
 (
 	MIRROR_MEMBER(m_id);
@@ -35,6 +37,12 @@ void Resource::unload()
 	{
 		_internalUnload();
 	}
+}
+
+void Resource::requestReload()
+{
+	YAE_ASSERT_MSG(m_manager != nullptr, "What does reloading a non registered resource means?");
+	m_manager->flagResourceForReload(this);
 }
 
 void Resource::_reload()

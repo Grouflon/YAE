@@ -2,9 +2,7 @@ require_relative "rake/_common"
 
 require_relative "rake/core"
 require_relative "rake/yae"
-require_relative "rake/editor"
 require_relative "rake/game"
-require_relative "rake/test"
 require_relative "rake/main"
 
 task :clean do

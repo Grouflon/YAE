@@ -5,7 +5,6 @@
 #include <core/filesystem.h>
 
 #include <windows.h>
-#include <delayimp.h>
 #include <psapi.h>
 #include <dbghelp.h>
 #include <chrono>
@@ -78,18 +77,11 @@ void* loadDynamicLibrary(const char* _path)
 {
 	HMODULE module = LoadLibraryA(_path);
 	return module;
-	//__HrLoadAllImportsForDll(_path);
-	//return GetModuleHandleA(_path);
 }
 
 
 void unloadDynamicLibrary(void* _libraryHandle)
 {
-	char moduleName[256];
-	int ret = GetModuleBaseNameA(GetCurrentProcess(), (HMODULE)_libraryHandle, moduleName, countof(moduleName));
-	YAE_ASSERT(ret < (int)countof(moduleName));
-	if (__FUnloadDelayLoadedDLL2(moduleName)) YAE_LOGF("DelayUnloaded %s", moduleName);
-
 	FreeLibrary((HMODULE)_libraryHandle);
 }
 

@@ -19,11 +19,11 @@ def settings()
 		_settings[:libs] |= [
 			"core",
 			"yae",
-			"delayimp",
 		]
-		_settings[:linker_flags] += ["-Xlinker /delayload:core.dll -Xlinker /delayload:yae.dll -Xlinker /delay:unload"]
 
 		_settings[:defines] += [
+			"IMGUI_USER_CONFIG=\\\"yae/yae_imconfig.h\\\"",
+			
 			"CORE_API=__declspec(dllimport)",
 			"MIRROR_API=__declspec(dllimport)",
 			"IMGUI_API=__declspec(dllimport)",

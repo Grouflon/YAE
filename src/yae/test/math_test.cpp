@@ -4,14 +4,13 @@
 #include <yae/random.h>
 #include <yae/math/glm_conversion.h>
 
-#include <test/test_macros.h>
+#include <yae/test/test_macros.h>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-using namespace yae;
-
-namespace math_test {
+namespace yae {
+namespace test {
 
 void testVectors()
 {
@@ -145,9 +144,9 @@ void testQuaternion()
         TEST(yae::math::isEqual(q2, toYae(g_q2)));
         TEST(yae::math::isEqual(yae::math::dot(q1, q2), glm::dot(g_q1, g_q2)));
 
-        Vector3 up = yae::math::up(q2);
-        Vector3 forward = yae::math::forward(q2);
-        Vector3 right = yae::math::right(q2);
+        //Vector3 up = yae::math::up(q2);
+        //Vector3 forward = yae::math::forward(q2);
+        //Vector3 right = yae::math::right(q2);
     }
     
 
@@ -171,4 +170,5 @@ void testQuaternion()
     */
 }
 
-} // namespace math_test
+} // namespace test
+} // namespace yae

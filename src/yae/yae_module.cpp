@@ -3,61 +3,49 @@
 #include <core/memory.h>
 #include <core/program.h>
 #include <core/Module.h>
-#include <core/containers/Array.h>
 
-#include <yae/ApplicationRegistry.h>
 #include <yae/Application.h>
+#include <yae/Engine.h>
 
-#include <imgui/imgui.h>
-
-void* ImGuiMemAlloc(size_t _size, void* _userData)
-{
-    return yae::toolAllocator().allocate(_size);
-}
-
-void ImGuiMemFree(void* _ptr, void* _userData)
-{
-    return yae::toolAllocator().deallocate(_ptr);
-}
+using namespace yae;
 
 // Module Interface
 
-void initModule(yae::Program* _program, yae::Module* _module)
+void initModule(Program* _program, Module* _module)
 {
-	yae::ApplicationRegistry* applicationRegistry = yae::defaultAllocator().create<yae::ApplicationRegistry>(); 
-	_module->userData = applicationRegistry;
-
-	// Init ImGui
-	{
-    	ImGui::SetAllocatorFunctions(&ImGuiMemAlloc, &ImGuiMemFree, nullptr);
-	}
+	Engine* engine_ = defaultAllocator().create<Engine>(); 
+	_module->userData = engine_;
+	engine_->init();
 }
 
-void shutdownModule(yae::Program* _program, yae::Module* _module)
+void shutdownModule(Program* _program, Module* _module)
 {
-	// ImGui shutdown
-	{
-		ImGui::SetAllocatorFunctions(nullptr, nullptr, nullptr);
-	}
-
-	yae::defaultAllocator().destroy((yae::ApplicationRegistry*)_module->userData);
+	engine().shutdown();
+	defaultAllocator().destroy((Engine*)_module->userData);
 	_module->userData = nullptr;
 }
 
-void onModuleReloaded(yae::Program* _program, yae::Module* _module)
+void beforeModuleReload(Program* _program, Module* _module)
 {
-
+	Engine* engine = (Engine*)_module->userData;
+	engine->beforeReload();
 }
 
-void startProgram(yae::Program* _program, yae::Module* _module)
+void afterModuleReload(Program* _program, Module* _module)
+{
+	Engine* engine = (Engine*)_module->userData;
+	engine->afterReload();
+}
+
+void startProgram(Program* _program, Module* _module)
 {
 }
 
-void stopProgram(yae::Program* _program, yae::Module* _module)
+void stopProgram(Program* _program, Module* _module)
 {
 }
 
-void updateProgram(yae::Program* _program, yae::Module* _module)
+void updateProgram(Program* _program, Module* _module)
 {
-	yae::ApplicationRegistry::Update();
+	engine().update();
 }

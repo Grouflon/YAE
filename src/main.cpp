@@ -31,35 +31,19 @@ int main(int _argc, char** _argv)
     {
         yae::Program program;
 
+        // Log
         program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
         program.logger().setCategoryVerbosity("resource", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("input", yae::LogVerbosity_Verbose);
         //program.logger().setCategoryVerbosity("SDL", yae::LogVerbosity_Verbose);
 
+        // Modules
         program.registerModule("yae");
-#if YAE_RELEASE == 0
-        program.registerModule("test");
-#endif
-
-#if YAE_EDITOR
-        program.registerModule("editor");
-#endif
         program.registerModule("game");
 
+        // Loop
         program.init((const char**)_argv, _argc);
-
-/*#if YAE_EDITOR
-        yae::Application app = yae::Application("yae Editor | " YAE_CONFIG, 800u, 600u);
-        app.addModule(editorModule);
-        (void)gameModule;
-#else
-        yae::Application app = yae::Application("yae Game | " YAE_CONFIG, 800u, 600u);
-        app.addModule(gameModule);
-#endif
-        program.registerApplication(&app);*/
         program.run();
-        //program.unregisterApplication(&app);
-
         program.shutdown();
     }
 

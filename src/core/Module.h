@@ -19,7 +19,8 @@ public:
 	DataArray<StringHash> dependencies;
 	DataArray<StringHash> dependents;
 
-	void (*onModuleReloadedFunction)(Program* _program, Module* _module) = nullptr;
+	void (*beforeModuleReloadFunction)(Program* _program, Module* _module) = nullptr;
+	void (*afterModuleReloadFunction)(Program* _program, Module* _module) = nullptr;
 	void (*initModuleFunction)(Program* _program, Module* _module) = nullptr;
 	void (*shutdownModuleFunction)(Program* _program, Module* _module) = nullptr;
 

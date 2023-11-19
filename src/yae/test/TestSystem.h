@@ -26,6 +26,9 @@ public:
 	TestSystem();
 	~TestSystem();
 
+	void init();
+	void shutdown();
+
 	void pushCategory(const char* _name);
 	void popCategory();
 
@@ -38,6 +41,7 @@ public:
 	const TestCategory& getRootCategory() const;
 
 //private:
+	void _registerAllTests();
 	void _runTest(const Test& _test);
 	void _runAllTestsInCategory(const TestCategory& _category);
 

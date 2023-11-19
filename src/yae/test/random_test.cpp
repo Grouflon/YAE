@@ -3,11 +3,10 @@
 #include <yae/RandomGenerator.h>
 #include <yae/random.h>
 
-#include <test/test_macros.h>
+#include <yae/test/test_macros.h>
 
-using namespace yae;
-
-namespace random_test {
+namespace yae {
+namespace test {
 
 void testRandom()
 {
@@ -41,4 +40,5 @@ void testRandom()
 	TEST(yae::random::range(generator, 0, 1) == 0);
 }
 
-} // namespace random
+} // namespace test
+} // namespace yae

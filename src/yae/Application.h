@@ -16,15 +16,21 @@ class Renderer;
 class InputSystem;
 class Serializer;
 
+namespace editor {
+class Editor;
+}
+
 class YAE_API Application
 {
 public:
 	Application(const char* _name, u32 _width, u32 _height);
-	~Application();
+	virtual ~Application();
 
 	void start();
 	void stop();
 	void requestStop(); // if within the application update, this should be called instead of stop()
+	void beforeReload();
+	void afterReload();
 
 	bool isRunning() const;
 	bool isStopRequested() const;
@@ -63,6 +69,7 @@ public:
 
 	virtual void _onStart();
 	virtual void _onStop();
+	virtual void _onReload();
 	virtual void _onUpdate(float _dt);
 	virtual bool _onSerialize(Serializer* _serializer);
 
@@ -78,6 +85,7 @@ public:
 	InputSystem* m_inputSystem = nullptr;
 	Renderer* m_renderer = nullptr;
 	ImGuiContext* m_imguiContext = nullptr;
+	editor::Editor* m_editor = nullptr;
 
 	SDL_Window* m_window = nullptr;
 	DataArray<SDL_Event> m_events;

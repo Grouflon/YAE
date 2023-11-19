@@ -9,41 +9,34 @@ using namespace yae;
 
 void initModule(yae::Program* _program, yae::Module* _module)
 {
-	if (_program->findModule("editor") == nullptr)
-	{
-		GameApplication* gameApplication = defaultAllocator().create<GameApplication>();
-		_module->userData = gameApplication;
-
-		gameApplication->start();
-	}
+	
 }
 
 void shutdownModule(yae::Program* _program, yae::Module* _module)
 {
-	if (_module->userData != nullptr)
-	{
-		GameApplication* gameApplication = (GameApplication*)_module->userData;
-
-		gameApplication->stop();
-
-		defaultAllocator().destroy(gameApplication);
-		_module->userData = nullptr;
-	}
 }
 
-void onModuleReloaded(yae::Program* _program, yae::Module* _module)
+void afterModuleReload(yae::Program* _program, yae::Module* _module)
 {
 
 }
 
 void startProgram(yae::Program* _program, yae::Module* _module)
 {
+	GameApplication* gameApplication = defaultAllocator().create<GameApplication>();
+	_module->userData = gameApplication;
 
+	gameApplication->start();
 }
 
 void stopProgram(yae::Program* _program, yae::Module* _module)
 {
+	GameApplication* gameApplication = (GameApplication*)_module->userData;
 
+	gameApplication->stop();
+
+	defaultAllocator().destroy(gameApplication);
+	_module->userData = nullptr;
 }
 
 void getDependencies(const char*** _outModuleNames, int* _outModuleCount)

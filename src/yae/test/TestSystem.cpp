@@ -2,17 +2,46 @@
 
 #include <core/logger.h>
 
+#include <yae/test/serialization_test.h>
+#include <yae/test/math_test.h>
+#include <yae/test/random_test.h>
+
 namespace yae {
+
+void TestSystem::_registerAllTests()
+{
+	pushCategory("serialization");
+        addTest("JsonSerializer", &test::testJsonSerializer);
+        addTest("BinarySerializer", &test::testBinarySerializer);
+    popCategory();
+
+    pushCategory("math");
+        addTest("vectors", &test::testVectors);
+        addTest("quaternion", &test::testQuaternion);
+    popCategory();
+
+    addTest("random", &test::testRandom);
+}
 
 TestSystem::TestSystem()
 	: m_categoryStack(&toolAllocator())
 	, m_tests(&toolAllocator())
 	, m_categories(&toolAllocator())
 {
-	pushCategory("root");
 }
 
 TestSystem::~TestSystem()
+{
+	YAE_ASSERT(m_categoryStack.size() == 0);
+}
+
+void TestSystem::init()
+{
+	pushCategory("root");
+	_registerAllTests();
+}
+
+void TestSystem::shutdown()
 {
 	YAE_ASSERT(m_categoryStack.size() == 1);
 	popCategory();
@@ -83,6 +112,7 @@ void TestSystem::addTest(const char* _name, void(*_testFunctionPtr)())
 
 void TestSystem::runAllTests()
 {
+	YAE_CAPTURE_FUNCTION();
 	YAE_VERBOSE_CAT("test", "Running all tests...");
 
 	for (const Test& test : m_tests)

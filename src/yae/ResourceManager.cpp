@@ -7,12 +7,8 @@
 
 #include <yae/resources/Resource.h>
 #include <yae/resource.h>
-
-#define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
-
-#if YAE_FILEWATCH_ENABLED
-#include <FileWatch/FileWatch.hpp>
-#endif
+#include <yae/Engine.h>
+#include <yae/FileWatchSystem.h>
 
 namespace yae {
 
@@ -54,6 +50,7 @@ void ResourceManager::gatherResources(const char* _path)
 void ResourceManager::registerResource(const char* _name, Resource* _resource)
 {
 	YAE_ASSERT(_resource != nullptr);
+	YAE_ASSERT(_resource->m_manager == nullptr);
 	YAE_ASSERT(std::find(m_resources.begin(), m_resources.end(), _resource) == m_resources.end());
 
 	YAE_VERIFY(string::safeCopyToBuffer(_resource->m_name, _name, countof(_resource->m_name)) < countof(_resource->m_name));
@@ -98,6 +95,8 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 		} 
 	}
 
+	_resource->m_manager = this;
+
 	m_resources.push_back(_resource);
 	YAE_VERBOSEF_CAT("resource", "Registered \"%s\"(%s)...", _resource->m_name, _resource->getClass()->getName());
 }
@@ -105,6 +104,9 @@ void ResourceManager::registerResource(const char* _name, Resource* _resource)
 void ResourceManager::unregisterResource(Resource* _resource)
 {
 	YAE_ASSERT(_resource != nullptr);
+	YAE_ASSERT(_resource->m_manager == this);
+
+	_resource->m_manager = nullptr;
 
 	// unregister
 	{
@@ -198,45 +200,31 @@ const DataArray<Resource*>& ResourceManager::getResourcesByType(const mirror::Cl
 
 void ResourceManager::flagResourceForReload(Resource* _resource)
 {
+	YAE_ASSERT(_resource->m_manager == this);
+
 	m_resourcesToReloadMutex.lock();
 	m_resourcesToReload.push_back(_resource);
 	m_resourcesToReloadMutex.unlock();
 }
 
-void ResourceManager::startReloadOnFileChanged(const char* _filePath, Resource* _resource)
+void ResourceManager::registerReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
-#if YAE_FILEWATCH_ENABLED
-	StringHash id(_filePath);
-
-	YAE_ASSERT(m_fileWatchers.get(id) == nullptr);
-
-	ResourceManager* rm = &resourceManager();
-	auto fileWatch = defaultAllocator().create<filewatch::FileWatch<std::string>>(
-		_filePath,
-		[_resource, rm](const std::string& _path, const filewatch::Event _change_type)
+	auto onFileChanged = [](const char* _filePath, FileChangeType _changeType, void* _userData)
+	{
+		if (_changeType == FileChangeType::MODIFIED)
 		{
-			if (_change_type == filewatch::Event::modified)
-			{
-				rm->flagResourceForReload(_resource);
-				YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _path.c_str());
-			}
+			Resource* resource = (Resource*)_userData;
+			resource->requestReload();
+			YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _filePath);
 		}
-	);
-	m_fileWatchers.set(id, fileWatch);
-#endif
+	};
+
+	engine().fileWatchSystem().startFileWatcher(_filePath, onFileChanged, _resource);
 }
 
-void ResourceManager::stopReloadOnFileChanged(const char* _filePath, Resource* _resource)
+void ResourceManager::unregisterReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
-#if YAE_FILEWATCH_ENABLED
-	StringHash id(_filePath);
-
-	auto* watcherPtr = (filewatch::FileWatch<std::string>**)m_fileWatchers.get(id);
-	YAE_ASSERT(watcherPtr != nullptr);
-
-	defaultAllocator().destroy(*watcherPtr);
-	m_fileWatchers.remove(id);
-#endif
+	engine().fileWatchSystem().stopFileWatcher(_filePath);
 }
 
 void ResourceManager::reloadChangedResources()

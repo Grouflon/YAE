@@ -3,18 +3,22 @@
 #include <core/platform.h>
 #include <core/program.h>
 #include <core/Module.h>
+#include <core/string.h>
 #include <core/time.h>
 #include <core/memory.h>
-#include <core/string.h>
 #include <core/filesystem.h>
 #include <core/serialization/serialization.h>
 #include <core/serialization/JsonSerializer.h>
 
-#include <yae/ApplicationRegistry.h>
+#include <yae/Engine.h>
 #include <yae/InputSystem.h>
 #include <yae/math_3d.h>
-#include <yae/resource.h>
+#include <yae/ResourceManager.h>
 #include <yae/resources/File.h>
+
+#if YAE_EDITOR
+#include <yae/editor/Editor.h>
+#endif
 
 #if YAE_IMPLEMENTS_RENDERER_VULKAN
 #include <yae/rendering/renderers/vulkan/VulkanRenderer.h>
@@ -45,17 +49,25 @@ Application::~Application()
 
 void Application::start()
 {
-	ApplicationRegistry::StartApplication(this);
+	engine().startApplication(this);
 }
 
 void Application::stop()
 {
-	ApplicationRegistry::StopApplication(this);
+	engine().stopApplication(this);
 }
 
 void Application::requestStop()
 {
 	m_isStopRequested = true;
+}
+
+void Application::beforeReload()
+{
+}
+
+void Application::afterReload()
+{
 }
 
 void Application::_start()
@@ -114,6 +126,12 @@ void Application::_start()
 
 	loadSettings();
 
+#if YAE_EDITOR
+	YAE_ASSERT(m_editor == nullptr);
+	m_editor = toolAllocator().create<editor::Editor>();
+	m_editor->init();
+#endif
+
 	_onStart();
 
 	ImGui::SetCurrentContext(nullptr);
@@ -126,6 +144,13 @@ void Application::_stop()
 
 	m_isRunning = false;
 	_onStop();
+
+	#if YAE_EDITOR
+	YAE_ASSERT(m_editor != nullptr);
+	m_editor->shutdown();
+	toolAllocator().destroy(m_editor);
+	m_editor = nullptr;
+#endif
 
 	ImGui::SetCurrentContext(m_imguiContext);
 	renderer().waitIdle();
@@ -224,6 +249,10 @@ void Application::_doFrame()
 
 	_onUpdate(m_dt);
 
+#if YAE_EDITOR
+	m_editor->update(m_dt);
+#endif
+
     // Rendering
 	ImGui::Render();
     m_renderer->render();
@@ -297,7 +326,10 @@ void Application::loadSettings()
 	FileReader reader(filePath.c_str(), &scratchAllocator());
 	if (!reader.load())
 	{
-		YAE_ERRORF_CAT("application", "Failed to load settings file \"%s\"", filePath.c_str());
+		// No settings file.
+		// Apply some initial values
+		setWindowPosition(0, 30);
+
 		return;
 	}
 
@@ -416,6 +448,11 @@ void Application::_onStart()
 }
 
 void Application::_onStop()
+{
+
+}
+
+void Application::_onReload()
 {
 
 }

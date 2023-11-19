@@ -2,9 +2,11 @@
 
 #include <yae/types.h>
 
-namespace math_test {
+namespace yae {
+namespace test {
 
 void testVectors();
 void testQuaternion();
 
-} // namespace math_test
+} // namespace test
+} // namespace yae

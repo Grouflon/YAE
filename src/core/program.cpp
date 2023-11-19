@@ -21,6 +21,8 @@
 
 #include <cstring>
 
+
+
 // anonymous functions
 
 
@@ -108,6 +110,24 @@ Module* Program::findModule(StringHash _moduleNameHash) const
 {
 	Module*const* modulePtr = m_modulesByName.get(_moduleNameHash);
 	return modulePtr != nullptr ? *modulePtr : nullptr;
+}
+
+void Program::reloadModule(const char* _moduleName)
+{
+	Module* module = findModule(_moduleName);
+	if (module == nullptr)
+	{
+		YAE_ERRORF("Can't find module \"%s\" to reload.", _moduleName);
+	}
+	reloadModule(module);
+}
+
+void Program::reloadModule(Module* _module)
+{
+	if (_module == nullptr)
+		return;
+
+	m_modulesToReload.push_back(_module);
 }
 
 void Program::init(const char** _args, int _argCount)
@@ -353,7 +373,7 @@ void Program::loadSettings()
 	FileReader reader(filePath.c_str());
 	if (!reader.load())
 	{
-		YAE_ERRORF_CAT("program", "Failed to load settings file \"%s\"", filePath.c_str());
+		// No settings file, do nothing
 		return;
 	}
 
@@ -496,7 +516,8 @@ void Program::_loadModule(Module* _module, const char* _dllPath)
 
 	mirror::InitNewTypes();
 
-	_module->onModuleReloadedFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "onModuleReloaded");
+	_module->beforeModuleReloadFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "beforeModuleReload");
+	_module->afterModuleReloadFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "afterModuleReload");
 	_module->initModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "initModule");
 	_module->shutdownModuleFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "shutdownModule");
 	_module->startProgramFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "startProgram");
@@ -541,7 +562,8 @@ void Program::_unloadModule(Module* _module)
 	}
 	_module->dependencies.clear();
 	
-	_module->onModuleReloadedFunction = nullptr;
+	_module->beforeModuleReloadFunction = nullptr;
+	_module->afterModuleReloadFunction = nullptr;
 	_module->initModuleFunction = nullptr;
 	_module->shutdownModuleFunction = nullptr;
 	_module->startProgramFunction = nullptr;
@@ -564,8 +586,8 @@ void Program::_copyAndLoadModule(Module* _module)
 	String dllDst = string::format("%s%s.%s", m_hotReloadDirectory.c_str(), _module->name.c_str(), YAE_MODULE_EXTENSION);
 	String symbolsDst = string::format("%s%s.pdb", m_hotReloadDirectory.c_str(), _module->name.c_str());
 
-	filesystem::copy(dllSrc.c_str(), dllDst.c_str(), filesystem::CopyMode_OverwriteExisting);
-	filesystem::copy(SymbolsSrc.c_str(), symbolsDst.c_str(), filesystem::CopyMode_OverwriteExisting);
+	YAE_VERIFY(filesystem::copy(dllSrc.c_str(), dllDst.c_str(), filesystem::CopyMode_OverwriteExisting));
+	YAE_VERIFY(filesystem::copy(SymbolsSrc.c_str(), symbolsDst.c_str(), filesystem::CopyMode_OverwriteExisting));
 
 	_loadModule(_module, dllDst.c_str());
 
@@ -574,7 +596,6 @@ void Program::_copyAndLoadModule(Module* _module)
 
 void Program::_processModuleHotReload()
 {
-	DataArray<Module*> modulesToReload(&scratchAllocator());
 	for (Module* module : m_modules)
 	{
 		// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
@@ -584,11 +605,11 @@ void Program::_processModuleHotReload()
 		bool isDLLOutDated = (lastWriteTime > module->lastLibraryWriteTime && timeSinceLastWriteTime > 0);
 		if (isDLLOutDated)
 		{
-			modulesToReload.push_back(module);
+			m_modulesToReload.push_back(module);
 		}
 	}
 
-	if (modulesToReload.size() > 0)
+	if (m_modulesToReload.size() > 0)
 	{
 		YAE_CAPTURE_SCOPE("ReloadGameAPI");
 
@@ -596,16 +617,23 @@ void Program::_processModuleHotReload()
 
 		for (int i = m_modules.size() - 1; i >= 0; --i)
 		{
-			_unloadModule(m_modules[i]);
+			Module* module = m_modules[i];
+
+			if (module->beforeModuleReloadFunction != nullptr)
+			{
+				module->beforeModuleReloadFunction(this, module);
+			}
+
+			_unloadModule(module);
 		}
 
 		for (Module* module : m_modules)
 		{
 			_copyAndLoadModule(module);
 
-			if (module->onModuleReloadedFunction != nullptr)
+			if (module->afterModuleReloadFunction != nullptr)
 			{
-				module->onModuleReloadedFunction(this, module);
+				module->afterModuleReloadFunction(this, module);
 			}
 		}
 
@@ -627,6 +655,7 @@ void Program::_processModuleHotReload()
 		}
 		*/
 	}
+	m_modulesToReload.clear();
 }
 
 String Program::_getModuleDLLPath(const char* _moduleName) const

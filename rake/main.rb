@@ -46,7 +46,7 @@ elsif PLATFORM == "Web"
 	file binary_file(main_settings) => [ "#{BIN_DIR}/core.wasm", "#{BIN_DIR}/yae.wasm", "#{BIN_DIR}/test.wasm", "#{BIN_DIR}/editor.wasm", "#{BIN_DIR}/game.wasm"]
 end
 
-task :link => ["core:build", "yae:build", "editor:build", "game:build", "test:build", :copy_files]
+task :link => ["core:build", "yae:build", "game:build", :copy_files]
 define_module_tasks(main_settings)
 
 end # namespace main

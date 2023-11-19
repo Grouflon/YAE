@@ -93,7 +93,7 @@
 				},
 				{
 					"name": "debug visual Debug",
-					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe\"",
+					"shell_cmd": "devenv /debugexe \"bin/Win64_Debug/main.exe -hotreload\"",
 				},
 				{
 					"name": "debug visual DebugOptimized",

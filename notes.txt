@@ -21,3 +21,4 @@ https://learn.microsoft.com/en-us/cpp/build/reference/delay-delay-load-import-se
 16/08/2022 - problèmes observés:
 - il y a définitivement un gros problème avec l'ordre d'init des types de mirror. J'ai croisé un cas ou un type s'enregistre avant les types primitif, ce qui fait qu'il est incapable de register ses membres correctement. Il faut réfléchir à une manière d'executer ça complètement hors de la phase d'init statique.
 - Les serializers mirror font n'imp lorsque il manque des membres dans ce qu'ils essaient de serialiser. Il faudrait probablement être un peu moins rigide et passer à la suite quand un membre est manquant. C'est plutot à l'implem de décider, mais les fonctions de serialization mirror sont des implems
+

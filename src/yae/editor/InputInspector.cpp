@@ -7,7 +7,6 @@
 
 #include <imgui/imgui.h>
 
-
 MIRROR_CLASS(yae::editor::InputInspector)
 (
 	MIRROR_MEMBER(opened);

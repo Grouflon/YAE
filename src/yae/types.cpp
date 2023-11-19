@@ -1,23 +1,31 @@
 #include "types.h"
 
 #include <core/program.h>
+#include <core/program.h>
 #include <core/Module.h>
 
-#include <yae/ApplicationRegistry.h>
 #include <yae/Application.h>
+#include <yae/Engine.h>
 
 namespace yae {
 
-Application& app()
+Engine& engine()
 {
-	Application* application = ApplicationRegistry::CurrentApplication();
-	YAE_ASSERT(application != nullptr);
-	return *application;
+	Engine* enginePtr = Engine::Instance();
+	YAE_ASSERT(enginePtr != nullptr);
+	return *enginePtr;
 }
 
 ResourceManager& resourceManager()
 {
 	return app().resourceManager();
+}
+
+Application& app()
+{
+	Application* application = engine().currentApplication();
+	YAE_ASSERT(application != nullptr);
+	return *application;
 }
 
 InputSystem& input()

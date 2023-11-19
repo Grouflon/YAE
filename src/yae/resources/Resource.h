@@ -40,6 +40,8 @@ public:
 	bool isLoaded() const { return m_loadCount > 0 && m_errorCount == 0; } // @TODO warning as errors option ?
 	bool isTransient() const { return m_transient; }
 
+	void requestReload();
+
 	const Array<ResourceLog>& getLogs() const { return m_logs; }
 
 // private:
@@ -52,6 +54,7 @@ public:
 	
 	void _log(ResourceLogType _type, const char* _msg);
 
+	ResourceManager* m_manager = nullptr;
 	Array<ResourceLog> m_logs;
 	char m_name[256];
 	ResourceID m_id;

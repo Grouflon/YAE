@@ -166,8 +166,6 @@ bool Renderer::init(SDL_Window* _window)
 		m_quad->load();
 	}
 
-
-
 	return true;
 }
 

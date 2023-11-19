@@ -2,22 +2,15 @@
 
 #include <core/filesystem.h>
 #include <core/program.h>
+#include <core/gl3w.h>
 
 #include <yae/resources/ShaderFile.h>
 #include <yae/resources/FontFile.h>
 #include <yae/resources/File.h>
 #include <yae/resource.h>
+#include <yae/rendering/renderers/opengl/OpenGLHelpers.h>
 
-#define GL_GLEXT_PROTOTYPES
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#define EGL_EGLEXT_PROTOTYPES
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
-#else
-#include <GL/gl3w.h>
-#endif
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <im3d/im3d.h>
 
@@ -37,19 +30,6 @@ const char* OPENGL_SHADER_VERSION = "#version 300 es";
 
 #define YAE_RENDER_IM3D (YAE_OPENGL_ES == 0)
 
-
-const char* glErrorToString(GLint _errorCode)
-{
-	switch (_errorCode)
-	{
-		case GL_NO_ERROR: return "GL_NO_ERROR";
-		case GL_INVALID_ENUM: return "GL_INVALID_ENUM";
-		case GL_INVALID_VALUE: return "GL_INVALID_VALUE";
-		case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
-		case GL_OUT_OF_MEMORY: return "GL_OUT_OF_MEMORY";
-		default: return "Unknown error";
-	}
-}
 
 GLuint primitiveModeToGlPrimitiveMode(yae::PrimitiveMode _primitiveMode)
 {
@@ -86,11 +66,7 @@ void glDebugCallback(GLenum _source, GLenum _type, GLuint _id, GLenum _severity,
 	}
 }
 
-#define YAE_GL_VERIFY(_instruction) { _instruction; GLint ___error = glGetError(); YAE_ASSERT_MSGF(___error == GL_NO_ERROR, "GL Error %s(0x%04x) -> " #_instruction, glErrorToString(___error), ___error); }
-#define YAE_GL_TEST(_instruction) [&](){ _instruction; GLint ___error = glGetError(); if (___error != GL_NO_ERROR) { YAE_ERRORF_CAT("renderer", "GL Error %s(0x%04x) -> ", #_instruction, glErrorToString(___error), ___error); } return ___error == GL_NO_ERROR; }()
-
 namespace yae {
-
 
 void OpenGLRenderer::hintWindow() const
 {
@@ -118,7 +94,6 @@ u32 OpenGLRenderer::getWindowFlags() const
 bool OpenGLRenderer::_init()
 {	
 	m_glContext = SDL_GL_CreateContext(m_window);
-	YAE_LOGF("%s", SDL_GetError());
 	YAE_ASSERT(m_glContext != nullptr);
 	YAE_SDL_VERIFY(SDL_GL_MakeCurrent(m_window, m_glContext));
 
@@ -152,19 +127,11 @@ bool OpenGLRenderer::_init()
 	*/
 
 #if YAE_PLATFORM_WEB == 0
-	// @NOTE(remi): this needs to be done once, after a window has been created
-	static bool s_isGl3wInitialized = false;
-	if (!s_isGl3wInitialized)
-	{
-		YAE_CAPTURE_SCOPE("gl3wInit");
-		int result = gl3wInit();
-		YAE_ASSERT(result == GL3W_OK);
-		s_isGl3wInitialized = true;
-	}
-    
+	initGl3w();
+
 	if (gl3wIsSupported(OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR) == false)
 	{
-		YAE_ERRORF_CAT("renderer", "Failed to initialize gl3w: Version %d.%d not supported", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
+		YAE_ERRORF_CAT("renderer", "OpenGL Version %d.%d not supported by gl3w.", OPENGL_VERSION_MAJOR, OPENGL_VERSION_MINOR);
 		return false;
 	}
 

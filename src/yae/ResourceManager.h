@@ -36,8 +36,8 @@ public:
 	template <typename T> const DataArray<Resource*>& getResourcesByType() const;
 
 	void flagResourceForReload(Resource* _resource);
-	void startReloadOnFileChanged(const char* _filePath, Resource* _resource);
-	void stopReloadOnFileChanged(const char* _filePath, Resource* _resource);
+	void registerReloadOnFileChanged(const char* _filePath, Resource* _resource);
+	void unregisterReloadOnFileChanged(const char* _filePath, Resource* _resource);
 	void reloadChangedResources();
 	// TODO: The naming of arguments here is terrible, I need to find something clearer
 	void addDependency(Resource* _dependencyResource, Resource* _dependentResource);

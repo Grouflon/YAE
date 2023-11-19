@@ -1,4 +1,4 @@
-#include "EditorApplication.h"
+#include "Editor.h"
 
 #include <core/memory.h>
 #include <core/program.h>
@@ -25,32 +25,13 @@
 namespace yae {
 namespace editor {
 
-EditorApplication::EditorApplication()
-	: Application("Editor", 800, 600)
-{
-
-}
-
-EditorApplication::EditorApplication(const char* _name, u32 _width, u32 _height)
-	: Application(_name, _width, _height)
-{
-
-}
-
-EditorApplication::~EditorApplication()
-{
-
-}
-
-void EditorApplication::reload()
+void Editor::reload()
 {
 	resourceEditor.reload();
 }
 
-void EditorApplication::_onStart()
-{
-	Application::_onStart();
-
+void Editor::init()
+{	
 	{
 		wireframeShader = resource::findOrCreate<ShaderProgram>("wireframeShader");
 
@@ -95,7 +76,7 @@ void EditorApplication::_onStart()
 	scene->addCamera(camera);
 }
 
-void EditorApplication::_onStop()
+void Editor::shutdown()
 {
 	renderer().destroyCamera("editorCamera");	
 	renderer().destroyScene("editorScene");
@@ -107,14 +88,10 @@ void EditorApplication::_onStop()
 
 	normalsShader->unload();
 	normalsShader = nullptr;
-
-	Application::_onStop();
 }
 
-void EditorApplication::_onUpdate(float _dt)
+void Editor::update(float _dt)
 {
-	Application::_onUpdate(_dt);
-
 	bool changedSettings = false;
 
 	if (ImGui::BeginMainMenuBar())
@@ -156,26 +133,6 @@ void EditorApplication::_onUpdate(float _dt)
 	        }
 
             ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Game"))
-        {
-        	if (m_gameApplication == nullptr)
-        	{
-        		if (ImGui::MenuItem("Play", "F5"))
-	        	{
-	        		_openGameApplication();
-	        	}	
-        	}
-        	else
-        	{
-        		if (ImGui::MenuItem("Stop", "F5"))
-	        	{
-	        		_closeGameApplication();
-	        	}
-        	}
-        	
-        	ImGui::EndMenu();
         }
 
         ImGui::EndMainMenuBar();
@@ -266,6 +223,7 @@ void EditorApplication::_onUpdate(float _dt)
     		ImGui::Text("projection matrix:");
 			imgui_matrix4(renderer().m_projMatrix);
 			*/
+			ImGui::Text("TGaa");
     	}
     	ImGui::End();
 
@@ -350,34 +308,25 @@ void EditorApplication::_onUpdate(float _dt)
     	app().saveSettings();
     }
 
+    // RELOAD
+    if (input().isCtrlDown() && input().isKeyDown(SDL_SCANCODE_R))
+    {
+    	program().reloadModule("yae");
+    }
+
     // EXIT PROGRAM
 	if (input().isKeyDown(SDL_SCANCODE_ESCAPE))
 	{
 		app().requestStop();
 	}
-
-	if (input().isKeyDown(SDL_SCANCODE_F5))
-	{
-		if (m_gameApplication != nullptr)
-		{
-			_closeGameApplication();
-		}
-		else
-		{
-			_openGameApplication();
-		}
-	}
 }
 
-bool EditorApplication::_onSerialize(Serializer* _serializer)
+bool Editor::serialize(Serializer* _serializer)
 {
-	if (!Application::_onSerialize(_serializer))
-		return false;
-
 	return serialization::serializeMirrorType(_serializer, *this, "editor");
 }
 
-void EditorApplication::_displayTypeTreeNode(mirror::Type* _type, mirror::Type* _parent)
+void Editor::_displayTypeTreeNode(mirror::Type* _type, mirror::Type* _parent)
 {
 	mirror::TypeID id = _type->getTypeID();
 	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | (selectedTypeID == id ? ImGuiTreeNodeFlags_Selected : 0);
@@ -427,22 +376,10 @@ void EditorApplication::_displayTypeTreeNode(mirror::Type* _type, mirror::Type* 
     }
 }
 
-void EditorApplication::_openGameApplication()
-{
-	if (m_gameApplication != nullptr)
-		return;
-}
-
-void EditorApplication::_closeGameApplication()
-{
-	if (m_gameApplication == nullptr)
-		return;
-}
-
 } // namespace editor
 } // namespace yae
 
-MIRROR_CLASS(yae::editor::EditorApplication)
+MIRROR_CLASS(yae::editor::Editor)
 (
 	MIRROR_MEMBER(showMemoryProfiler);
 	MIRROR_MEMBER(showFrameRate);

@@ -4,12 +4,10 @@ def settings()
 	_settings = default_settings()
 	_settings[:source_files] |= FileList[
 			"src/yae/**/*.cpp",
-			"extern/imgui/*.cpp",
 			"extern/im3d/*.cpp",
-			"extern/imgui/backends/imgui_impl_sdl2.cpp",
-			"extern/imgui/backends/imgui_impl_opengl3.cpp",
 		]
 		.exclude("src/yae/rendering/renderers/**/*.*")
+		.exclude("src/yae/test/**/*.*")
 
 	_settings[:defines] += [
 	]
@@ -32,15 +30,16 @@ def settings()
 		_settings[:libs] += [
 			"core",
 			"SDL2",
-			"delayimp",
 		]
-		_settings[:linker_flags] += ["-Xlinker /delayload:core.dll -Xlinker /delay:unload"]
+		_settings[:linker_flags] += []
 
 		_settings[:defines] += [
-			"IMGUI_API=__declspec(dllexport)",
-			"GL3W_API=__declspec(dllexport)",
+			"IMGUI_USER_CONFIG=\\\"yae/yae_imconfig.h\\\"",
+
 			"YAE_API=__declspec(dllexport)",
 			"CORE_API=__declspec(dllimport)",
+			"GL3W_API=__declspec(dllimport)",
+			"IMGUI_API=__declspec(dllimport)",
 		]
 
 	elsif _settings[:platform] == "Web"
@@ -49,17 +48,35 @@ def settings()
 		renderer = :opengl
 	end
 
+	# renderer
 	if renderer == :opengl
 		_settings[:source_files] |= FileList["src/yae/rendering/renderers/opengl/**/*.cpp"]
 		_settings[:defines] += ["YAE_IMPLEMENTS_RENDERER_OPENGL=1"]
+	end
 
-		_settings[:source_files] |= ["extern/gl3w/src/gl3w.c"]
-		_settings[:include_dirs] += ["extern/gl3w/include"]
+	if _settings[:config] == "Release"
+		with_test = false
+		with_editor = false
+	else
+		with_test = true
+		with_editor = true
+	end
+
+	# tests
+	if with_test
+		_settings[:source_files] |= FileList["src/yae/test/**/*.cpp"]
+		_settings[:defines] += ["YAE_TESTS=1"]
+	end
+
+	# editor
+	if with_editor
+		_settings[:source_files] |= FileList["src/yae/editor/**/*.cpp"]
+		_settings[:defines] += ["YAE_EDITOR=1"]
 	end
 
 	# file overrides
 	_settings[:file_flags] = _settings[:file_flags].merge({
-		"src/yae/ResourceManager.cpp" => ["-Wno-missing-field-initializers"],
+		"src/yae/FileWatchSystem.cpp" => ["-Wno-missing-field-initializers"], # incorrect initialization in FileWatch.hpp
 		"extern/imgui/imgui_widgets.cpp" => ["-Wno-unused-variable"],
 		"extern/im3d/im3d.cpp" => ["-Wno-unused-variable", "-Wno-unused-function"],
 	})

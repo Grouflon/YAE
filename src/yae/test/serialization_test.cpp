@@ -3,11 +3,10 @@
 #include <core/serialization/JsonSerializer.h>
 #include <core/serialization/BinarySerializer.h>
 #include <core/containers/Array.h>
-#include <test/test_macros.h>
+#include <yae/test/test_macros.h>
 
-using namespace yae;
-
-namespace serialization_test {
+namespace yae {
+namespace test {
 
 struct Nest
 {
@@ -160,6 +159,7 @@ void testJsonSerializer()
         YAE_LOGF("str: %s", _s.str.c_str());
         YAE_LOG("");
     };
+    (void)printSfouf;
 
     //printSfouf(sfoufWrite);
     //printSfouf(sfoufRead);
@@ -196,4 +196,5 @@ void testBinarySerializer()
     allocator.deallocate(data);	
 }
 
-} // namespace serialization_test
+} // namespace test
+} // namespace yae
