@@ -34,8 +34,13 @@ CORE_API void* loadDynamicLibrary(const char* _path);
 CORE_API void unloadDynamicLibrary(void* _libraryHandle);
 CORE_API void* getProcedureAddress(void* _libraryHandle, const char* _procedureName);
 
-// Callstack
+// Symbols related functions
+CORE_API void loadSymbols();
+CORE_API void unloadSymbols();
 CORE_API u16 captureCallstack(StackFrame* _outFrames, u16 _maxFrameCount);
+CORE_API String getSymbolNameFromAddress(void* _address);
+CORE_API void* getAddressFromSymbolName(const char* _symbolName);
+CORE_API void debugSymbols(void* _address, const char* _name);
 
 // Window
 CORE_API void* findConsoleWindowHandle();

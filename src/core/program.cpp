@@ -438,9 +438,17 @@ void Program::saveSettings()
 	YAE_LOGF_CAT("program", "Saved program settings to \"%s\"", filePath.c_str());
 }
 
-#if YAE_PLATFORM_WEB == 0
+void Program::registerFunctionPointer(void** _pointerLocation)
+{
+	YAE_ASSERT(!m_functionPointersPatch.has(_pointerLocation));
+	m_functionPointersPatch.set(_pointerLocation, FunctionPointerPatch());
+}
 
-#endif
+void Program::unregisterFunctionPointer(void** _pointerLocation)
+{
+	YAE_ASSERT(m_functionPointersPatch.has(_pointerLocation));
+	m_functionPointersPatch.remove(_pointerLocation);
+}
 
 const DataArray<Module*>& Program::getModules() const
 {
@@ -613,6 +621,9 @@ void Program::_processModuleHotReload()
 	{
 		YAE_CAPTURE_SCOPE("ReloadGameAPI");
 
+		// NOTE: Commenting out until patch is actually working
+		//_prepareFunctionPointersPatch();
+
 		// NOTE: let's do something dumb for now: unload everything, reload everything
 
 		for (int i = m_modules.size() - 1; i >= 0; --i)
@@ -636,6 +647,9 @@ void Program::_processModuleHotReload()
 				module->afterModuleReloadFunction(this, module);
 			}
 		}
+
+		// NOTE: Commenting out until patch is actually working
+		//_patchFunctionPointers();
 
 		/*
 		for (int i = modulesToReload.size() - 1; i >= 0; --i)
@@ -667,6 +681,45 @@ String Program::_getModuleDLLPath(const char* _moduleName) const
 String Program::_getModuleSymbolsPath(const char* _moduleName) const
 {
 	return string::format("%s%s.pdb", m_binDirectory.c_str(), _moduleName);
+}
+
+void Program::_prepareFunctionPointersPatch()
+{
+	platform::loadSymbols();
+	for (auto& pair : m_functionPointersPatch)
+	{
+		pair.value.address = *pair.key;
+		if (pair.value.address == nullptr)
+			continue;
+
+		pair.value.name = platform::getSymbolNameFromAddress(pair.value.address);
+		YAE_VERBOSEF_CAT("function_patch", "Prepare %s(%p) patch", pair.value.name.c_str(), pair.value.address);
+	}
+	platform::unloadSymbols();
+}
+
+void Program::_patchFunctionPointers()
+{
+	platform::loadSymbols();
+	for (auto& pair : m_functionPointersPatch)
+	{
+		if (pair.value.address == nullptr)
+			continue;
+
+		void* newAddress = platform::getAddressFromSymbolName(pair.value.name.c_str());
+		YAE_ASSERT(newAddress != nullptr);
+		YAE_VERBOSEF_CAT("function_patch", "Patching %s(%p->%p) patch", pair.value.name.c_str(), pair.value.address, newAddress);
+
+		if (newAddress != pair.value.address)
+		{
+			*pair.key = newAddress;
+			logger().setDefaultOutputColor(OutputColor_Green);
+			YAE_LOGF("Patch %s successful: %p -> %p", pair.value.name.c_str(), pair.value.address, newAddress);
+			logger().setDefaultOutputColor(OutputColor_Default);
+
+		}
+	}
+	platform::unloadSymbols();
 }
 
 } // namespace yae

@@ -208,19 +208,19 @@ void ResourceManager::flagResourceForReload(Resource* _resource)
 	m_resourcesToReloadMutex.unlock();
 }
 
+static void OnFileChanged(const char* _filePath, FileChangeType _changeType, void* _userData)
+{
+	if (_changeType == FileChangeType::MODIFIED)
+	{
+		Resource* resource = (Resource*)_userData;
+		resource->requestReload();
+		YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _filePath);
+	}
+}
+
 void ResourceManager::registerReloadOnFileChanged(const char* _filePath, Resource* _resource)
 {
-	auto onFileChanged = [](const char* _filePath, FileChangeType _changeType, void* _userData)
-	{
-		if (_changeType == FileChangeType::MODIFIED)
-		{
-			Resource* resource = (Resource*)_userData;
-			resource->requestReload();
-			YAE_VERBOSEF_CAT("resource", "\"%s\" modified.", _filePath);
-		}
-	};
-
-	engine().fileWatchSystem().startFileWatcher(_filePath, onFileChanged, _resource);
+	engine().fileWatchSystem().startFileWatcher(_filePath, &OnFileChanged, _resource);
 }
 
 void ResourceManager::unregisterReloadOnFileChanged(const char* _filePath, Resource* _resource)

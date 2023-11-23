@@ -37,8 +37,6 @@ void ShaderFile::_doLoad()
 {
 	YAE_CAPTURE_FUNCTION();
 
-	YAE_LOG("HA");
-
 	m_manager->registerReloadOnFileChanged(m_path.c_str(), this);
 
 	FileReader reader(m_path.c_str(), &scratchAllocator());

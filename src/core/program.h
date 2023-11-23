@@ -51,6 +51,9 @@ public:
 	void loadSettings();
 	void saveSettings();
 
+	void registerFunctionPointer(void** _pointerLocation);
+	void unregisterFunctionPointer(void** _pointerLocation);
+
 	// Modules
 	const DataArray<Module*>& getModules() const;
 
@@ -64,6 +67,9 @@ public:
 
 	String _getModuleDLLPath(const char* _moduleName) const;
 	String _getModuleSymbolsPath(const char* _moduleName) const;
+
+	void _prepareFunctionPointersPatch();
+	void _patchFunctionPointers();
 
 	Logger* m_logger = nullptr;
 	Profiler* m_profiler = nullptr;
@@ -82,6 +88,15 @@ public:
 	HashMap<StringHash, Module*> m_modulesByName;
 	DataArray<Module*> m_modulesToReload;
 	bool m_exitRequested = false;
+
+	struct FunctionPointerPatch
+	{
+		FunctionPointerPatch() {}
+		
+		String128 name;
+		void* address = nullptr;
+	};
+	HashMap<void**, FunctionPointerPatch> m_functionPointersPatch;
 
 	i32 m_previousConsoleWindowX = 0;
 	i32 m_previousConsoleWindowY = 0;
