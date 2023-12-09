@@ -1,9 +1,9 @@
 #pragma once
 
 #include <yae/types.h>
-#include <core/time.h>
-#include <yae/math_types.h>
+
 #include <core/containers/HashMap.h>
+#include <core/time.h>
 
 #include <SDL_events.h>
 
@@ -15,6 +15,7 @@ namespace yae {
 class Renderer;
 class InputSystem;
 class Serializer;
+class SceneSystem;
 
 namespace editor {
 class Editor;
@@ -40,6 +41,7 @@ public:
 	InputSystem& input() const;
 	Renderer& renderer() const;
 	ResourceManager& resourceManager() const;
+	SceneSystem& sceneSystem() const;
 
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
@@ -86,6 +88,7 @@ public:
 	Renderer* m_renderer = nullptr;
 	ImGuiContext* m_imguiContext = nullptr;
 	editor::Editor* m_editor = nullptr;
+	SceneSystem* m_sceneSystem = nullptr;
 
 	SDL_Window* m_window = nullptr;
 	DataArray<SDL_Event> m_events;

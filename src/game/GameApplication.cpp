@@ -24,6 +24,7 @@
 #include <yae/resources/ShaderFile.h>
 #include <yae/resources/ShaderProgram.h>
 #include <yae/resources/TextureFile.h>
+#include <yae/SceneSystem.h>
 
 #include <game/transform.h>
 
@@ -34,75 +35,6 @@
 #include <stdio.h>
 
 namespace yae {
-
-void saveResourceToFile(const Resource* _resource, const char* _path)
-{
-	mirror::Class* resourceType = _resource->getClass();
-
-	JsonSerializer serializer(&scratchAllocator());
-	serializer.beginWrite();
-	YAE_VERIFY(serializer.beginSerializeObject());
-	String resourceTypeStr = String(resourceType->getName(), &scratchAllocator());
-	YAE_VERIFY(serializer.serialize(resourceTypeStr, "type"));
-	YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, const_cast<Resource*>(_resource), resourceType));
-	YAE_VERIFY(serializer.endSerializeObject());
-	serializer.endWrite();
-
-	FileHandle file(_path);
-	if (!file.open(FileHandle::OPENMODE_WRITE))
-	{
-		YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for write", _path);
-		return;
-	}
-	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
-	{
-		YAE_ERRORF_CAT("resource", "Failed to write into \"%s\"", _path);
-		return;
-	}
-	file.close();
-}
-
-Resource* createResourceFromFile(const char* _path)
-{
-	FileReader reader(_path, &scratchAllocator());
-
-	if (!reader.load())
-	{
-		YAE_ERRORF_CAT("resource", "Failed to open \"%s\" for read", _path);
-		return nullptr;
-	}
-
-	JsonSerializer serializer(&scratchAllocator());
-	if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
-	{
-		YAE_ERRORF_CAT("resource", "Failed to parse \"%s\" JSON file", _path);
-		return nullptr;
-	}
-
-	Resource* result = nullptr;
-	serializer.beginRead();
-	YAE_VERIFY(serializer.beginSerializeObject());
-	String resourceTypeStr(&scratchAllocator());
-	YAE_VERIFY(serializer.serialize(resourceTypeStr, "type"));
-	mirror::Class* resourceType = mirror::FindClassByName(resourceTypeStr.c_str());
-	if (resourceType != nullptr)
-	{
-		YAE_ASSERT(resourceType->hasFactory());
-		result = (Resource*) resourceType->instantiate([](size_t _size, void*) { return defaultAllocator().allocate(_size); });
-		YAE_ASSERT(result != nullptr);
-
-		YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, result, resourceType));
-	}
-	else
-	{
-		YAE_ERRORF_CAT("resource", "Unknown reflected type \"%s\"", resourceTypeStr.c_str());
-	}
-	YAE_VERIFY(serializer.endSerializeObject());
-	serializer.endRead();
-
-
-	return result;
-}
 
 static void drawNode(NodeID _nodeID)
 {
@@ -167,6 +99,10 @@ void GameApplication::_onStart()
 	ladybugMesh->load();
 	YAE_ASSERT(ladybugMesh->isLoaded());
 
+	pyramidMesh = resource::findOrCreateFile<MeshFile>("./data/models/pyramid.obj");
+	pyramidMesh->load();
+	YAE_ASSERT(pyramidMesh->isLoaded());
+
 	texture = resource::findOrCreateFile<TextureFile>("./data/textures/viking_room.png");
 	texture->load();
 	YAE_ASSERT(texture->isLoaded());
@@ -195,15 +131,13 @@ void GameApplication::_onStart()
 	meshShader->load();
 	YAE_ASSERT(meshShader->isLoaded());
 
-	SpatialSystem* spatialSystem = defaultAllocator().create<SpatialSystem>();
-	app().setUserData("spatialSystem", spatialSystem);
-
-	node1 = spatialSystem->createNode();
-	node2 = spatialSystem->createNode();
-
-	node2->setLocalPosition(Vector3(0.f, 0.f, 1.f));
-
-	node2->setParent(node1);
+	scene = sceneSystem().createScene("gameScene");
+	entity1 = sceneSystem().createEntity("entity1", scene);
+	entity2 = sceneSystem().createEntity("entity2", scene);
+	YAE_ASSERT(entity1.get());
+	YAE_ASSERT(entity2.get());
+	entity2->transform().setParent(entity1->transform());
+	entity2->transform().setLocalPosition(Vector3::FORWARD() * 10.f);
 
 	RenderCamera* gameCamera = renderer().createCamera("game");
 	gameCamera->fov = 45.f;
@@ -219,19 +153,17 @@ void GameApplication::_onStart()
 
 void GameApplication::_onStop()
 {
+	sceneSystem().destroyEntity(entity2);
+	sceneSystem().destroyEntity(entity1);
+	sceneSystem().destroyScene(scene);
+
 	meshShader->unload();
 	texture->unload();
 	ladybugTexture->unload();
 	font->unload();
 	mesh->unload();
 	ladybugMesh->unload();
-
-	spatialSystem().destroyNode(node2);
-	spatialSystem().destroyNode(node1);
-
-	SpatialSystem* spatialSystemPtr = (SpatialSystem*)(app().getUserData("spatialSystem"));
-	defaultAllocator().destroy(spatialSystemPtr);
-	app().setUserData("spatialSystem", nullptr);
+	pyramidMesh->unload();
 }
 
 void GameApplication::_onUpdate(float _dt)
@@ -382,100 +314,49 @@ void GameApplication::_onUpdate(float _dt)
 		}
 	Im3d::End();
 
-	/*
-	glm::vec3 color(1.f, 1.f, 1.f);
-	float scale = 1.f;
-	Vertex vertices[] =
-	{
-		Vertex(glm::vec3(-scale, -scale, 0.f), color, glm::vec2(0.f, 0.f)),
-		Vertex(glm::vec3(scale, -scale, 0.f), color, glm::vec2(1.f, 0.f)),
-		Vertex(glm::vec3(scale, scale, 0.f), color, glm::vec2(1.f, 1.f)),
-		Vertex(glm::vec3(-scale, scale, 0.f), color, glm::vec2(0.f, 1.f)),
-	};
-	u32 indices[] =
-	{
-		0, 1, 2,
-		0, 2, 3,
-	};
 
+	Im3d::PushLayerId(IM3D_DRAWONTOP_LAYER);
+	Matrix4 m1 = entity1->transform().getLocalMatrix();
+	ImGui::DragMatrix("entity1", &m1);
+	if (Im3d::Gizmo("entity1", (float*)&m1)) {}
+	entity1->transform().setLocalMatrix(m1);
 	renderer().drawMesh(
-		mesh1Transform,
-		vertices, countof(vertices),
-		indices, countof(indices),
-		texture->getTextureHandle()
+	 	m1,
+	 	pyramidMesh,
+	 	meshShader,
+	 	ladybugTexture
 	);
 
-	renderer().drawMesh(
-		mesh2Transform,
-		vertices, countof(vertices),
-		indices, countof(indices),
-		texture->getTextureHandle()
-	);
-	*/
-
+	// Matrix4 m2 = entity2->transform().getLocalMatrix();
+	// ImGui::DragMatrix("entity2", &m2);
+	// entity2->transform().setLocalMatrix(m2);
 	// renderer().drawMesh(
-	// 	Matrix4::IDENTITY,
+	// 	entity2->transform().getWorldMatrix(),
 	// 	ladybugMesh,
 	// 	meshShader,
 	// 	ladybugTexture
 	// );
-
-	ImGui::DragMatrix("mesh1", &mesh1Transform);
-	Im3d::PushLayerId(IM3D_DRAWONTOP_LAYER);
-	if (Im3d::Gizmo("mesh1", (float*)&mesh1Transform)) {}
-	renderer().drawMesh(
-		mesh1Transform,
-		ladybugMesh,
-		meshShader,
-		ladybugTexture
-	);
 	Im3d::PopLayerId();
 
-	// if (Im3d::Gizmo("mesh2", (float*)&mesh2Transform)) {}
+	// Im3d::PushLayerId(IM3D_DRAWONTOP_LAYER);
+	// if (Im3d::Gizmo("mesh1", (float*)&mesh1Transform)) {}
 	// renderer().drawMesh(
-	// 	mesh2Transform,
-	// 	mesh,
+	// 	mesh1Transform,
+	// 	ladybugMesh,
 	// 	meshShader,
-	// 	texture
+	// 	ladybugTexture
 	// );
+	// Im3d::PopLayerId();
 
 	float fontScale = 0.005f;
 	fontTransform = Matrix4::IDENTITY();
 	fontTransform = math::scale(fontTransform, Vector3::ONE() * fontScale);
-	//sfontTransform = math::translate(fontTransform, Vector3(210.f, 20.f, 0.f));
-	// renderer().drawText(fontTransform, font, "Hello World!");
-	//renderer().drawMesh(mesh2Transform, mesh->getMeshHandle());
-
-	String64 buf = string::format("node %lld:", node2.id);
-	Matrix4 matrix = node2->getWorldMatrix();
-	ImGui::DragMatrix(buf.c_str(), &matrix);
-
-	// renderer().drawMesh(
-	// 	node2->getWorldMatrix(),
-	// 	mesh,
-	// 	meshShader,
-	// 	texture
-	// );
-
-	// for (NodeID node : spatialSystem().getRoots())
-	// {
-	// 	drawNode(node);
-	// }
+	fontTransform = math::translate(fontTransform, Vector3(210.f, 20.f, 0.f));
+	renderer().drawText(fontTransform, font, "Hello World!");
 
 	renderer().popScene();
 
-	const char* resourcePath = "./data/textures/ladybug_palette.res";
-
-	if (ImGui::Button("Save resource"))
-	{
-		saveResourceToFile(ladybugTexture, resourcePath);
-	}
-
-	if (ImGui::Button("Load resource"))
-	{
-		Resource* resource = createResourceFromFile(resourcePath);
-		defaultAllocator().destroy(resource);
-	}
+	//const char* resourcePath = "./data/textures/ladybug_palette.res";
 }
 
 bool GameApplication::_onSerialize(Serializer* _serializer)

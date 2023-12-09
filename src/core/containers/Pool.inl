@@ -20,7 +20,7 @@ constexpr PoolID makeId(u32 _index, u32 _generation)
 }
 
 template <typename T>
-IndexedPool<T>::IndexedPool(Allocator* _allocator)
+Pool<T>::Pool(Allocator* _allocator)
 	: m_indices(_allocator)
 	, m_data(_allocator)
 	, m_freeListBegin(INVALID_INDEX)
@@ -30,7 +30,7 @@ IndexedPool<T>::IndexedPool(Allocator* _allocator)
 }
 
 template <typename T>
-const T* IndexedPool<T>::get(PoolID _id) const
+const T* Pool<T>::get(PoolID _id) const
 {
 	const u32 index = extractIndexFromId(_id);
 	const u32 generation = extractGenerationFromId(_id);
@@ -45,14 +45,14 @@ const T* IndexedPool<T>::get(PoolID _id) const
 }
 
 template <typename T>
-T* IndexedPool<T>::get(PoolID _id)
+T* Pool<T>::get(PoolID _id)
 {
 
-	return const_cast<T*>(const_cast<const IndexedPool<T>*>(this)->get(_id));
+	return const_cast<T*>(const_cast<const Pool<T>*>(this)->get(_id));
 }
 
 template <typename T>
-PoolID IndexedPool<T>::add(const T& _item)
+PoolID Pool<T>::add(const T& _item)
 {
 	u32 index;
 	Index* indexPtr;
@@ -88,7 +88,7 @@ PoolID IndexedPool<T>::add(const T& _item)
 
 
 template <typename T>
-bool IndexedPool<T>::remove(PoolID _id)
+bool Pool<T>::remove(PoolID _id)
 {
 	if (get(_id) == nullptr)
 		return false;
@@ -123,7 +123,7 @@ bool IndexedPool<T>::remove(PoolID _id)
 
 
 template <typename T>
-void IndexedPool<T>::clear()
+void Pool<T>::clear()
 {
 	m_data.clear();
 	for (u32 index = 0; index < m_indices.size(); ++index)
@@ -149,37 +149,43 @@ void IndexedPool<T>::clear()
 	}
 }
 
+template <typename T>
+u32 Pool<T>::size()
+{
+	return m_data.size();
+}
+
 
 template <typename T>
-T* IndexedPool<T>::begin()
+T* Pool<T>::begin()
 {
 	return m_data.begin();
 }
 
 
 template <typename T>
-const T* IndexedPool<T>::begin() const
+const T* Pool<T>::begin() const
 {
 	return m_data.begin();
 }
 
 
 template <typename T>
-T* IndexedPool<T>::end()
+T* Pool<T>::end()
 {
 	return m_data.end();
 }
 
 
 template <typename T>
-const T* IndexedPool<T>::end() const
+const T* Pool<T>::end() const
 {
 	return m_data.end();
 }
 
 
 template <typename T>
-Allocator* IndexedPool<T>::allocator() const
+Allocator* Pool<T>::allocator() const
 {
 	return m_data.allocator();
 }

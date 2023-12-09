@@ -32,6 +32,7 @@ int main(int _argc, char** _argv)
         yae::Program program;
 
         // Log
+        program.logger().setCategoryVerbosity("program", yae::LogVerbosity_Verbose);
         program.logger().setCategoryVerbosity("OpenGL", yae::LogVerbosity_Verbose);
         program.logger().setCategoryVerbosity("resource", yae::LogVerbosity_Verbose);
         program.logger().setCategoryVerbosity("function_patch", yae::LogVerbosity_Verbose);

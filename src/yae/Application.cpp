@@ -1,20 +1,21 @@
 #include "Application.h"
 
+#include <core/filesystem.h>
+#include <core/memory.h>
+#include <core/Module.h>
 #include <core/platform.h>
 #include <core/program.h>
-#include <core/Module.h>
+#include <core/serialization/JsonSerializer.h>
+#include <core/serialization/serialization.h>
 #include <core/string.h>
 #include <core/time.h>
-#include <core/memory.h>
-#include <core/filesystem.h>
-#include <core/serialization/serialization.h>
-#include <core/serialization/JsonSerializer.h>
 
 #include <yae/Engine.h>
 #include <yae/InputSystem.h>
 #include <yae/math_3d.h>
 #include <yae/ResourceManager.h>
 #include <yae/resources/File.h>
+#include <yae/SceneSystem.h>
 
 #if YAE_EDITOR
 #include <yae/editor/Editor.h>
@@ -98,6 +99,10 @@ void Application::_start()
 	m_inputSystem = defaultAllocator().create<InputSystem>();
 	m_inputSystem->init(m_window);
 
+	// Scene System
+	m_sceneSystem = defaultAllocator().create<SceneSystem>();
+	m_sceneSystem->init();
+
 	// ImGui
 	m_imguiContext = ImGui::CreateContext();
 	ImGui::SetCurrentContext(m_imguiContext);
@@ -163,6 +168,10 @@ void Application::_stop()
 	ImGui::SetCurrentContext(nullptr);
 	ImGui::DestroyContext(m_imguiContext);
 	m_imguiContext = nullptr;
+
+	m_sceneSystem->shutdown();
+	defaultAllocator().destroy(m_sceneSystem);
+	m_sceneSystem = nullptr;
 
 	m_inputSystem->shutdown();
 	defaultAllocator().destroy(m_inputSystem);
@@ -283,6 +292,12 @@ InputSystem& Application::input() const
 {
 	YAE_ASSERT(m_inputSystem != nullptr);
 	return *m_inputSystem;
+}
+
+SceneSystem& Application::sceneSystem() const
+{
+	YAE_ASSERT(m_sceneSystem != nullptr);
+	return *m_sceneSystem;
 }
 
 Renderer& Application::renderer() const

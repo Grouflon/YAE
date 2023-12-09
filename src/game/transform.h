@@ -2,7 +2,7 @@
 
 #include <game/game.h>
 
-#include <core/containers/IDLookup.h>
+#include <core/containers/Pool.h>
 #include <yae/math_types.h>
 
 namespace yae {
@@ -86,7 +86,7 @@ public:
 
 
 //private:
-	IndexedPool<SpatialNode> m_nodes;
+	Pool<SpatialNode> m_nodes;
 
 	DataArray<NodeID> m_roots;
 };

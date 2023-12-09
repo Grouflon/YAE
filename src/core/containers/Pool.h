@@ -2,18 +2,15 @@
 
 #include <core/types.h>
 #include <core/containers/Array.h>
+#include <core/containers/PoolID.h>
 
 namespace yae {
 
-const u64 INVALID_POOL_INDEX = ~u64(0);
-
-typedef u64 PoolID;
-
 template <typename T>
-class IndexedPool
+class Pool
 {
 public:
-	IndexedPool(Allocator* _allocator = nullptr);
+	Pool(Allocator* _allocator = nullptr);
 
 	const T* get(PoolID _id) const;
 	T* get(PoolID _id);
@@ -21,6 +18,7 @@ public:
 	PoolID add(const T& _item);
 	bool remove(PoolID _id);
 	void clear();
+	u32 size();
 
 	// Iterators
 	T* begin();
@@ -54,4 +52,4 @@ public:
 
 } // namespace yae
 
-#include "IDLookup.inl"
+#include "Pool.inl"

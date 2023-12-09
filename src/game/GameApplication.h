@@ -1,7 +1,7 @@
 #pragma once
 
 #include <yae/Application.h>
-#include <game/transform.h>
+#include <yae/ID.h>
 
 namespace yae {
 
@@ -9,6 +9,8 @@ class MeshFile;
 class TextureFile;
 class FontFile;
 class ShaderProgram;
+class Scene;
+class Entity;
 
 class GAME_API GameApplication : public Application
 {
@@ -31,15 +33,15 @@ public:
 
 	MeshFile* mesh = nullptr;
 	MeshFile* ladybugMesh = nullptr;
+	MeshFile* pyramidMesh = nullptr;
 	TextureFile* texture = nullptr;
 	TextureFile* ladybugTexture = nullptr;
 	FontFile* font = nullptr;
 	ShaderProgram* meshShader = nullptr;
 
-	NodeID node1;
-	NodeID node2;
-	NodeID node3;
-	NodeID node4;
+	ID<Scene> scene;
+	ID<Entity> entity1;
+	ID<Entity> entity2;
 };
 
 } // namespace yae
