@@ -32,6 +32,8 @@ public:
 	void pop_back();
 	void erase(u32 _index, u32 _count);
 	void erase(T* _item);
+	void erase(const T& _item);
+	void erase(bool(*_predicate)(const T&, void*), void* _data = nullptr);
 	void reserve(u32 _newCapacity);
 	void swap(T* _iteratorA, T* _iteratorB);
 	void swap(u32 _indexA, u32 _indexB);

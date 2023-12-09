@@ -156,6 +156,32 @@ void BaseArray<T>::erase(u32 _index, u32 _count)
 	resize(this->m_size - _count);
 }
 
+template <typename T>
+void BaseArray<T>::erase(const T& _item)
+{
+	for (T* it = begin(); it != end(); ++it)
+	{
+		if (*it == _item)
+		{
+			erase(it);
+			--it;
+		}
+	}
+}
+
+template <typename T>
+void BaseArray<T>::erase(bool(*_predicate)(const T&, void*), void* _data)
+{
+	YAE_ASSERT(_predicate != nullptr);
+	for (T* it = begin(); it != end(); ++it)
+	{
+		if (_predicate(*it, _data))
+		{
+			erase(it);
+			--it;
+		}
+	}
+}
 
 template <typename T>
 void BaseArray<T>::erase(T* _item)
