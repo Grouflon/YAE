@@ -38,6 +38,7 @@ public:
 	void clear();
 	void shrink();
 
+	bool startsWith(const char* _str) const;
 	size_t find(const char* _str, size_t _startPosition = 0) const;
 	String& replace(const char* _toReplace, const char* _replacement);
 	String& replace(size_t _position, size_t _count, const char* _replacement);

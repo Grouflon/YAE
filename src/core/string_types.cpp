@@ -146,6 +146,19 @@ void String::shrink()
 	}
 }
 
+bool String::startsWith(const char* _str) const
+{
+	if (_str == nullptr)
+		return false;
+
+	size_t length = strlen(_str);
+	for (size_t i = 0; i < length; ++i)
+	{
+		if (data()[i] != _str[i])
+			return false;
+	}
+	return true;
+}
 
 size_t String::find(const char* _str, size_t _startPosition) const
 {
