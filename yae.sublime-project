@@ -45,16 +45,20 @@
 					"shell_cmd" : "rake\\clean.bat Win64_Debug && rake\\clean.bat Win64_DebugOptimized && rake\\clean.bat Win64_Release",
 				},
 				{
+					"name" : "compile Win64_Debug",
+					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Debug",
+				},
+				{
+					"name": "debug",
+					"shell_cmd": "start remedybg yae.rdbg",
+				},
+				{
 					"name" : "compile core:Win64_Debug",
 					"shell_cmd" : "rake core:build PLATFORM=Win64 CONFIG=Debug",
 				},
 				{
 					"name" : "compile yae:Win64_Debug",
 					"shell_cmd" : "rake yae:build PLATFORM=Win64 CONFIG=Debug",
-				},
-				{
-					"name" : "compile Win64_Debug",
-					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Debug",
 				},
 				{
 					"name" : "compile Win64_DebugOptimized",
@@ -71,10 +75,6 @@
 				{
 					"name" : "compile Web_Debug",
 					"shell_cmd" : "rake main:build PLATFORM=Web CONFIG=Debug",
-				},
-				{
-					"name": "debug",
-					"shell_cmd": "start remedybg yae.rdbg",
 				},
 				{
 					"name": "debug Web",

@@ -37,6 +37,12 @@ def default_settings()
 		"-Wno-int-to-void-pointer-cast",
 		"-Wno-switch",
 
+		# LivePP flags
+		"-gcodeview", # Generate CodeView debug information
+		"-fms-hotpatch", #Ensure that all functions can be hotpatched at runtime
+		"-ffunction-sections", #Put each function into its own section
+		"-Xclang -mno-constructor-aliases", #Disable an internal optimization that folds/aliases constructors and destructors
+
 		"-g ", #generate symbols
 	]
 	dep_flags = "-MD -MF %{dep}" # flags required for dependency generation; passed to compilers
@@ -133,6 +139,12 @@ def default_settings()
 		linker_flags += [
 			"-Xlinker /NODEFAULTLIB",
 			"-Xlinker /ignore:4099", # Warning about missing pdbs for external libs, we don't care
+
+			# LivePP flags
+			"-Xlinker /FUNCTIONPADMIN", # General -> Create Hotpatchable Image
+			"-Xlinker /OPT:NOREF", #  Optimization -> References
+			"-Xlinker /OPT:NOICF", #  Optimization -> Enable COMDAT Folding
+			"-Xlinker /DEBUG:FULL", #  Debugging -> Generate Debug Info
 		]
 
 		if config == "Debug"

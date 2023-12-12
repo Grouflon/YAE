@@ -4,7 +4,7 @@
 #include <core/containers/HashMap.h>
 #include <core/time.h>
 
-#include <core/program.h>
+#include <core/Program.h>
 
 namespace yae {
 

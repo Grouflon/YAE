@@ -1,6 +1,6 @@
 #include "string_types.h"
 
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/memory.h>
 
 #include <mirror/mirror.h>

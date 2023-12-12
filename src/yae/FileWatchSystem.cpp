@@ -1,5 +1,7 @@
 #include "FileWatchSystem.h"
 
+#include <core/filesystem.h>
+
 #define YAE_FILEWATCH_ENABLED (YAE_PLATFORM_WINDOWS == 1)
 #if YAE_FILEWATCH_ENABLED
 #include <FileWatch/FileWatch.hpp>
@@ -69,6 +71,13 @@ void FileWatchSystem::_startFileWatch(FileWatcher* _fileWatcher)
 	YAE_ASSERT(_fileWatcher != nullptr);
 
 #if YAE_FILEWATCH_ENABLED
+	if (!filesystem::doesPathExists(_fileWatcher->filePath.c_str()))
+	{
+		YAE_ERRORF_CAT("filewatch", "Can't start filewatch on \"%s\": path does not exists", _fileWatcher->filePath.c_str());
+		_fileWatcher->fileWatch = nullptr;
+		return;
+	}
+
 	_fileWatcher->fileWatch = defaultAllocator().create<filewatch::FileWatch<std::string>>(
 		_fileWatcher->filePath.c_str(),
 		[_fileWatcher](const std::string& _path, const filewatch::Event _changeType)
@@ -97,8 +106,11 @@ void FileWatchSystem::_stopFileWatch(FileWatcher* _fileWatcher)
 
 #if YAE_FILEWATCH_ENABLED
 	auto watcher = (filewatch::FileWatch<std::string>*)_fileWatcher->fileWatch;
-	YAE_ASSERT(watcher != nullptr);
-	defaultAllocator().destroy(watcher);
+	if (watcher != nullptr)
+	{
+		defaultAllocator().destroy(watcher);
+		_fileWatcher->fileWatch = nullptr;
+	}
 #else
 	YAE_ASSERT_MSG(false, "FileWatch not enabled");
 #endif

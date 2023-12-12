@@ -4,7 +4,7 @@
 #include <core/memory.h>
 #include <core/Module.h>
 #include <core/platform.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/serialization/JsonSerializer.h>
 #include <core/serialization/serialization.h>
 #include <core/string.h>
@@ -89,6 +89,8 @@ void Application::_start()
 
 	u32 windowFlags = 0;
 	windowFlags |= m_renderer->getWindowFlags();
+	// windowFlags |= SDL_WINDOWPOS_CENTERED;
+	windowFlags |= SDL_WINDOW_RESIZABLE;
 	m_renderer->hintWindow();
 	m_window = SDL_CreateWindow(m_name.c_str(), 0, 0, m_baseWidth, m_baseHeight, windowFlags);
 	YAE_ASSERT(m_window != nullptr);

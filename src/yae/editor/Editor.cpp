@@ -1,7 +1,7 @@
 #include "Editor.h"
 
 #include <core/memory.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/serialization/serialization.h>
 #include <core/serialization/Serializer.h>
 #include <core/string.h>
@@ -103,6 +103,23 @@ void Editor::update(float _dt)
         		app().requestStop();
         	}
             ImGui::EndMenu();
+        }
+
+        if (program().isCodeHotReloadEnabled())
+        {
+        	if (ImGui::BeginMenu("Code"))
+	        {
+	        	if (ImGui::MenuItem("Hot-Reload", "Ctrl+R"))
+	        	{
+	        		program().requestCodeHotReload();
+	        	}
+	        	if (ImGui::MenuItem("Hot-Restart", "Ctrl+Shift+R"))
+	        	{
+	        		program().requestHotRestart();
+	        	}
+
+	            ImGui::EndMenu();
+	        }
         }
 
         if (ImGui::BeginMenu("Display"))
@@ -223,7 +240,6 @@ void Editor::update(float _dt)
     		ImGui::Text("projection matrix:");
 			imgui_matrix4(renderer().m_projMatrix);
 			*/
-			ImGui::Text("TGaa");
     	}
     	ImGui::End();
 
@@ -309,9 +325,17 @@ void Editor::update(float _dt)
     }
 
     // RELOAD
-    if (input().isCtrlDown() && input().isKeyDown(SDL_SCANCODE_R))
+    if (program().isCodeHotReloadEnabled())
     {
-    	program().reloadModule("yae");
+    	if (input().isCtrlDown() && input().wasKeyJustPressed(SDL_SCANCODE_R))
+	    {
+	    	program().requestCodeHotReload();
+	    }
+
+	    if (input().isCtrlDown() && input().isShiftDown() && input().wasKeyJustPressed(SDL_SCANCODE_R))
+	    {
+	    	program().requestHotRestart();
+	    }
     }
 
     // EXIT PROGRAM

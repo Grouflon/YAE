@@ -20,6 +20,7 @@ public:
 	void update();
 	void shutdown();
 
+	// TODO: Rename to IsKeyPressed/Released for consistency (wasyadayada is hard to remember)
 	bool wasKeyJustPressed(int _key) const;
 	bool wasKeyJustReleased(int _key) const;
 	bool isKeyDown(int _key) const;

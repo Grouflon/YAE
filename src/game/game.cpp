@@ -1,7 +1,7 @@
 #include "game.h"
 
 #include <core/Module.h>
-#include <core/program.h>
+#include <core/Program.h>
 
 #include <game/GameApplication.h>
 

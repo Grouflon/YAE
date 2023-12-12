@@ -6,6 +6,11 @@
 #include <core/containers/Array.h>
 #include <core/containers/HashMap.h>
 
+namespace lpp
+{
+	struct LppSynchronizedAgent;
+}
+
 namespace yae {
 
 class Allocator;
@@ -23,8 +28,10 @@ public:
 	Module* registerModule(const char* _moduleName);
 	Module* findModule(const char* _moduleName) const;
 	Module* findModule(StringHash _moduleNameHash) const;
-	void reloadModule(const char* _moduleName);
-	void reloadModule(Module* _module);
+
+	bool isCodeHotReloadEnabled() const;
+	void requestCodeHotReload();
+	void requestHotRestart();
 
 	void init(const char** _args, int _argCount);
 	void shutdown();
@@ -51,9 +58,6 @@ public:
 	void loadSettings();
 	void saveSettings();
 
-	void registerFunctionPointer(void** _pointerLocation);
-	void unregisterFunctionPointer(void** _pointerLocation);
-
 	// Modules
 	const DataArray<Module*>& getModules() const;
 
@@ -68,11 +72,9 @@ public:
 	String _getModuleDLLPath(const char* _moduleName) const;
 	String _getModuleSymbolsPath(const char* _moduleName) const;
 
-	void _prepareFunctionPointersPatch();
-	void _patchFunctionPointers();
-
 	Logger* m_logger = nullptr;
 	Profiler* m_profiler = nullptr;
+	lpp::LppSynchronizedAgent* m_lppAgent;
 
 	int m_argCount = 0;
 	const char** m_args = nullptr;
@@ -86,17 +88,7 @@ public:
 	bool m_hotReloadEnabled = false;
 	DataArray<Module*> m_modules;
 	HashMap<StringHash, Module*> m_modulesByName;
-	DataArray<Module*> m_modulesToReload;
 	bool m_exitRequested = false;
-
-	struct FunctionPointerPatch
-	{
-		FunctionPointerPatch() {}
-		
-		String128 name;
-		void* address = nullptr;
-	};
-	HashMap<void**, FunctionPointerPatch> m_functionPointersPatch;
 
 	i32 m_previousConsoleWindowX = 0;
 	i32 m_previousConsoleWindowY = 0;

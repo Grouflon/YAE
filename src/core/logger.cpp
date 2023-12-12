@@ -1,6 +1,6 @@
 #include "logger.h"
 
-#include <core/program.h>
+#include <core/Program.h>
 
 
 namespace yae {

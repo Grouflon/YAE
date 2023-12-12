@@ -2,7 +2,6 @@
 
 #include <yae/types.h>
 
-#include <core/FunctionPointer.h>
 #include <core/containers/HashMap.h>
 
 namespace yae {
@@ -35,7 +34,7 @@ public:
 	{
 	public:
 		String256 filePath;
-		FunctionPointer<void, const char*, FileChangeType, void*> fileChangedFunction = nullptr;
+		FileWatchFunction fileChangedFunction = nullptr;
 		void* userData = nullptr;
 		void* fileWatch = nullptr;
 	};

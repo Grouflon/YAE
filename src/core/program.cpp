@@ -1,4 +1,4 @@
-#include "program.h"
+#include "Program.h"
 
 #include <core/platform.h>
 #include <core/filesystem.h>
@@ -18,6 +18,8 @@
 #endif
 
 #include <core/yae_sdl.h>
+
+#include "LivePP/API/x64/LPP_API_x64_CPP.h"
 
 #include <cstring>
 
@@ -55,7 +57,6 @@ namespace yae {
 Program* Program::s_programInstance = nullptr;
 
 Program::Program()
-	//: m_applications(&defaultAllocator())
 	: m_exePath(&defaultAllocator())
 	, m_binDirectory(&defaultAllocator())
 	, m_rootDirectory(&defaultAllocator())
@@ -112,22 +113,31 @@ Module* Program::findModule(StringHash _moduleNameHash) const
 	return modulePtr != nullptr ? *modulePtr : nullptr;
 }
 
-void Program::reloadModule(const char* _moduleName)
+bool Program::isCodeHotReloadEnabled() const
 {
-	Module* module = findModule(_moduleName);
-	if (module == nullptr)
-	{
-		YAE_ERRORF("Can't find module \"%s\" to reload.", _moduleName);
-	}
-	reloadModule(module);
+	return m_hotReloadEnabled;
 }
 
-void Program::reloadModule(Module* _module)
+void Program::requestCodeHotReload()
 {
-	if (_module == nullptr)
+	if (!m_hotReloadEnabled)
+	{
+		YAE_WARNING("Can't hot-reload as hot-reload is not enabled. The program needs to be run with the -hotreload argument.");
 		return;
+	}
+	m_lppAgent->ScheduleReload();
+	YAE_LOGF("Code hot-reload requested");
+}
 
-	m_modulesToReload.push_back(_module);
+void Program::requestHotRestart()
+{
+	if (!m_hotReloadEnabled)
+	{
+		YAE_WARNING("Can't hot-restart as hot-reload is not enabled. The program needs to be run with the -hotreload argument.");
+		return;
+	}
+	m_lppAgent->ScheduleRestart(lpp::LPP_RESTART_OPTION_ALL_PROCESSES);
+	YAE_LOGF("Hot-restart requested");
 }
 
 void Program::init(const char** _args, int _argCount)
@@ -178,6 +188,23 @@ void Program::init(const char** _args, int _argCount)
 	YAE_LOGF("settings directory: %s",  getSettingsDirectory());
 	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
 
+	// Live++ Init
+	if (m_hotReloadEnabled)
+	{
+		// create a default agent, loading the Live++ agent from the given path, e.g. "ThirdParty/LivePP"
+		m_lppAgent = defaultAllocator().create<lpp::LppSynchronizedAgent>();
+	    *m_lppAgent = lpp::LppCreateSynchronizedAgent(nullptr, L"extern/LivePP");
+
+	    // Check if agent is valid
+	    YAE_VERIFY(lpp::LppIsValidSynchronizedAgent(m_lppAgent));
+
+	    // Enable Live++ for all loaded modules
+	    m_lppAgent->EnableModule(lpp::LppGetCurrentModulePath(), lpp::LPP_MODULES_OPTION_ALL_IMPORT_MODULES, nullptr, nullptr);
+
+	    // Enable Live++ for newly loaded modules
+	    m_lppAgent->EnableAutomaticHandlingOfDynamicallyLoadedModules(nullptr, nullptr);
+	}
+
 	// SDL Init
 	{
 		u32 flags = SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_GAMECONTROLLER;
@@ -186,15 +213,7 @@ void Program::init(const char** _args, int _argCount)
 
 	for (Module* module : m_modules)
 	{	
-		// Prepare Game API for hot reload
-		if (m_hotReloadEnabled)
-		{
-			_copyAndLoadModule(module);
-		}
-		else
-		{
-			_loadModule(module, _getModuleDLLPath(module->name.c_str()).c_str());
-		}
+		_loadModule(module, _getModuleDLLPath(module->name.c_str()).c_str());
 	}
 
 	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
@@ -220,6 +239,13 @@ void Program::shutdown()
 	{
 		SDL_Quit();
 	}
+
+	if (m_hotReloadEnabled)
+	{
+    	lpp::LppDestroySynchronizedAgent(m_lppAgent);
+    	defaultAllocator().destroy(m_lppAgent);
+    	m_lppAgent = nullptr;
+    }
 
 	defaultAllocator().destroy(m_profiler);
 	m_profiler = nullptr;
@@ -438,18 +464,6 @@ void Program::saveSettings()
 	YAE_LOGF_CAT("program", "Saved program settings to \"%s\"", filePath.c_str());
 }
 
-void Program::registerFunctionPointer(void** _pointerLocation)
-{
-	YAE_ASSERT(!m_functionPointersPatch.has(_pointerLocation));
-	m_functionPointersPatch.set(_pointerLocation, FunctionPointerPatch());
-}
-
-void Program::unregisterFunctionPointer(void** _pointerLocation)
-{
-	YAE_ASSERT(m_functionPointersPatch.has(_pointerLocation));
-	m_functionPointersPatch.remove(_pointerLocation);
-}
-
 const DataArray<Module*>& Program::getModules() const
 {
 	return m_modules;	
@@ -471,10 +485,25 @@ void Program::_doFrame()
 		}
 	}
 
-	// Hot Reload Modules
+	// listen to hot-reload and hot-restart requests
 	if (m_hotReloadEnabled)
 	{
-		_processModuleHotReload();
+		if (m_lppAgent->WantsReload())
+		{
+			YAE_CAPTURE_SCOPE("hot-reload");
+			YAE_LOG("Performing hot-reload...");
+			// Live++: client code can do whatever it wants here, e.g. synchronize across several threads, the network, etc.
+			m_lppAgent->CompileAndReloadChanges(lpp::LPP_RELOAD_BEHAVIOUR_WAIT_UNTIL_CHANGES_ARE_APPLIED);
+			mirror::InitNewTypes();
+			YAE_LOG("Hot-reload done.");
+		}
+
+		if (m_lppAgent->WantsRestart())
+		{
+			YAE_LOG("Performing hot-restart...");
+			// Live++: client code can do whatever it wants here, e.g. finish logging, abandon threads, etc.
+			m_lppAgent->Restart(lpp::LPP_RESTART_BEHAVIOUR_INSTANT_TERMINATION, 0u);
+		}
 	}
 
 	// Settings save check
@@ -602,76 +631,6 @@ void Program::_copyAndLoadModule(Module* _module)
 	_module->lastLibraryWriteTime = filesystem::getFileLastWriteTime(dllSrc.c_str());
 }
 
-void Program::_processModuleHotReload()
-{
-	for (Module* module : m_modules)
-	{
-		// @TODO: Maybe do a proper file watch at some point. Adding a bit of wait seems to do the trick though
-		String dllPath = _getModuleDLLPath(module->name.c_str());
-		Date lastWriteTime = filesystem::getFileLastWriteTime(dllPath.c_str());
-		Date timeSinceLastWriteTime = date::now() - lastWriteTime;
-		bool isDLLOutDated = (lastWriteTime > module->lastLibraryWriteTime && timeSinceLastWriteTime > 0);
-		if (isDLLOutDated)
-		{
-			m_modulesToReload.push_back(module);
-		}
-	}
-
-	if (m_modulesToReload.size() > 0)
-	{
-		YAE_CAPTURE_SCOPE("ReloadGameAPI");
-
-		// NOTE: Commenting out until patch is actually working
-		//_prepareFunctionPointersPatch();
-
-		// NOTE: let's do something dumb for now: unload everything, reload everything
-
-		for (int i = m_modules.size() - 1; i >= 0; --i)
-		{
-			Module* module = m_modules[i];
-
-			if (module->beforeModuleReloadFunction != nullptr)
-			{
-				module->beforeModuleReloadFunction(this, module);
-			}
-
-			_unloadModule(module);
-		}
-
-		for (Module* module : m_modules)
-		{
-			_copyAndLoadModule(module);
-
-			if (module->afterModuleReloadFunction != nullptr)
-			{
-				module->afterModuleReloadFunction(this, module);
-			}
-		}
-
-		// NOTE: Commenting out until patch is actually working
-		//_patchFunctionPointers();
-
-		/*
-		for (int i = modulesToReload.size() - 1; i >= 0; --i)
-		{
-			Module* module = modulesToReload[i];
-			_unloadModule(module);
-		}
-
-		for (Module* module : modulesToReload)
-		{
-			_copyAndLoadModule(module);
-
-			if (module->onModuleReloadedFunction != nullptr)
-			{
-				module->onModuleReloadedFunction(this, module);
-			}
-		}
-		*/
-	}
-	m_modulesToReload.clear();
-}
-
 String Program::_getModuleDLLPath(const char* _moduleName) const
 {
 	return string::format("%s%s.%s", m_binDirectory.c_str(), _moduleName, YAE_MODULE_EXTENSION);
@@ -681,45 +640,6 @@ String Program::_getModuleDLLPath(const char* _moduleName) const
 String Program::_getModuleSymbolsPath(const char* _moduleName) const
 {
 	return string::format("%s%s.pdb", m_binDirectory.c_str(), _moduleName);
-}
-
-void Program::_prepareFunctionPointersPatch()
-{
-	platform::loadSymbols();
-	for (auto& pair : m_functionPointersPatch)
-	{
-		pair.value.address = *pair.key;
-		if (pair.value.address == nullptr)
-			continue;
-
-		pair.value.name = platform::getSymbolNameFromAddress(pair.value.address);
-		YAE_VERBOSEF_CAT("function_patch", "Prepare %s(%p) patch", pair.value.name.c_str(), pair.value.address);
-	}
-	platform::unloadSymbols();
-}
-
-void Program::_patchFunctionPointers()
-{
-	platform::loadSymbols();
-	for (auto& pair : m_functionPointersPatch)
-	{
-		if (pair.value.address == nullptr)
-			continue;
-
-		void* newAddress = platform::getAddressFromSymbolName(pair.value.name.c_str());
-		YAE_ASSERT(newAddress != nullptr);
-		YAE_VERBOSEF_CAT("function_patch", "Patching %s(%p->%p) patch", pair.value.name.c_str(), pair.value.address, newAddress);
-
-		if (newAddress != pair.value.address)
-		{
-			*pair.key = newAddress;
-			logger().setDefaultOutputColor(OutputColor_Green);
-			YAE_LOGF("Patch %s successful: %p -> %p", pair.value.name.c_str(), pair.value.address, newAddress);
-			logger().setDefaultOutputColor(OutputColor_Default);
-
-		}
-	}
-	platform::unloadSymbols();
 }
 
 } // namespace yae

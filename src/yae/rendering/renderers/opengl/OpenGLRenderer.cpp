@@ -1,7 +1,7 @@
 #include "OpenGLRenderer.h"
 
 #include <core/filesystem.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/gl3w.h>
 
 #include <yae/resources/ShaderFile.h>

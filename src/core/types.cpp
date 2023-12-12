@@ -1,6 +1,6 @@
 #include "types.h"
 
-#include <core/program.h>
+#include <core/Program.h>
 
 #include <cfloat>
 

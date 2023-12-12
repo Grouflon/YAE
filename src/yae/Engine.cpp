@@ -1,7 +1,7 @@
 #include "Engine.h"
 
 #include <core/string.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/Module.h>
 #include <core/yae_sdl.h>
 

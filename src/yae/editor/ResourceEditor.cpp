@@ -1,7 +1,7 @@
 #include "ResourceEditor.h"
 
 #include <core/string.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/filesystem.h>
 
 #include <yae/Application.h>

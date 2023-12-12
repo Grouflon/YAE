@@ -1,12 +1,11 @@
 #include <core/memory.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/logger.h>
 
 #include <mirror.h>
 #include <stdio.h>
 #include <cstdlib>
 
-#define YAE_EDITOR 1
 
 int main(int _argc, char** _argv)
 {
@@ -48,6 +47,8 @@ int main(int _argc, char** _argv)
         program.run();
         program.shutdown();
     }
+
+    
 
     return EXIT_SUCCESS;
 }

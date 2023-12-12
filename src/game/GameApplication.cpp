@@ -3,7 +3,7 @@
 #include <core/containers/Array.h>
 #include <core/filesystem.h>
 #include <core/Module.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/serialization/BinarySerializer.h>
 #include <core/serialization/JsonSerializer.h>
 #include <core/serialization/serialization.h>
@@ -101,7 +101,7 @@ void GameApplication::_onStart()
 
 	pyramidMesh = resource::findOrCreateFile<MeshFile>("./data/models/pyramid.obj");
 	pyramidMesh->load();
-	YAE_ASSERT(pyramidMesh->isLoaded());
+	// YAE_ASSERT(pyramidMesh->isLoaded());
 
 	texture = resource::findOrCreateFile<TextureFile>("./data/textures/viking_room.png");
 	texture->load();

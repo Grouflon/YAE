@@ -1,7 +1,7 @@
 
 #include "filesystem.h"
 
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/platform.h>
 #include <core/containers/Array.h>
 

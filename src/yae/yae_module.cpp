@@ -1,7 +1,7 @@
 #include "yae_module.h"
 
 #include <core/memory.h>
-#include <core/program.h>
+#include <core/Program.h>
 #include <core/Module.h>
 
 #include <yae/Application.h>
