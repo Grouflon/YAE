@@ -72,6 +72,8 @@ public:
 	String _getModuleDLLPath(const char* _moduleName) const;
 	String _getModuleSymbolsPath(const char* _moduleName) const;
 
+	void _onSerialize(Serializer& _serializer);
+
 	Logger* m_logger = nullptr;
 	Profiler* m_profiler = nullptr;
 	lpp::LppSynchronizedAgent* m_lppAgent;

@@ -37,7 +37,6 @@ void DoProgramFrame()
 
 // !anonymous functions
 
-
 struct ProgramSettings
 {
 	i32 consoleWindowWidth = -1;
@@ -221,7 +220,6 @@ void Program::init(const char** _args, int _argCount)
 		platform::getWindowSize(consoleWindowHandle, &m_previousConsoleWindowWidth, &m_previousConsoleWindowHeight);
 		platform::getWindowPosition(consoleWindowHandle, &m_previousConsoleWindowX, &m_previousConsoleWindowY);
 	}
-	loadSettings();
 }
 
 
@@ -275,6 +273,8 @@ void Program::run()
 			module->startProgramFunction(this, module);
 		}
 	}
+
+	loadSettings();
 
     YAE_CAPTURE_STOP("init_modules");
     {
@@ -388,11 +388,6 @@ static String getSettingsFilePath()
 	return filesystem::normalizePath(string::format("%s/program_settings.json", program().getSettingsDirectory()).c_str());
 }
 
-static bool serializeSettings(Serializer* _serializer, ProgramSettings* _settings)
-{
-	return serialization::serializeMirrorType(_serializer, *_settings);
-}
-
 void Program::loadSettings()
 {
 	String filePath = getSettingsFilePath();
@@ -410,41 +405,18 @@ void Program::loadSettings()
 		return;	
 	}
 
-	ProgramSettings settings;
 	serializer.beginRead();
-	serializeSettings(&serializer, &settings);
+	_onSerialize(serializer);
 	serializer.endRead();
-
-	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
-	{
-		if (settings.consoleWindowWidth > 0 && settings.consoleWindowHeight > 0)
-		{
-			platform::setWindowSize(consoleWindowHandle, settings.consoleWindowWidth, settings.consoleWindowHeight);
-		}
-		if (settings.consoleWindowX != -1 && settings.consoleWindowY != -1)
-		{
-			platform::setWindowPosition(consoleWindowHandle, settings.consoleWindowX, settings.consoleWindowY);
-		}
-		m_previousConsoleWindowX = settings.consoleWindowX;
-		m_previousConsoleWindowY = settings.consoleWindowY;
-		m_previousConsoleWindowWidth = settings.consoleWindowWidth;
-		m_previousConsoleWindowHeight = settings.consoleWindowHeight;
-	}
-	YAE_LOGF_CAT("program", "Loaded program settings from \"%s\"", filePath.c_str());
+	
+	YAE_VERBOSEF_CAT("program", "Loaded program settings from \"%s\"", filePath.c_str());
 }
 
 void Program::saveSettings()
 {
-	ProgramSettings settings;
-	if (void* consoleWindowHandle = platform::findConsoleWindowHandle())
-	{
-		platform::getWindowSize(consoleWindowHandle, &settings.consoleWindowWidth, &settings.consoleWindowHeight);
-		platform::getWindowPosition(consoleWindowHandle, &settings.consoleWindowX, &settings.consoleWindowY);
-	}
-
 	JsonSerializer serializer(&scratchAllocator());
 	serializer.beginWrite();
-	serializeSettings(&serializer, &settings);
+	_onSerialize(serializer);
 	serializer.endWrite();
 
 	String filePath = getSettingsFilePath();
@@ -461,7 +433,7 @@ void Program::saveSettings()
 	}
 	file.close();
 
-	YAE_LOGF_CAT("program", "Saved program settings to \"%s\"", filePath.c_str());
+	YAE_VERBOSEF_CAT("program", "Saved program settings to \"%s\"", filePath.c_str());
 }
 
 const DataArray<Module*>& Program::getModules() const
@@ -560,6 +532,7 @@ void Program::_loadModule(Module* _module, const char* _dllPath)
 	_module->startProgramFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "startProgram");
 	_module->stopProgramFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "stopProgram");
 	_module->updateProgramFunction = (void (*)(Program*, Module*))platform::getProcedureAddress(_module->libraryHandle, "updateProgram");
+	_module->serializeSettingsFunction = (bool (*)(Serializer&))platform::getProcedureAddress(_module->libraryHandle, "serializeSettings");
 	_module->getDependenciesFunction = (void (*)(const char***, int*))platform::getProcedureAddress(_module->libraryHandle, "getDependencies");
 
 	if (_module->getDependenciesFunction != nullptr)
@@ -606,6 +579,7 @@ void Program::_unloadModule(Module* _module)
 	_module->startProgramFunction = nullptr;
 	_module->stopProgramFunction = nullptr;
 	_module->updateProgramFunction = nullptr;
+	_module->serializeSettingsFunction = nullptr;
 	_module->getDependenciesFunction = nullptr;
 
 	platform::unloadDynamicLibrary(_module->libraryHandle);
@@ -641,5 +615,55 @@ String Program::_getModuleSymbolsPath(const char* _moduleName) const
 {
 	return string::format("%s%s.pdb", m_binDirectory.c_str(), _moduleName);
 }
+
+void Program::_onSerialize(Serializer& _serializer)
+{
+	if (!_serializer.beginSerializeObject())
+		return;
+
+	ProgramSettings settings;
+	void* consoleWindowHandle = platform::findConsoleWindowHandle();
+
+	if (_serializer.isWriting() && consoleWindowHandle != nullptr)
+	{
+		platform::getWindowSize(consoleWindowHandle, &settings.consoleWindowWidth, &settings.consoleWindowHeight);
+		platform::getWindowPosition(consoleWindowHandle, &settings.consoleWindowX, &settings.consoleWindowY);
+	}
+
+	serialization::serializeMirrorType(_serializer, settings, "program");
+
+	if (_serializer.isReading() && consoleWindowHandle != nullptr)
+	{
+		if (settings.consoleWindowWidth > 0 && settings.consoleWindowHeight > 0)
+		{
+			platform::setWindowSize(consoleWindowHandle, settings.consoleWindowWidth, settings.consoleWindowHeight);
+		}
+		if (settings.consoleWindowX != -1 && settings.consoleWindowY != -1)
+		{
+			platform::setWindowPosition(consoleWindowHandle, settings.consoleWindowX, settings.consoleWindowY);
+		}
+		m_previousConsoleWindowX = settings.consoleWindowX;
+		m_previousConsoleWindowY = settings.consoleWindowY;
+		m_previousConsoleWindowWidth = settings.consoleWindowWidth;
+		m_previousConsoleWindowHeight = settings.consoleWindowHeight;
+	}
+
+	if (_serializer.beginSerializeObject("modules"))
+	{
+		for (Module* module : m_modules)
+		{
+			if (module->serializeSettingsFunction != nullptr)
+			{
+				_serializer.beginSerializeObject(module->name.c_str());
+				module->serializeSettingsFunction(_serializer);
+				_serializer.endSerializeObject();
+			}
+		}
+		_serializer.endSerializeObject();
+	}
+
+	_serializer.endSerializeObject();
+}	
+
 
 } // namespace yae

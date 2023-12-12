@@ -15,6 +15,8 @@ YAE_API void afterModuleReload(yae::Program* _program, yae::Module* _module);
 YAE_API void startProgram(yae::Program* _program, yae::Module* _module);
 YAE_API void stopProgram(yae::Program* _program, yae::Module* _module);
 YAE_API void updateProgram(yae::Program* _program, yae::Module* _module);
+YAE_API	bool serializeSettings(yae::Serializer& _serializer);
+
 
 #ifdef __cplusplus
 }

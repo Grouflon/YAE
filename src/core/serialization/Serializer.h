@@ -20,6 +20,8 @@ public:
 	virtual ~Serializer();
 
 	SerializationMode getMode() const;
+	bool isReading() const;
+	bool isWriting() const;
 
 	virtual void beginWrite();
 	virtual void endWrite();

@@ -46,9 +46,6 @@ public:
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
 
-	void loadSettings();
-	void saveSettings();
-
 	float getDeltaTime() const;
 	float getTime() const;
 
@@ -62,6 +59,8 @@ public:
 	void getWindowPosition(i32* _outX, i32* _outY) const;
 	Vector2 getWindowPosition() const;
 
+	bool serializeSettings(Serializer& _serializer);
+
 //private:
 	void _start();
 	void _stop();
@@ -73,9 +72,7 @@ public:
 	virtual void _onStop();
 	virtual void _onReload();
 	virtual void _onUpdate(float _dt);
-	virtual bool _onSerialize(Serializer* _serializer);
-
-	void _requestSaveSettings();
+	virtual bool _onSerializeSettings(Serializer& _serializer);
 
 	String m_name;
 	u32 m_baseWidth = 0;
@@ -98,8 +95,6 @@ public:
 	float m_time = 0.f;
 
 	HashMap<StringHash, void*> m_userData;
-
-	bool m_saveSettingsRequested = false;
 };
 
 } // namespace yae

@@ -240,7 +240,7 @@ void GameApplication::_onUpdate(float _dt)
 
 		if (!math::isZero(inputRate) || !math::isZero(rotationInputRate))
 		{
-			app().saveSettings();
+			program().saveSettings();
 		}
 	}
 
@@ -359,7 +359,7 @@ void GameApplication::_onUpdate(float _dt)
 	//const char* resourcePath = "./data/textures/ladybug_palette.res";
 }
 
-bool GameApplication::_onSerialize(Serializer* _serializer)
+bool GameApplication::_onSerializeSettings(Serializer& _serializer)
 {
 	bool result = serialization::serializeMirrorType(_serializer, *this, "game");
 

@@ -7,25 +7,25 @@
 namespace yae {
 namespace serialization {
 
-bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Type* _type, const char* _key, u32 _flags)
+bool serializeMirrorType(Serializer& _serializer, void* _value, const mirror::Type* _type, const char* _key, u32 _flags)
 {
 	YAE_ASSERT(_type != nullptr);
 	YAE_ASSERT(_value != nullptr);
 
 	switch(_type->getTypeInfo())
 	{
-		case mirror::TypeInfo_bool:   return _serializer->serialize(*(bool*)_value, _key);
-		case mirror::TypeInfo_char:   return _serializer->serialize(*(u8*)_value, _key);
-		case mirror::TypeInfo_int8:   return _serializer->serialize(*(i8*)_value, _key);
-		case mirror::TypeInfo_int16:  return _serializer->serialize(*(i16*)_value, _key);
-		case mirror::TypeInfo_int32:  return _serializer->serialize(*(i32*)_value, _key);
-		case mirror::TypeInfo_int64:  return _serializer->serialize(*(i64*)_value, _key);
-		case mirror::TypeInfo_uint8:  return _serializer->serialize(*(u8*)_value, _key);
-		case mirror::TypeInfo_uint16: return _serializer->serialize(*(u16*)_value, _key);
-		case mirror::TypeInfo_uint32: return _serializer->serialize(*(u32*)_value, _key);
-		case mirror::TypeInfo_uint64: return _serializer->serialize(*(u64*)_value, _key);
-		case mirror::TypeInfo_float:  return _serializer->serialize(*(float*)_value, _key);
-		case mirror::TypeInfo_double: return _serializer->serialize(*(double*)_value, _key);
+		case mirror::TypeInfo_bool:   return _serializer.serialize(*(bool*)_value, _key);
+		case mirror::TypeInfo_char:   return _serializer.serialize(*(u8*)_value, _key);
+		case mirror::TypeInfo_int8:   return _serializer.serialize(*(i8*)_value, _key);
+		case mirror::TypeInfo_int16:  return _serializer.serialize(*(i16*)_value, _key);
+		case mirror::TypeInfo_int32:  return _serializer.serialize(*(i32*)_value, _key);
+		case mirror::TypeInfo_int64:  return _serializer.serialize(*(i64*)_value, _key);
+		case mirror::TypeInfo_uint8:  return _serializer.serialize(*(u8*)_value, _key);
+		case mirror::TypeInfo_uint16: return _serializer.serialize(*(u16*)_value, _key);
+		case mirror::TypeInfo_uint32: return _serializer.serialize(*(u32*)_value, _key);
+		case mirror::TypeInfo_uint64: return _serializer.serialize(*(u64*)_value, _key);
+		case mirror::TypeInfo_float:  return _serializer.serialize(*(float*)_value, _key);
+		case mirror::TypeInfo_double: return _serializer.serialize(*(double*)_value, _key);
 
 		case mirror::TypeInfo_Class:
 		{
@@ -35,7 +35,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			// Special route for strings
 			if (clss == mirror::GetClass<String>())
 			{
-				return _serializer->serialize(*(String*)_value, _key);
+				return _serializer.serialize(*(String*)_value, _key);
 			}
 
 			// Simplified serialization for overriden serialization types that can be considered primitive arrays (e.g. Vectors, Quaternions...)
@@ -53,7 +53,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 					u32 arraySize = (u32)serializeArraySizeMetaData->asInt();
 					size_t typeSize = serializeType->getSize();
 
-					if (!_serializer->beginSerializeArray(arraySize, _key))
+					if (!_serializer.beginSerializeArray(arraySize, _key))
 						return _flags & SF_IGNORE_MISSING_KEYS;
 
 					for (u32 i = 0; i < arraySize; ++i)
@@ -62,7 +62,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 							return false;
 					}
 
-					if (!_serializer->endSerializeArray())
+					if (!_serializer.endSerializeArray())
 						return false;
 					return true;
 				}
@@ -120,12 +120,12 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 					}
 				};
 
-				switch(_serializer->getMode())
+				switch(_serializer.getMode())
 				{
 					case SerializationMode::READ:
 					{
 						String valueString = String(&scratchAllocator());
-						if (!_serializer->serialize(valueString, _key))
+						if (!_serializer.serialize(valueString, _key))
 							return false;
 
 						i64 value = 0;
@@ -146,7 +146,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 							return false;
 
 						String valueString = String(valueStringLiteral, &scratchAllocator());
-						return _serializer->serialize(valueString, _key);
+						return _serializer.serialize(valueString, _key);
 					}
 					break;
 
@@ -167,7 +167,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 			const mirror::FixedSizeArray* fixedSizeArrayType = _type->asFixedSizeArray();
 			YAE_ASSERT(fixedSizeArrayType != nullptr);
 			u32 arraySize = fixedSizeArrayType->getElementCount();
-			if (!_serializer->beginSerializeArray(arraySize, _key))
+			if (!_serializer.beginSerializeArray(arraySize, _key))
 				return _flags & SF_IGNORE_MISSING_KEYS;
 
 			const mirror::Type* subType = fixedSizeArrayType->getSubType();
@@ -179,7 +179,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 					return false;
 			}
 
-			if (!_serializer->endSerializeArray())
+			if (!_serializer.endSerializeArray())
 				return false;
 		}
 		break;
@@ -191,7 +191,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 				const mirror::ArrayType* arrayType = (const mirror::ArrayType*)_type;
 
 				u32 arraySize = arrayType->getSize(_value);
-				if (!_serializer->beginSerializeArray(arraySize, _key))
+				if (!_serializer.beginSerializeArray(arraySize, _key))
 					return _flags & SF_IGNORE_MISSING_KEYS;
 				arrayType->setSize(_value, arraySize);
 
@@ -204,7 +204,7 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 						return false;
 				}
 
-				if (!_serializer->endSerializeArray())
+				if (!_serializer.endSerializeArray())
 					return false;
 			}
 		}
@@ -215,20 +215,20 @@ bool serializeMirrorType(Serializer* _serializer, void* _value, const mirror::Ty
 	return true;
 }
 
-bool serializeClassInstance(Serializer* _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
+bool serializeClassInstance(Serializer& _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
 {
-	if (!_serializer->beginSerializeObject(_key))
+	if (!_serializer.beginSerializeObject(_key))
 		return _flags & SF_IGNORE_MISSING_KEYS;
 
 	if (!serializeClassInstanceMembers(_serializer, _instance, _class, _key, _flags))
 		return false;
 
-	if (!_serializer->endSerializeObject())
+	if (!_serializer.endSerializeObject())
 		return false;
 	return true;
 }
 
-bool serializeClassInstanceMembers(Serializer* _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
+bool serializeClassInstanceMembers(Serializer& _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
 {
 	size_t membersCount = _class->getMembersCount();
 	DataArray<mirror::ClassMember*> members(&scratchAllocator());

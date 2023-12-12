@@ -21,7 +21,7 @@ public:
 	void _onStart() override;
 	void _onStop() override;
 	void _onUpdate(float _dt) override;
-	virtual bool _onSerialize(Serializer* _serializer) override;
+	virtual bool _onSerializeSettings(Serializer& _serializer) override;
 
 	float pitch = 0.f;
 	float yaw = 0.f;

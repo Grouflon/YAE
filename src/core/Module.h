@@ -28,6 +28,8 @@ public:
 	void (*stopProgramFunction)(Program* _program, Module* _module) = nullptr;
 	void (*updateProgramFunction)(Program* _program, Module* _module) = nullptr;
 
+	bool (*serializeSettingsFunction)(Serializer& _module) = nullptr;
+
 	void (*getDependenciesFunction)(const char*** _outModuleNames, int* _outModuleCount) = nullptr;
 };
 

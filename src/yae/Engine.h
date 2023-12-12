@@ -26,6 +26,8 @@ public:
 	Application* currentApplication();
 	FileWatchSystem& fileWatchSystem();
 
+	bool serializeSettings(yae::Serializer& _serializer);
+
 //private:
 	DataArray<Application*> m_applications;
 	DataArray<Application*> m_applicationStack;

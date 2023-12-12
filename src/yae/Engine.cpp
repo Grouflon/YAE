@@ -4,6 +4,7 @@
 #include <core/Program.h>
 #include <core/Module.h>
 #include <core/yae_sdl.h>
+#include <core/serialization/Serializer.h>
 
 #include <yae/resource.h>
 #include <yae/Application.h>
@@ -275,6 +276,25 @@ FileWatchSystem& Engine::fileWatchSystem()
 	return *m_fileWatchSystem;
 }
 
+bool Engine::serializeSettings(yae::Serializer& _serializer)
+{
+	u32 applicationCount = m_applications.size();
+	if (_serializer.beginSerializeArray(applicationCount, "applications"))
+	{
+		for (u32 i = 0; i < applicationCount; ++i)
+		{
+			if (i >= m_applications.size())
+				break;
 
+			if (_serializer.beginSerializeObject())
+			{
+				m_applications[i]->serializeSettings(_serializer);
+				_serializer.endSerializeObject();
+			}
+		}
+		_serializer.endSerializeArray();
+	}
+	return true;
+}
 
 } // namespace yae

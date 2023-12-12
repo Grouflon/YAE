@@ -25,7 +25,7 @@ public:
 	void reload();
 
 	void update(float _dt);
-	bool serialize(Serializer* _serializer);
+	bool serializeSettings(Serializer& _serializer);
 
 	bool showMemoryProfiler = false;
 	bool showFrameRate = false;

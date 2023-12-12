@@ -321,7 +321,7 @@ void Editor::update(float _dt)
 
     if (changedSettings)
     {
-    	app().saveSettings();
+    	program().saveSettings();
     }
 
     // RELOAD
@@ -345,9 +345,9 @@ void Editor::update(float _dt)
 	}
 }
 
-bool Editor::serialize(Serializer* _serializer)
+bool Editor::serializeSettings(Serializer& _serializer)
 {
-	return serialization::serializeMirrorType(_serializer, *this, "editor");
+	return serialization::serializeClassInstanceMembers(_serializer, *this);
 }
 
 void Editor::_displayTypeTreeNode(mirror::Type* _type, mirror::Type* _parent)

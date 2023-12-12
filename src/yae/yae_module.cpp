@@ -49,3 +49,9 @@ void updateProgram(Program* _program, Module* _module)
 {
 	engine().update();
 }
+
+bool serializeSettings(yae::Serializer& _serializer)
+{
+	return engine().serializeSettings(_serializer);
+}
+

@@ -44,7 +44,7 @@ Resource* findOrCreateFromFile(const char* _path)
 			resource = (Resource*) resourceType->instantiate([](size_t _size, void*) { return defaultAllocator().allocate(_size); });
 			YAE_ASSERT(resource != nullptr);
 
-			YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, resource, resourceType));
+			YAE_VERIFY(serialization::serializeClassInstanceMembers(serializer, resource, resourceType));
 		}
 		else
 		{
@@ -70,7 +70,7 @@ void saveToFile(Resource* _resource, const char* _path)
 	YAE_VERIFY(serializer.beginSerializeObject());
 	String resourceTypeStr = String(resourceType->getName(), &scratchAllocator());
 	YAE_VERIFY(serializer.serialize(resourceTypeStr, "type"));
-	YAE_VERIFY(serialization::serializeClassInstanceMembers(&serializer, const_cast<Resource*>(_resource), resourceType));
+	YAE_VERIFY(serialization::serializeClassInstanceMembers(serializer, const_cast<Resource*>(_resource), resourceType));
 	YAE_VERIFY(serializer.endSerializeObject());
 	serializer.endWrite();
 

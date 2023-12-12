@@ -23,6 +23,16 @@ SerializationMode Serializer::getMode() const
 	return m_mode;
 }
 
+bool Serializer::isReading() const
+{
+	return m_mode == SerializationMode::READ;
+}
+
+bool Serializer::isWriting() const
+{
+	return m_mode == SerializationMode::WRITE;
+}
+
 void Serializer::beginWrite()
 {
 	YAE_ASSERT(m_mode == SerializationMode::NONE);

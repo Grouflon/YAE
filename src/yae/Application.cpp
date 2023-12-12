@@ -31,7 +31,20 @@
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <core/yae_sdl.h>
 
-#define YAE_USE_SETTINGS_FILE (YAE_PLATFORM_WEB == 0)
+struct WindowSettings
+{
+	i32 windowWidth = -1;
+	i32 windowHeight = -1;
+	i32 windowX = -1;
+	i32 windowY = -1;
+};
+MIRROR_CLASS(WindowSettings)
+(
+	MIRROR_MEMBER(windowWidth);
+	MIRROR_MEMBER(windowHeight);
+	MIRROR_MEMBER(windowX);
+	MIRROR_MEMBER(windowY);
+);
 
 namespace yae {
 
@@ -131,8 +144,6 @@ void Application::_start()
 
 	m_clock.reset();
 
-	loadSettings();
-
 #if YAE_EDITOR
 	YAE_ASSERT(m_editor == nullptr);
 	m_editor = toolAllocator().create<editor::Editor>();
@@ -152,7 +163,7 @@ void Application::_stop()
 	m_isRunning = false;
 	_onStop();
 
-	#if YAE_EDITOR
+#if YAE_EDITOR
 	YAE_ASSERT(m_editor != nullptr);
 	m_editor->shutdown();
 	toolAllocator().destroy(m_editor);
@@ -199,6 +210,7 @@ void Application::_doFrame()
 
 	ImGui::SetCurrentContext(m_imguiContext);
 
+	bool saveSettingsRequested = false;
 	Time frameTime = m_clock.reset();
 	m_dt = frameTime.asSeconds();
 	m_time += m_dt;
@@ -226,16 +238,14 @@ void Application::_doFrame()
 		    			{
 		    				case SDL_WINDOWEVENT_MOVED:
 		    				{
-		    					// event->window.data1 > x
-		    					// event->window.data2 > y
-		    					_requestSaveSettings();
+		    					saveSettingsRequested = true;
 		    				}
 		    				break;
 
 		    				case SDL_WINDOWEVENT_RESIZED:
 		    				{
 		    					m_renderer->notifyFrameBufferResized(event.window.data1, event.window.data2);
-								_requestSaveSettings();
+								saveSettingsRequested = true;
 		    				}
 		    				break;
 		    			}
@@ -260,9 +270,10 @@ void Application::_doFrame()
 
 	_onUpdate(m_dt);
 
-#if YAE_EDITOR
-	m_editor->update(m_dt);
-#endif
+	if (m_editor != nullptr)
+	{
+		m_editor->update(m_dt);
+	}
 
     // Rendering
 	ImGui::Render();
@@ -270,10 +281,9 @@ void Application::_doFrame()
 	m_renderer->endFrame();
 
 	// Settings
-	if (m_saveSettingsRequested)
+	if (saveSettingsRequested)
 	{
-		saveSettings();
-		m_saveSettingsRequested = false;
+		program().saveSettings();
 	}
 
 	// Reload changed resources
@@ -336,70 +346,6 @@ static String getSettingsFilePath(const Application* _app)
 	return path;
 }
 
-void Application::loadSettings()
-{
-#if YAE_USE_SETTINGS_FILE
-	String filePath = getSettingsFilePath(this);
-	FileReader reader(filePath.c_str(), &scratchAllocator());
-	if (!reader.load())
-	{
-		// No settings file.
-		// Apply some initial values
-		setWindowPosition(0, 30);
-
-		return;
-	}
-
-	JsonSerializer serializer(&scratchAllocator());
-	if (!serializer.parseSourceData(reader.getContent(), reader.getContentSize()))
-	{
-		YAE_ERRORF_CAT("application", "Failed to parse json settings file \"%s\"", filePath.c_str());
-		return;	
-	}
-	serializer.beginRead();
-	YAE_VERIFY(serializer.beginSerializeObject());
-	if (!_onSerialize(&serializer))
-	{
-		YAE_ERRORF_CAT("application", "Failed to serialize application.");
-	}
-	YAE_VERIFY(serializer.endSerializeObject());
-	serializer.endRead();
-
-	YAE_LOGF_CAT("application", "Loaded application settings from \"%s\"", filePath.c_str());
-#endif
-}
-
-void Application::saveSettings()
-{
-#if YAE_USE_SETTINGS_FILE
-	JsonSerializer serializer(&scratchAllocator());
-	serializer.beginWrite();
-	YAE_VERIFY(serializer.beginSerializeObject());
-	if (!_onSerialize(&serializer))
-	{
-		YAE_ERRORF_CAT("application", "Failed to serialize application.");
-	}
-	YAE_VERIFY(serializer.endSerializeObject());
-	serializer.endWrite();
-
-	String filePath = getSettingsFilePath(this);
-	FileHandle file(filePath.c_str());
-	if (!file.open(FileHandle::OPENMODE_WRITE))
-	{
-		YAE_ERRORF_CAT("application", "Failed to open \"%s\" for write", filePath.c_str());
-		return;
-	}
-	if (!file.write(serializer.getWriteData(), serializer.getWriteDataSize()))
-	{
-		YAE_ERRORF_CAT("application", "Failed to write into \"%s\"", filePath.c_str());
-		return;
-	}
-	file.close();
-
-	YAE_VERBOSEF_CAT("application", "Saved application settings to \"%s\"", filePath.c_str());
-#endif
-}
-
 float Application::getDeltaTime() const
 {
 	return m_dt;
@@ -459,6 +405,38 @@ Vector2 Application::getWindowPosition() const
 	return Vector2(x, y);
 }
 
+bool Application::serializeSettings(Serializer& _serializer)
+{
+	WindowSettings settings;
+	getWindowSize(&settings.windowWidth, &settings.windowHeight);
+	getWindowPosition(&settings.windowX, &settings.windowY);
+
+	serialization::serializeMirrorType(_serializer, settings, "window");
+
+	if (settings.windowWidth > 0 && settings.windowHeight > 0)
+	{
+		setWindowSize(settings.windowWidth, settings.windowHeight);
+	}
+	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
+	if (settings.windowX != -1 && settings.windowY != -1)
+	{
+		setWindowPosition(settings.windowX, settings.windowY);
+	}
+
+	if (m_editor != nullptr)
+	{
+		if (_serializer.beginSerializeObject("editor"))
+		{
+			m_editor->serializeSettings(_serializer);
+			_serializer.endSerializeObject();
+		}
+	}
+
+	_onSerializeSettings(_serializer);
+
+	return true;
+}
+
 void Application::_onStart()
 {
 
@@ -479,46 +457,9 @@ void Application::_onUpdate(float _dt)
 
 }
 
-struct WindowSettings
+bool Application::_onSerializeSettings(Serializer& _serializer)
 {
-	i32 windowWidth = -1;
-	i32 windowHeight = -1;
-	i32 windowX = -1;
-	i32 windowY = -1;
-};
-
-bool Application::_onSerialize(Serializer* _serializer)
-{
-	WindowSettings settings;
-	getWindowSize(&settings.windowWidth, &settings.windowHeight);
-	getWindowPosition(&settings.windowX, &settings.windowY);
-
-	if (!serialization::serializeMirrorType(_serializer, settings, "application"))
-		return false;
-
-	if (settings.windowWidth > 0 && settings.windowHeight > 0)
-	{
-		setWindowSize(settings.windowWidth, settings.windowHeight);
-	}
-	// @TODO(remi): We need to find a better way to discriminate uninitialized values than that
-	if (settings.windowX != -1 && settings.windowY != -1)
-	{
-		setWindowPosition(settings.windowX, settings.windowY);
-	}
 	return true;
 }
 
-void Application::_requestSaveSettings()
-{
-	m_saveSettingsRequested = true;
-}
-
 } // namespace yae
-
-MIRROR_CLASS(yae::WindowSettings)
-(
-	MIRROR_MEMBER(windowWidth);
-	MIRROR_MEMBER(windowHeight);
-	MIRROR_MEMBER(windowX);
-	MIRROR_MEMBER(windowY);
-);
