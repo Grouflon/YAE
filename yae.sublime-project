@@ -49,6 +49,10 @@
 					"shell_cmd" : "rake main:build PLATFORM=Win64 CONFIG=Debug",
 				},
 				{
+					"name": "debug visualstudio Debug",
+					"shell_cmd": "devenv /debugexe bin/Win64_Debug/main.exe -hotreload",
+				},
+				{
 					"name": "debug",
 					"shell_cmd": "start remedybg yae.rdbg",
 				},
@@ -81,15 +85,11 @@
 					"shell_cmd": "start emrun --serve_after_exit --serve_after_close --serve_root . bin/Web_Debug/main.html",
 				},
 				{
-					"name": "debug visual Debug",
-					"shell_cmd": "devenv /debugexe bin/Win64_Debug/main.exe -hotreload",
-				},
-				{
-					"name": "debug visual DebugOptimized",
+					"name": "debug visualstudio DebugOptimized",
 					"shell_cmd": "devenv /debugexe \"bin/Win64_DebugOptimized/main.exe\"",
 				},
 				{
-					"name": "debug visual Release",
+					"name": "debug visualstudio Release",
 					"shell_cmd": "devenv /debugexe \"bin/Win64_Release/main.exe\"",
 				}
 			],

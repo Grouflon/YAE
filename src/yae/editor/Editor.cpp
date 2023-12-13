@@ -324,6 +324,7 @@ void Editor::update(float _dt)
     if (showLoggerWindow)
     {
     	bool previousOpen = showLoggerWindow;
+    	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(250.f, 150.f));
 		if (ImGui::Begin("Logger", &showLoggerWindow))
     	{
     		if (ImGui::BeginTable("logCategories", 2, ImGuiTableFlags_RowBg))
@@ -335,6 +336,7 @@ void Editor::update(float _dt)
 	                ImGui::Text("%s", pair.value.name.c_str());
 	                ImGui::TableNextColumn();
 	                ImGui::PushID(pair.value.name.c_str());
+                	ImGui::SetNextItemWidth(-FLT_MIN);
 	    			changedSettings = ImGui::EditMirrorType("", (void*)&pair.value.verbosity, mirror::GetType(pair.value.verbosity)) || changedSettings;
 	    			ImGui::PopID();
 	    		}
@@ -342,6 +344,8 @@ void Editor::update(float _dt)
 	        }
     	}
     	ImGui::End();
+    	ImGui::PopStyleVar();
+
 		changedSettings = changedSettings || (previousOpen != showLoggerWindow);
     }
 
