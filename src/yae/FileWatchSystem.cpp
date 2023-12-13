@@ -7,6 +7,8 @@
 #include <FileWatch/FileWatch.hpp>
 #endif
 
+#undef ERROR //NOTE: Windows header messes with our log types
+
 namespace yae {
 
 void FileWatchSystem::init()

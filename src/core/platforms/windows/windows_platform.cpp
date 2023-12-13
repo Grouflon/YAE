@@ -9,6 +9,8 @@
 #include <dbghelp.h>
 #include <chrono>
 
+#undef ERROR //NOTE: Windows header messes with our log types
+
 namespace yae {
 
 namespace platform {

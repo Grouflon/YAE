@@ -32,6 +32,7 @@ public:
 	bool showMirrorDebugWindow = false;
 	bool showRendererDebugWindow = false;
 	bool showDemoWindow = false;
+	bool showLoggerWindow = false;
 
 	ShaderProgram* wireframeShader = nullptr;
 	ShaderProgram* normalsShader = nullptr;

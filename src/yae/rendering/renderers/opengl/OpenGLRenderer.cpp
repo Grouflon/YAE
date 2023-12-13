@@ -16,6 +16,8 @@
 
 #include <core/yae_sdl.h>
 
+#undef ERROR //NOTE: Windows header messes with our log types
+
 #if YAE_PLATFORM_WEB == 0
 const int OPENGL_VERSION_MAJOR = 4;
 const int OPENGL_VERSION_MINOR = 3;

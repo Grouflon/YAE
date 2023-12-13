@@ -47,6 +47,7 @@ public:
 
 	virtual bool beginSerializeObject(const char* _key = nullptr) = 0;
 	virtual bool endSerializeObject() = 0;
+	// TODO: we may want to add read-only object exploration functions. Otherwise there is no way to fill an empty hashmap with the serializer
 
 	const char* getLastError() const;
 

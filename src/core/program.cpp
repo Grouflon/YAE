@@ -67,6 +67,7 @@ Program::Program()
 	YAE_ASSERT(s_programInstance == nullptr);
 	s_programInstance = this;
     m_logger = defaultAllocator().create<Logger>();
+	m_profiler = defaultAllocator().create<Profiler>(&toolAllocator());
 }
 
 
@@ -80,6 +81,9 @@ Program::~Program()
 	}
 	m_modules.clear();
 	m_modulesByName.clear();
+
+	defaultAllocator().destroy(m_profiler);
+	m_profiler = nullptr;
 	
 	defaultAllocator().destroy(m_logger);
 	m_logger = nullptr;
@@ -141,14 +145,18 @@ void Program::requestHotRestart()
 
 void Program::init(const char** _args, int _argCount)
 {
+	YAE_CAPTURE_FUNCTION();
+
 	YAE_ASSERT(s_programInstance == this);
 
 	m_isInitialized = true;
 
-	YAE_ASSERT(_args != nullptr && _argCount >= 1);
+	YAE_ASSERT(_args != nullptr && _argCount >= 1);	
 
 	m_args = _args;
 	m_argCount = _argCount;
+
+	loadSettings();
 
 	// @TODO: make an actual argument parser
 	for (int i = 1; i < _argCount; ++i)
@@ -158,10 +166,6 @@ void Program::init(const char** _args, int _argCount)
 			m_hotReloadEnabled = true;
 		}
 	}
-
-	m_profiler = defaultAllocator().create<Profiler>(&toolAllocator());
-
-	YAE_CAPTURE_FUNCTION();
 
     m_exePath = filesystem::getAbsolutePath(m_args[0]);
     m_binDirectory = filesystem::getDirectory(m_exePath.c_str());
@@ -186,6 +190,7 @@ void Program::init(const char** _args, int _argCount)
 	YAE_LOGF("intermediate directory: %s",  getIntermediateDirectory());
 	YAE_LOGF("settings directory: %s",  getSettingsDirectory());
 	YAE_LOGF("working directory: %s", filesystem::getWorkingDirectory().c_str());
+
 
 	// Live++ Init
 	if (m_hotReloadEnabled)
@@ -244,9 +249,6 @@ void Program::shutdown()
     	defaultAllocator().destroy(m_lppAgent);
     	m_lppAgent = nullptr;
     }
-
-	defaultAllocator().destroy(m_profiler);
-	m_profiler = nullptr;
 
 #if DEBUG_STRINGHASH
 	clearStringHashRepository();
@@ -624,14 +626,13 @@ void Program::_onSerialize(Serializer& _serializer)
 	ProgramSettings settings;
 	void* consoleWindowHandle = platform::findConsoleWindowHandle();
 
+	// Program
 	if (_serializer.isWriting() && consoleWindowHandle != nullptr)
 	{
 		platform::getWindowSize(consoleWindowHandle, &settings.consoleWindowWidth, &settings.consoleWindowHeight);
 		platform::getWindowPosition(consoleWindowHandle, &settings.consoleWindowX, &settings.consoleWindowY);
 	}
-
 	serialization::serializeMirrorType(_serializer, settings, "program");
-
 	if (_serializer.isReading() && consoleWindowHandle != nullptr)
 	{
 		if (settings.consoleWindowWidth > 0 && settings.consoleWindowHeight > 0)
@@ -646,6 +647,13 @@ void Program::_onSerialize(Serializer& _serializer)
 		m_previousConsoleWindowY = settings.consoleWindowY;
 		m_previousConsoleWindowWidth = settings.consoleWindowWidth;
 		m_previousConsoleWindowHeight = settings.consoleWindowHeight;
+	}
+
+	// Logger
+	if (_serializer.beginSerializeObject("logger"))
+	{
+		m_logger->serialize(_serializer);
+		_serializer.endSerializeObject();
 	}
 
 	if (_serializer.beginSerializeObject("modules"))

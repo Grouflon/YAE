@@ -5,6 +5,7 @@
 #include <core/serialization/serialization.h>
 #include <core/serialization/Serializer.h>
 #include <core/string.h>
+#include <core/logger.h>
 
 #include <yae/im3d_extension.h>
 #include <yae/imgui_extension.h>
@@ -125,6 +126,7 @@ void Editor::update(float _dt)
         if (ImGui::BeginMenu("Display"))
         {
 	        changedSettings = ImGui::MenuItem("Resources", NULL, &resourceEditor.opened) || changedSettings;
+	        changedSettings = ImGui::MenuItem("Logger", NULL, &showLoggerWindow) || changedSettings;
 
         	if (ImGui::BeginMenu("Profiling"))
 	        {
@@ -155,9 +157,9 @@ void Editor::update(float _dt)
         ImGui::EndMainMenuBar();
     }
 
-    changedSettings = changedSettings || resourceEditor.update();
-    changedSettings = changedSettings || mirrorInspector.update();
-    changedSettings = changedSettings || inputInspector.update();
+    changedSettings = resourceEditor.update() || changedSettings;
+    changedSettings = mirrorInspector.update() || changedSettings;
+    changedSettings = inputInspector.update() || changedSettings;
 
     if (showMemoryProfiler)
     {
@@ -319,6 +321,30 @@ void Editor::update(float _dt)
 		changedSettings = changedSettings || (previousOpen != showDemoWindow);
     }
 
+    if (showLoggerWindow)
+    {
+    	bool previousOpen = showLoggerWindow;
+		if (ImGui::Begin("Logger", &showLoggerWindow))
+    	{
+    		if (ImGui::BeginTable("logCategories", 2, ImGuiTableFlags_RowBg))
+	        {
+	            for (auto& pair : logger().getCategories())
+	    		{
+	                ImGui::TableNextRow();
+	                ImGui::TableNextColumn();
+	                ImGui::Text("%s", pair.value.name.c_str());
+	                ImGui::TableNextColumn();
+	                ImGui::PushID(pair.value.name.c_str());
+	    			changedSettings = ImGui::EditMirrorType("", (void*)&pair.value.verbosity, mirror::GetType(pair.value.verbosity)) || changedSettings;
+	    			ImGui::PopID();
+	    		}
+	            ImGui::EndTable();
+	        }
+    	}
+    	ImGui::End();
+		changedSettings = changedSettings || (previousOpen != showLoggerWindow);
+    }
+
     if (changedSettings)
     {
     	program().saveSettings();
@@ -410,6 +436,7 @@ MIRROR_CLASS(yae::editor::Editor)
 	MIRROR_MEMBER(showRendererDebugWindow);
 	MIRROR_MEMBER(showMirrorDebugWindow);
 	MIRROR_MEMBER(showDemoWindow);
+	MIRROR_MEMBER(showLoggerWindow);
 
 	MIRROR_MEMBER(resourceEditor);
 	MIRROR_MEMBER(inputInspector);

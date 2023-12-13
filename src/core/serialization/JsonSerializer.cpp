@@ -88,6 +88,7 @@ void deallocateString(Allocator* _allocator, json_string_s* _str)
 void allocateStringPayload(Allocator* _allocator, json_value_s* _value, const char* _payload)
 {
 	_value->type = json_type_string;
+	_payload = _payload == nullptr ? "" : _payload;
 	_value->payload = allocateString(_allocator, _payload);
 }
 

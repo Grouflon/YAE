@@ -6,13 +6,13 @@ namespace yae {
 
 class Logger;
 
-enum LogVerbosity
+enum class LogVerbosity : u8
 {
-	LogVerbosity_None = 0,
-	LogVerbosity_Error,
-	LogVerbosity_Warning,
-	LogVerbosity_Log,
-	LogVerbosity_Verbose
+	NONE = 0,
+	ERROR,
+	WARNING,
+	LOG,
+	VERBOSE
 };
 
 namespace logging {
@@ -43,22 +43,22 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 
 } // namespace yae
 
-#define YAE_VERBOSE(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Verbose, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_VERBOSE_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Verbose, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_VERBOSEF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Verbose, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
-#define YAE_VERBOSEF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Verbose, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_VERBOSE(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::VERBOSE, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_VERBOSE_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::VERBOSE, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_VERBOSEF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::VERBOSE, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_VERBOSEF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::VERBOSE, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
 
-#define YAE_LOG(_msg)							::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Log, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_LOG_CAT(_category, _msg)			::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Log, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_LOGF(_fmt, ...)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Log, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
-#define YAE_LOGF_CAT(_category, _fmt, ...)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Log, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_LOG(_msg)							::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::LOG, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_LOG_CAT(_category, _msg)			::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::LOG, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_LOGF(_fmt, ...)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::LOG, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_LOGF_CAT(_category, _fmt, ...)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::LOG, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
 
-#define YAE_WARNING(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_WARNING_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_WARNINGF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Warning, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
-#define YAE_WARNINGF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Warning, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_WARNING(_msg)						::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::WARNING, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_WARNING_CAT(_category, _msg)		::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::WARNING, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_WARNINGF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::WARNING, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_WARNINGF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::WARNING, "[%s:%d] " _fmt "", __FILENAME__, __LINE__, __VA_ARGS__)
 
-#define YAE_ERROR(_msg)							::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Error, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_ERROR_CAT(_category, _msg)			::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Error, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
-#define YAE_ERRORF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity_Error, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
-#define YAE_ERRORF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity_Error, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_ERROR(_msg)							::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::ERROR, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_ERROR_CAT(_category, _msg)			::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::ERROR, "[%s:%d] %s", __FILENAME__, __LINE__, _msg)
+#define YAE_ERRORF(_fmt, ...)					::yae::logging::log(::yae::logger(), nullptr, ::yae::LogVerbosity::ERROR, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)
+#define YAE_ERRORF_CAT(_category, _fmt, ...)	::yae::logging::log(::yae::logger(), _category, ::yae::LogVerbosity::ERROR, "[%s:%d] " _fmt, __FILENAME__, __LINE__, __VA_ARGS__)

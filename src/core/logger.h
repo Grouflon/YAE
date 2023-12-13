@@ -25,6 +25,10 @@ public:
 	void setDefaultOutputColor(OutputColor _color);
 	OutputColor getDefaultOutputColor() const;
 
+	const HashMap<StringHash, LogCategory>& getCategories() const;
+
+	bool serialize(Serializer& _serializer);
+
 // private:
 	HashMap<StringHash, LogCategory> m_categories;
 	OutputColor m_defaultOutputColor = OutputColor_Default;

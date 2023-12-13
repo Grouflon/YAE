@@ -4,6 +4,8 @@
 #include <core/logger.h>
 #include <core/platform.h>
 
+#include <mirror/mirror.h>
+
 namespace yae {
 
 namespace logging {
@@ -15,9 +17,9 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 	OutputColor outputColor = _logger.getDefaultOutputColor();
 	switch(_verbosity)
 	{
-		case LogVerbosity_Error: outputColor = OutputColor_Red; break;
-		case LogVerbosity_Warning: outputColor = OutputColor_Yellow; break;
-		case LogVerbosity_Verbose: outputColor = OutputColor_Grey; break;
+		case LogVerbosity::ERROR: outputColor = OutputColor_Red; break;
+		case LogVerbosity::WARNING: outputColor = OutputColor_Yellow; break;
+		case LogVerbosity::VERBOSE: outputColor = OutputColor_Grey; break;
 		default: break;
 	}
 	
@@ -32,3 +34,12 @@ void log(::yae::Logger& _logger, const char* _categoryName, yae::LogVerbosity _v
 }
 
 } // namespace yae
+
+MIRROR_ENUM(yae::LogVerbosity)
+(
+	MIRROR_ENUM_VALUE(yae::LogVerbosity::NONE);
+	MIRROR_ENUM_VALUE(yae::LogVerbosity::ERROR);
+	MIRROR_ENUM_VALUE(yae::LogVerbosity::WARNING);
+	MIRROR_ENUM_VALUE(yae::LogVerbosity::LOG);
+	MIRROR_ENUM_VALUE(yae::LogVerbosity::VERBOSE);
+);

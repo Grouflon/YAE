@@ -10,3 +10,6 @@
 ## Cleaning and coding rules
 - Rename Program as Core. Maybe
 - Cleanup lowercase/uppercase file names. Decide of some rule
+
+## Sublime
+- insert date time with plugins snippets and macros https://forum.sublimetext.com/t/easiest-way-to-insert-date-time-with-a-single-keypress/4134/10
