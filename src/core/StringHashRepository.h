@@ -5,7 +5,6 @@
 
 #if DEBUG_STRINGHASH
 #include <core/containers/HashMap.h>
-#include <core/string.h>
 
 namespace yae {
 
@@ -22,7 +21,7 @@ public:
 	void clear();
 
 private:
-	HashMap<u32, MallocString> m_stringMap;
+	HashMap<u32, char*> m_stringMap;
 };
 
 extern StringHashRepository g_stringHashRepository;
