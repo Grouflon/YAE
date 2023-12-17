@@ -1,6 +1,5 @@
 #include <core/memory.h>
 #include <core/Program.h>
-#include <core/logger.h>
 
 #include <mirror.h>
 #include <stdio.h>
