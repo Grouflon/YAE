@@ -1,5 +1,8 @@
 # TODO
 
+## Philosophy
+- String, Arrays, whatevs shoud not transmit their allocators. Nothing should have a null allocator. Transformation functions such as string.h functions should always use the scrath allocator. Allocators should be easier to init and use (stop juggling with pointers and ref)
+
 ## Hot-Reload
 - Mirror: Step away from static initilization even more and make it so that we can refresh the types definition/population at runtime (clear content and run through the new populate code). Since all is data I guess it should be okay (if pointer functions works ? or maybe it can go through the virtual type wrapper, I don't know) 
 
