@@ -133,8 +133,7 @@ void BaseArray<T>::erase(u32 _index, u32 _count)
 
 	if (m_flags & ArrayFlags_CallConstructors)
 	{
-		u32 rangeEnd = _index + _count;
-		for (u32 i = _index; i < rangeEnd; ++i)
+		for (u32 i = _index; i < this->m_size; ++i)
 		{
 			u32 nextValidIndex = i + _count;
 			if (nextValidIndex < this->m_size)
