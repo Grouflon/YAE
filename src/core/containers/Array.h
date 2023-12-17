@@ -30,7 +30,7 @@ public:
 	T& push_back(const T& _item);
 	void push_back(const T* _items, u32 _itemCount);
 	void pop_back();
-	void erase(u32 _index, u32 _count);
+	void erase(u32 _index, u32 _count = 1);
 	void erase(T* _item);
 	void erase(const T& _item);
 	void erase(bool(*_predicate)(const T&, void*), void* _data = nullptr);
