@@ -19,11 +19,13 @@ class Resource;
 class Application;
 class InputSystem;
 class Renderer;
+class Console;
 
 YAE_API Engine& engine();
 YAE_API ResourceManager& resourceManager();
 YAE_API Application& app();
 YAE_API InputSystem& input();
 YAE_API Renderer& renderer();
+YAE_API Console& console();
 
 } // namespace yae

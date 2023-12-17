@@ -16,6 +16,7 @@ class Renderer;
 class InputSystem;
 class Serializer;
 class SceneSystem;
+class Console;
 
 namespace editor {
 class Editor;
@@ -42,6 +43,7 @@ public:
 	Renderer& renderer() const;
 	ResourceManager& resourceManager() const;
 	SceneSystem& sceneSystem() const;
+	Console& console() const;
 
 	void* getUserData(const char* _name) const;
 	void setUserData(const char* _name, void* _userData);
@@ -68,6 +70,9 @@ public:
 	void _pushEvent(const SDL_Event& _event);
 	void _doFrame();
 
+	void _registerConsoleCommands();
+	void _unregisterConsoleCommands();
+
 	virtual void _onStart();
 	virtual void _onStop();
 	virtual void _onReload();
@@ -86,6 +91,7 @@ public:
 	ImGuiContext* m_imguiContext = nullptr;
 	editor::Editor* m_editor = nullptr;
 	SceneSystem* m_sceneSystem = nullptr;
+	Console* m_console = nullptr;
 
 	SDL_Window* m_window = nullptr;
 	DataArray<SDL_Event> m_events;

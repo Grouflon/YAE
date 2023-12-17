@@ -16,6 +16,7 @@
 #include <yae/ResourceManager.h>
 #include <yae/resources/File.h>
 #include <yae/SceneSystem.h>
+#include <yae/Console.h>
 
 #if YAE_EDITOR
 #include <yae/editor/Editor.h>
@@ -87,6 +88,11 @@ void Application::afterReload()
 void Application::_start()
 {
 	YAE_CAPTURE_FUNCTION();
+
+	// Console
+	m_console = toolAllocator().create<Console>();
+	m_console->init();
+	_registerConsoleCommands();
 
 	m_resourceManager = defaultAllocator().create<ResourceManager>();
 	String256 resourcePath = string::format("%s/data/", program().getRootDirectory());
@@ -197,6 +203,12 @@ void Application::_stop()
 	m_resourceManager->flushResources();
 	defaultAllocator().destroy(m_resourceManager);
 	m_resourceManager = nullptr;
+
+	// Console
+	_unregisterConsoleCommands();
+	m_console->shutdown();
+	toolAllocator().destroy(m_console);
+	m_console = nullptr;
 }
 
 void Application::_pushEvent(const SDL_Event& _event)
@@ -275,6 +287,8 @@ void Application::_doFrame()
 		m_editor->update(m_dt);
 	}
 
+	m_console->drawConsole();
+
     // Rendering
 	ImGui::Render();
     m_renderer->render();
@@ -322,6 +336,12 @@ ResourceManager& Application::resourceManager() const
 {
 	YAE_ASSERT(m_resourceManager != nullptr);
 	return *m_resourceManager;
+}
+
+Console& Application::console() const
+{
+	YAE_ASSERT(m_console != nullptr);
+	return *m_console;
 }
 
 void* Application::getUserData(const char* _name) const
@@ -460,6 +480,39 @@ void Application::_onUpdate(float _dt)
 bool Application::_onSerializeSettings(Serializer& _serializer)
 {
 	return true;
+}
+
+void Application::_registerConsoleCommands()
+{
+	console().registerCommand("program.hotreload",
+		[](u32 _argc, const char** _argv)
+		{
+			program().requestCodeHotReload();
+		}
+	);
+	console().registerCommand("app.window_size",
+		[](u32 _argc, const char** _argv)
+		{
+			if (_argc < 2)
+			{
+				i32 width, height;
+				app().getWindowSize(&width, &height);
+				YAE_LOGF("%d %d", width, height);
+			}
+			else
+			{
+				i32 width = std::atoi(_argv[0]);
+				i32 height = std::atoi(_argv[1]);
+				app().setWindowSize(width, height);
+			}
+		}
+	);
+}
+
+void Application::_unregisterConsoleCommands()
+{
+	console().unregisterCommand("app.window_size");
+	console().unregisterCommand("program.hotreload");
 }
 
 } // namespace yae

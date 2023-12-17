@@ -38,4 +38,9 @@ Renderer& renderer()
 	return app().renderer();
 }
 
+Console& console()
+{
+	return app().console();
+}
+
 } // namespace yae
