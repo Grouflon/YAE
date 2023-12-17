@@ -51,6 +51,8 @@ typedef uint64_t	u64;
 	: __FILE__ \
 	))
 #endif
+#define STRINGIZE(x) STRINGIZE2(x)
+#define STRINGIZE2(x) #x
 
 #ifdef _MSC_VER
 #include <intrin.h>

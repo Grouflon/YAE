@@ -1,7 +1,7 @@
 #include "logger.h"
 
 #include <core/Program.h>
-
+#include <core/filesystem.h>
 #include <core/serialization/serialization.h>
 
 
@@ -19,6 +19,30 @@ Logger::~Logger()
 {
 }
 
+void Logger::log(const char* _categoryName, yae::LogVerbosity _verbosity, const char* _fileInfo, const char* _msg)
+{
+	Logger::LogCategory& category = findOrAddCategory(_categoryName);
+
+	OutputColor outputColor = getDefaultOutputColor();
+	switch(_verbosity)
+	{
+		case LogVerbosity::ERROR: outputColor = OutputColor_Red; break;
+		case LogVerbosity::WARNING: outputColor = OutputColor_Yellow; break;
+		case LogVerbosity::VERBOSE: outputColor = OutputColor_Grey; break;
+		default: break;
+	}
+
+	if (category.verbosity >= _verbosity)
+	{
+		String128 fileName = filesystem::getFileName(_fileInfo);
+
+		platform::setOutputColor(outputColor);
+		printf("[%s][%s] %s\n", category.name.c_str(), fileName.c_str(), _msg);
+		platform::setOutputColor(OutputColor_Default);
+	}
+
+	logged.dispatch(category.name.c_str(), _verbosity, _fileInfo, _msg);
+}
 
 void Logger::setCategoryVerbosity(const char* _categoryName, LogVerbosity _verbosity)
 {
@@ -44,6 +68,11 @@ Logger::LogCategory& Logger::findOrAddCategory(const char* _categoryName)
 		categoryPtr = &m_categories.set(hash, category);
 	}
 	return *categoryPtr;
+}
+
+LogVerbosity Logger::getCategoryVerbosity(const char* _categoryName)
+{
+	return findOrAddCategory(_categoryName).verbosity;
 }
 
 void Logger::setDefaultOutputColor(OutputColor _color)
