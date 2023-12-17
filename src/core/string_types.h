@@ -17,7 +17,6 @@ enum StringFlags_
 class CORE_API String
 {
 public:
-	static const size_t INVALID_POS;
 
 	String(Allocator* _allocator = nullptr);
 	String(const char* _str, Allocator* _allocator = nullptr);
@@ -37,12 +36,6 @@ public:
 	void resize(size_t _size, char _c = ' ');
 	void clear();
 	void shrink();
-
-	bool startsWith(const char* _str) const;
-	size_t find(const char* _str, size_t _startPosition = 0) const;
-	String& replace(const char* _toReplace, const char* _replacement);
-	String& replace(size_t _position, size_t _count, const char* _replacement);
-	String slice(size_t _startPosition, size_t _count) const;
 
 	String& operator=(const char* _str);
 	String& operator=(const String& _str);
@@ -100,6 +93,12 @@ public:
 
 	InlineString(const String& _str, Allocator* _allocator = nullptr)
 		:String(_str.c_str(), _allocator, INLINE_SIZE)
+	{
+		YAE_ASSERT(capacity() > INLINE_SIZE || data() == m_buffer);
+	}
+
+	InlineString(const InlineString<INLINE_SIZE>& _str)
+		:String(_str.c_str(), _str.allocator(), INLINE_SIZE)
 	{
 		YAE_ASSERT(capacity() > INLINE_SIZE || data() == m_buffer);
 	}

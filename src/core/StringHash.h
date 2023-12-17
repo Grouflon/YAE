@@ -12,11 +12,14 @@
 
 namespace yae {
 
+class String;
+
 class CORE_API StringHash
 {
 public:
 	StringHash();
 	StringHash(const char* _str);
+	StringHash(const String& _str);
 	StringHash(u32 _hash);
 
 	u32 getHash() const { return m_hash; }

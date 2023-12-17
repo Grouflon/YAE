@@ -3,6 +3,7 @@
 #include <core/callstack.h>
 #include <core/memory.h>
 #include <core/filesystem.h>
+#include <core/string.h>
 
 #include <windows.h>
 #include <psapi.h>
@@ -217,7 +218,7 @@ String getSymbolNameFromAddress(void* _address)
 		}
 
 		String256 undecoratedSymbol = pSymbol->Name;
-		undecoratedSymbol = undecoratedSymbol.slice(symbolNameStart, symbolNameEnd - symbolNameStart);
+		undecoratedSymbol = string::slice(undecoratedSymbol, symbolNameStart, symbolNameEnd - symbolNameStart);
 
 		char output[256];
 		if (UnDecorateSymbolName(undecoratedSymbol.c_str(), output, sizeof(output), UNDNAME_COMPLETE))
@@ -347,7 +348,7 @@ void debugSymbols(void* _address, const char* _addressName)
 	{
 		Data* dataPtr = (Data*)UserContext;
 		String name = pSymInfo->Name;
-		if (name.find(dataPtr->name) != String::INVALID_POS)
+		if (string::find(name, dataPtr->name) != string::INVALID_POS)
 		{
 			char* offset = (char*)pSymInfo->Address - (ULONG64)dataPtr->addr;
 			YAE_LOGF("%s\t-> sym:%p, add:%p, off:%p", dataPtr->name, pSymInfo->Address, dataPtr->addr, offset);

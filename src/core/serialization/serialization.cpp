@@ -33,7 +33,7 @@ bool serializeMirrorType(Serializer& _serializer, void* _value, const mirror::Ty
 			YAE_ASSERT(clss);
 
 			// Special route for strings
-			if (clss == mirror::GetClass<String>())
+			if (clss->isChildOf(mirror::GetClass<String>()))
 			{
 				return _serializer.serialize(*(String*)_value, _key);
 			}
@@ -220,7 +220,7 @@ bool serializeClassInstance(Serializer& _serializer, void* _instance, const mirr
 	if (!_serializer.beginSerializeObject(_key))
 		return _flags & SF_IGNORE_MISSING_KEYS;
 
-	if (!serializeClassInstanceMembers(_serializer, _instance, _class, _key, _flags))
+	if (!serializeClassInstanceMembers(_serializer, _instance, _class, _flags))
 		return false;
 
 	if (!_serializer.endSerializeObject())
@@ -228,7 +228,7 @@ bool serializeClassInstance(Serializer& _serializer, void* _instance, const mirr
 	return true;
 }
 
-bool serializeClassInstanceMembers(Serializer& _serializer, void* _instance, const mirror::Class* _class, const char* _key, u32 _flags)
+bool serializeClassInstanceMembers(Serializer& _serializer, void* _instance, const mirror::Class* _class, u32 _flags)
 {
 	size_t membersCount = _class->getMembersCount();
 	DataArray<mirror::ClassMember*> members(&scratchAllocator());

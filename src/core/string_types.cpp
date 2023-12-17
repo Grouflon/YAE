@@ -11,7 +11,6 @@
 namespace yae {
 
 const char* EMPTY_STRING = "";
-const size_t String::INVALID_POS = size_t(-1);
 
 String::String(Allocator* _allocator)
 	: m_buffer(nullptr)
@@ -144,93 +143,6 @@ void String::shrink()
 		m_buffer = (char*)m_allocator->reallocate(m_buffer, newCapacity);
 		m_bufferSize = newCapacity;
 	}
-}
-
-bool String::startsWith(const char* _str) const
-{
-	if (_str == nullptr)
-		return false;
-
-	size_t length = strlen(_str);
-	for (size_t i = 0; i < length; ++i)
-	{
-		if (data()[i] != _str[i])
-			return false;
-	}
-	return true;
-}
-
-size_t String::find(const char* _str, size_t _startPosition) const
-{
-	if (data() == nullptr || _str == nullptr)
-		return INVALID_POS;
-
-	if (_startPosition >= m_length)
-		return INVALID_POS;
-
-	const char* ptr = strstr(data() + _startPosition, _str);
-	if (ptr == nullptr)
-		return INVALID_POS;
-
-	return size_t(ptr - data());
-}
-
-
-
-String& String::replace(const char* _toReplace, const char* _replacement)
-{
-	size_t toReplaceLen = strlen(_toReplace);
-	size_t replacementLen = strlen(_replacement);
-	size_t pos = find(_toReplace);
-	while (pos != INVALID_POS)
-	{
-		replace(pos, toReplaceLen, _replacement);
-		pos = find(_toReplace, pos + replacementLen);
-	}
-	return *this;
-}
-
-
-
-String String::slice(size_t _startPosition, size_t _count) const
-{
-	String str = String(&scratchAllocator());
-
-	if (_startPosition > m_length)
-		return str;
-
-	_count = std::min(_count, m_length - _startPosition);
-	str.resize(_count);
-	memcpy(str.data(), data() + _startPosition, _count);
-	return str;
-}
-
-
-
-String& String::replace(size_t _position, size_t _count, const char* _replacement)
-{
-	if (m_length == 0)
-		return *this;
-
-	size_t baseLength = m_length;
-	size_t count = std::min(baseLength - _position, _count);
-	size_t replacementLen = strlen(_replacement);
-
-	if (_count < replacementLen) // if replacement string is longer, resize before
-	{
-		resize(baseLength + replacementLen - count);
-	}
-
-	char* bufferPosition = data() + _position;
-	memcpy(bufferPosition + replacementLen, bufferPosition + count, baseLength - (_position + count));
-	memcpy(bufferPosition, _replacement, replacementLen);
-
-	if (_count > replacementLen) // if replacement string is shorted, resize after
-	{
-		resize(baseLength + replacementLen - count);
-	}
-
-	return *this;
 }
 
 String& String::operator=(const char* _str)
@@ -389,4 +301,34 @@ MallocString::MallocString(const String& _str)
 
 MIRROR_CLASS(yae::String)
 (
+);
+
+MIRROR_CLASS(yae::MallocString)
+(
+	MIRROR_PARENT(yae::String);
+);
+
+MIRROR_CLASS(yae::String32)
+(
+	MIRROR_PARENT(yae::String);
+);
+
+MIRROR_CLASS(yae::String64)
+(
+	MIRROR_PARENT(yae::String);
+);
+
+MIRROR_CLASS(yae::String128)
+(
+	MIRROR_PARENT(yae::String);
+);
+
+MIRROR_CLASS(yae::String256)
+(
+	MIRROR_PARENT(yae::String);
+);
+
+MIRROR_CLASS(yae::String512)
+(
+	MIRROR_PARENT(yae::String);
 );

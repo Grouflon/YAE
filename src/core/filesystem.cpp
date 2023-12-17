@@ -4,6 +4,7 @@
 #include <core/Program.h>
 #include <core/platform.h>
 #include <core/containers/Array.h>
+#include <core/string.h>
 
 #include <filesystem>
 #include <cstdio>
@@ -32,7 +33,7 @@ String& normalizePath(String& _path)
 		// Remove all double slashes
 		if (i > 0 && _path[i - 1] == '/' && _path[i] == '/')
 		{
-			_path.replace(i, 1, "");
+			_path = string::replace(_path, i, 1, "");
 			continue;
 		}
 		++i;
@@ -75,7 +76,7 @@ String getDirectory(const char* _path)
 		size_t pos = size - 1 - i;
 		if (path[pos] == '/')
 		{
-			return path.slice(0, pos + 1);
+			return string::slice(path, 0, pos + 1);
 		}
 	}
 	return path;
@@ -92,7 +93,7 @@ String getFileName(const char* _path)
 		size_t pos = size - 1 - i;
 		if (path[pos] == '/')
 		{
-			return path.slice(pos + 1, size);
+			return string::slice(path, pos + 1, size);
 		}
 	}
 	return path;
@@ -108,7 +109,7 @@ String getFileNameWithoutExtension(const char* _path)
 		size_t pos = size - 1 - i;
 		if (fileName[pos] == '.')
 		{
-			return fileName.slice(0, pos);
+			return string::slice(fileName, 0, pos);
 		}
 	}
 	return fileName;
@@ -124,7 +125,7 @@ String getExtension(const char* _path)
 		size_t pos = size - 1 - i;
 		if (fileName[pos] == '.')
 		{
-			return fileName.slice(pos + 1, size);
+			return string::slice(fileName, pos + 1, size);
 		}
 	}
 	return String();

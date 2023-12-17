@@ -28,6 +28,11 @@ StringHash::StringHash(const char* _str)
 #endif
 }
 
+StringHash::StringHash(const String& _str)
+	: StringHash(_str.c_str())
+{
+}
+
 StringHash::StringHash(u32 _hash)
 {
 	m_hash = _hash;

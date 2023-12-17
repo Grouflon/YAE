@@ -361,8 +361,8 @@ static String getSettingsFilePath(const Application* _app)
 {
 	String path = filesystem::normalizePath(string::format("%s/%s_settings.json", program().getSettingsDirectory(), _app->getName()).c_str());
 	// @TODO(remi): Let's find a better way to sanitize a string for paths at some point
-	path.replace(" ", "");
-	path.replace("|", "");
+	path = string::replace(path, " ", "");
+	path = string::replace(path, "|", "");
 	return path;
 }
 
@@ -448,6 +448,15 @@ bool Application::serializeSettings(Serializer& _serializer)
 		if (_serializer.beginSerializeObject("editor"))
 		{
 			m_editor->serializeSettings(_serializer);
+			_serializer.endSerializeObject();
+		}
+	}
+
+	if (m_console != nullptr)
+	{
+		if (_serializer.beginSerializeObject("console"))
+		{
+			m_console->serializeSettings(_serializer);
 			_serializer.endSerializeObject();
 		}
 	}

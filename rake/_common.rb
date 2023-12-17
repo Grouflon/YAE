@@ -36,6 +36,7 @@ def default_settings()
 		"-Wno-void-pointer-to-int-cast",
 		"-Wno-int-to-void-pointer-cast",
 		"-Wno-switch",
+		"-Wno-deprecated-copy-with-user-provided-copy", # This has been added for inline string copy constructors to not break implicit copy
 
 		# LivePP flags
 		"-gcodeview", # Generate CodeView debug information

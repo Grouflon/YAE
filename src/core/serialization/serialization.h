@@ -19,7 +19,7 @@ const u32 DEFAULT_SERIALIZATION_FLAGS = SF_IGNORE_MISSING_KEYS|SF_ENUM_BY_NAME;
 
 CORE_API bool serializeMirrorType(Serializer& _serializer, void* _value, const mirror::Type* _type, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
 CORE_API bool serializeClassInstance(Serializer& _serializer, void* _instance, const mirror::Class* _class, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
-CORE_API bool serializeClassInstanceMembers(Serializer& _serializer, void* _instance, const mirror::Class* _class, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
+CORE_API bool serializeClassInstanceMembers(Serializer& _serializer, void* _instance, const mirror::Class* _class, u32 _flags = DEFAULT_SERIALIZATION_FLAGS);
 
 template <typename T>
 bool serializeMirrorType(Serializer& _serializer, T& _value, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
@@ -38,19 +38,19 @@ bool serializeMirrorType(Serializer& _serializer, T* _value, const char* _key = 
 }
 
 template <typename T>
-bool serializeClassInstanceMembers(Serializer& _serializer, T& _value, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
+bool serializeClassInstanceMembers(Serializer& _serializer, T& _value, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
 {
 	mirror::Class* clss = mirror::GetClass(_value);
 	if (clss == nullptr)
 		return false;
 	
-	return serializeClassInstanceMembers(_serializer, &_value, clss, _key, _flags);
+	return serializeClassInstanceMembers(_serializer, &_value, clss, _flags);
 }
 
 template <typename T>
-bool serializeClassInstanceMembers(Serializer& _serializer, T* _value, const char* _key = nullptr, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
+bool serializeClassInstanceMembers(Serializer& _serializer, T* _value, u32 _flags = DEFAULT_SERIALIZATION_FLAGS)
 {
-	return serializeClassInstanceMembers(_serializer, *_value, _key, _flags);
+	return serializeClassInstanceMembers(_serializer, *_value, _flags);
 }
 
 } // namespace serialization
