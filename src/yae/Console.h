@@ -5,6 +5,8 @@
 #include <core/containers/Array.h>
 #include <core/containers/HashMap.h>
 
+struct ImGuiInputTextCallbackData;
+
 namespace yae {
 
 typedef void (*ConsoleCommand)(u32, const char**);
@@ -23,8 +25,12 @@ public:
 
 	void drawConsole();
 
+	bool serializeSettings(Serializer& _serializer);
+
 //private:
 	void _onLog(const char* _categoryName, LogVerbosity _verbosity, const char* _fileInfo, const char* _message);
+
+	int _consoleInputTextCallback(ImGuiInputTextCallbackData* _data);
 
 	struct Command
 	{
@@ -35,8 +41,11 @@ public:
 	HashMap<StringHash, u32> m_nameToCommand;
 
 	String256 m_inputField;
-	Array<String128> m_commandHistory;
 	i32 m_commandHistoryPosition = -1;
+	bool m_scrollToBottom = false;
+
+	Array<String128> m_commandHistory;
+	u32 m_maxCommandHistorySize = 10;
 
 	enum class ConsoleMode : u8
 	{

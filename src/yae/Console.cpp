@@ -2,11 +2,15 @@
 
 #include <core/logger.h>
 #include <core/math.h>
+#include <core/Program.h>
+#include <core/serialization/serialization.h>
+#include <core/string.h>
 
 #include <yae/imgui_extension.h>
 #include <yae/InputSystem.h>
 
 #include <imgui/imgui.h>
+#include <mirror/mirror.h>
 
 namespace yae {
 
@@ -34,12 +38,11 @@ void Console::shutdown()
 
 void Console::execute(const char* _command)
 {
-	m_commandHistory.push_back(_command);
-
-	u32* commandIndexPtr = m_nameToCommand.get(_command);
+	StringHash commandHash = string::toLowerCase(_command);
+	u32* commandIndexPtr = m_nameToCommand.get(commandHash);
 	if (commandIndexPtr != nullptr)
 	{
-		YAE_LOGF_CAT("console", "> %s", _command);
+		YAE_LOGF_CAT("console", "> %s", m_commands[*commandIndexPtr].name.c_str());
 		m_commands[*commandIndexPtr].callback(0, nullptr);
 	}
 	else
@@ -62,59 +65,65 @@ void Console::registerCommand(const char* _name, ConsoleCommand _callback)
 	command.callback = _callback;
 
 	m_commands.push_back(command);
-	m_nameToCommand[command.name.c_str()] = m_commands.size() - 1;
+
+	StringHash hash = string::toLowerCase(_name);
+	m_nameToCommand[hash] = m_commands.size() - 1;
 }
 
 void Console::unregisterCommand(const char* _name)
 {
-	YAE_ASSERT(m_nameToCommand.get(_name) != nullptr);
+	StringHash hash = string::toLowerCase(_name);
+	YAE_ASSERT(m_nameToCommand.get(hash) != nullptr);
 
-	u32 commandIndex = *m_nameToCommand.get(_name);
+	u32 commandIndex = *m_nameToCommand.get(hash);
 	m_commands.erase(commandIndex);
 	for (u32 i = commandIndex; i < m_commands.size(); ++i)
 	{
-		m_nameToCommand[m_commands[i].name.c_str()] = i;
+		StringHash commandHash = string::toLowerCase(m_commands[i].name);
+		m_nameToCommand[commandHash] = i;
 	}
 }
 
-static int ConsoleInputTextCallback(ImGuiInputTextCallbackData* _data)
+int Console::_consoleInputTextCallback(ImGuiInputTextCallbackData* _data)
 {
+	switch (_data->EventFlag)
+    {
+    	case ImGuiInputTextFlags_CallbackHistory:
+    	{
+            const i32 previousHistoryPosition = m_commandHistoryPosition;
+			if (_data->EventKey == ImGuiKey_UpArrow)
+			{
+				m_commandHistoryPosition = math::min(m_commandHistoryPosition + 1, i32(m_commandHistory.size() - 1));
+			}
+			else if (_data->EventKey == ImGuiKey_DownArrow)
+			{
+				m_commandHistoryPosition = math::max(m_commandHistoryPosition - 1, -1);
+			}
+
+			if (previousHistoryPosition != m_commandHistoryPosition)
+			{
+            	const char* command = (m_commandHistoryPosition >= 0) ? m_commandHistory[m_commandHistory.size() - 1 - m_commandHistoryPosition].c_str() : "";
+            	_data->DeleteChars(0, _data->BufTextLen);
+				_data->InsertChars(0, command);
+			}
+    	}
+    	break;
+    }
 	return 0;
 }
 
 void Console::drawConsole()
 {
+	bool reclaimFocus = false;
+
 	if (ImGui::IsKeyPressed(ImGuiKey_F2, false))
 	{
 		m_consoleMode = ConsoleMode((u8(m_consoleMode) + 1) % 3);
+		reclaimFocus = true;
 	}
 
 	if (m_consoleMode == ConsoleMode::CLOSED)
 		return;
-
-	// NOTE(12/17/2023): This doest work. We need to use imgui callbacks for implementing history
-	// bool commandHistoryBrowsed = false;
-	// if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
-	// {
-	// 	m_commandHistoryPosition = math::min(m_commandHistoryPosition + 1, i32(m_commandHistory.size() - 1));
-	// 	commandHistoryBrowsed = true;
-	// }
-	// if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
-	// {
-	// 	m_commandHistoryPosition = math::min(m_commandHistoryPosition - 1, -1);
-	// 	commandHistoryBrowsed = true;
-	// }
-	// if (commandHistoryBrowsed)
-	// {
-	// 	if (m_commandHistoryPosition >= 0)
-	// 	{
-	// 		m_inputField = m_commandHistory[m_commandHistory.size() - 1 - m_commandHistoryPosition];
-	// 	}
-	// 	else
-	// 	{
-	// 		m_inputField.clear();
-	// 	}
-	// }
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -161,6 +170,9 @@ void Console::drawConsole()
 
 	    			ImGui::TextColored(color, "%s", entry.message.c_str());
 	    		}
+	    		if (m_scrollToBottom || ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+                	ImGui::SetScrollHereY(1.0f);
+                m_scrollToBottom = false;
 	    	}
 	    	ImGui::EndChild();
     		ImGui::PopStyleVar(1);
@@ -176,14 +188,46 @@ void Console::drawConsole()
 	    	ImGui::Text(">");
 	    	ImGui::SameLine();
 	    	ImGui::SetNextItemWidth(-FLT_MIN);
-	    	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-	    	ImGui::SetKeyboardFocusHere();
-	    	if (ImGui::InputText("Input", &m_inputField, flags, &ConsoleInputTextCallback, this))
+	    	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory;
+	    	auto callback = [](ImGuiInputTextCallbackData* _data)
 	    	{
+	    		Console* console = (Console*)_data->UserData;
+	    		return console->_consoleInputTextCallback(_data);
+	    	};
+
+	    	if (ImGui::InputText("Input", &m_inputField, flags, callback, this))
+	    	{
+	    		// Add to command history
+	    		{
+	    			for (i32 i = m_commandHistory.size() - 1; i >= 0; --i)
+					{
+						if (m_commandHistory[i] == m_inputField)
+						{
+							m_commandHistory.erase(i);
+							break;
+						}
+					}
+					m_commandHistory.push_back(m_inputField.c_str());
+
+					while (m_commandHistory.size() > m_maxCommandHistorySize)
+					{
+						m_commandHistory.erase(0, 1);
+					}
+					program().saveSettings();
+	    		}
+
 	    		execute(m_inputField.c_str());
 	    		m_inputField.clear();
 				m_commandHistoryPosition = -1;
+				reclaimFocus = true;
+				m_scrollToBottom = true;
 	    	}
+
+	    	// Auto-focus on window apparition
+	        ImGui::SetItemDefaultFocus();
+	        if (reclaimFocus)
+	            ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+
     		ImGui::PopStyleVar(1);
     	}
     	ImGui::EndChild();
@@ -191,6 +235,11 @@ void Console::drawConsole()
     	ImGui::PopStyleVar(1);
     }
     ImGui::End();
+}
+
+bool Console::serializeSettings(Serializer& _serializer)
+{
+	return serialization::serializeClassInstanceMembers(_serializer, *this);
 }
 
 void Console::_onLog(const char* _categoryName, LogVerbosity _verbosity, const char* _fileInfo, const char* _message)
@@ -208,3 +257,9 @@ void Console::_onLog(const char* _categoryName, LogVerbosity _verbosity, const c
 }
 
 } // namespace yae
+
+MIRROR_CLASS(yae::Console)
+(
+	MIRROR_MEMBER(m_commandHistory);
+	MIRROR_MEMBER(m_maxCommandHistorySize);
+);
