@@ -144,6 +144,20 @@ typename HashMap<Key, T>::Entry* HashMap<Key, T>::end()
 	return m_data.end();
 }
 
+template<typename Key, typename T>
+T& HashMap<Key, T>::operator[](Key _key)
+{
+	return *getOrInsert(_key, T());
+}
+
+template<typename Key, typename T>
+const T& HashMap<Key, T>::operator[](Key _key) const
+{
+	T* entryPtr = get(_key);
+	YAE_ASSERT(entryPtr != nullptr);
+	return *entryPtr;
+}
+
 template <typename Key, typename T>
 u32 HashMap<Key, T>::_addEntry(Key _key)
 {

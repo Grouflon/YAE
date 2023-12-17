@@ -41,6 +41,9 @@ public:
 	Entry* begin();
 	Entry* end();
 
+	T& operator[](Key _key);
+	const T& operator[](Key _key) const;
+
 private:
 	static const u32 END_OF_LIST = 0xffffffffu;
 
