@@ -38,16 +38,30 @@ void Console::shutdown()
 
 void Console::execute(const char* _command)
 {
-	StringHash commandHash = string::toLowerCase(_command);
+	if (_command == nullptr)
+		return;
+
+	Array<String> slicedCommand(string::split(_command, " "), &scratchAllocator());
+	if (slicedCommand.size() == 0)
+		return;
+
+	DataArray<const char*> arguments(&scratchAllocator());
+	for (u32 i = 1; i < slicedCommand.size(); ++i)
+	{
+		arguments.push_back(slicedCommand[i].c_str());
+	}
+
+	const char* command = slicedCommand[0].c_str();
+	StringHash commandHash = string::toLowerCase(command);
 	u32* commandIndexPtr = m_nameToCommand.get(commandHash);
 	if (commandIndexPtr != nullptr)
 	{
-		YAE_LOGF_CAT("console", "> %s", m_commands[*commandIndexPtr].name.c_str());
-		m_commands[*commandIndexPtr].callback(0, nullptr);
+		YAE_LOGF_CAT("console", "> %s", _command);
+		m_commands[*commandIndexPtr].callback(arguments.size(), arguments.data());
 	}
 	else
 	{
-		YAE_WARNINGF_CAT("console", "Unknown command: %s", _command);
+		YAE_WARNINGF_CAT("console", "Unknown command: %s", command);
 	}
 }
 
