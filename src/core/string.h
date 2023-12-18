@@ -2,6 +2,8 @@
 
 #include <core/types.h>
 
+#include <core/containers/Array.h>
+
 namespace yae {
 namespace string {
 
@@ -43,6 +45,8 @@ CORE_API String replace(const char* _str, size_t _position, size_t _count, const
 CORE_API String replace(const String& _str, size_t _position, size_t _count, const char* _replacement);
 CORE_API String slice(const char* _str, size_t _startPosition, size_t _count);
 CORE_API String slice(const String& _str, size_t _startPosition, size_t _count);
+CORE_API Array<String> split(const char* _str, const char* _separator);
+CORE_API Array<String> split(const String& _str, const char* _separator);
 CORE_API String toLowerCase(const char* _str);
 CORE_API String toLowerCase(const String& _str);
 CORE_API String toUpperCase(const char* _str);

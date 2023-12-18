@@ -133,6 +133,43 @@ String slice(const String& _str, size_t _startPosition, size_t _count)
 	return slice(_str.c_str(), _startPosition, _count);
 }
 
+Array<String> split(const char* _str, const char* _separator)
+{
+	Array<String> result;
+	const char* start = _str;
+	const char* end = start;
+	u32 separatorLength = strlen(_separator);
+	u32 stringLength = strlen(_str);
+
+	while (end < _str + stringLength)
+	{
+		if (strncmp(end, _separator, separatorLength) == 0)
+		{
+			if (start != end)
+			{
+				result.push_back(slice(start, 0, end - start));
+			}
+			end += separatorLength;
+			start = end;
+		}
+		else
+		{
+			++end;
+		}
+	}
+	if (start != end)
+	{
+		result.push_back(slice(start, 0, end - start));
+	}
+
+	return result;
+}
+
+Array<String> split(const String& _str, const char* _separator)
+{
+	return split(_str.c_str(), _separator);
+}
+
 String toLowerCase(const char* _str)
 {
 	String result = _str;
