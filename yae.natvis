@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <Type Name="yae::String">
+    <DisplayString Condition="m_flags==0">{m_buffer,s8}</DisplayString>
+    <DisplayString Condition="m_flags==1">{&amp;m_buffer+(sizeof(yae::String)/8),s8}</DisplayString>
+    <StringView Condition="m_flags==0">m_buffer,s8</StringView>
+    <StringView Condition="m_flags==1">&amp;m_buffer+(sizeof(yae::String)/8),s8</StringView>
+  </Type>
+
+  <Type Name="yae::StringHash">
+    <DisplayString Condition="m_string!=nullptr">{m_string,s8}</DisplayString>
+    <DisplayString Condition="m_string==nullptr">{m_hash}</DisplayString>
+    <StringView Condition="m_string!=nullptr">m_string,s8</StringView>
+  </Type>
+
+  <Type Name="yae::BaseArray&lt;*&gt;">
+    <DisplayString>{{ size={m_size} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>m_size</Size>
+        <ValuePointer>m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="yae::HashMap&lt;*&gt;">
+    <DisplayString>{{ size={m_data.m_size} }}</DisplayString>
+    <Expand>
+      <CustomListItems>
+        <Variable Name="index" InitialValue="0" />
+
+        <Size>m_data.m_size</Size>
+        <Loop>
+          <Break Condition="index == m_data.m_size" />
+          <Item Name="{m_data.m_data[index].key}">m_data.m_data[index].value</Item>
+          <Exec>index++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="yae::HashMap&lt;*&gt;::Entry">
+    <DisplayString>{key} => {value}</DisplayString>
+    <Expand>
+      <Item Name="Key">key</Item>
+      <Item Name="Value">value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="yae::ID&lt;*&gt;">
+    <!-- <DisplayString>{id}</DisplayString> -->
+    
+    <Intrinsic Name="matchIndex" Category="Method" Expression="(id&amp;((u64(1)&lt;&lt;32)-1))==index">
+      <Parameter Name="index" Type="u64" />
+    </Intrinsic>
+    <Intrinsic Name="matchGeneration" Category="Method" Expression="(u32(id&gt;&gt;32))==index">
+      <Parameter Name="index" Type="u64" />
+    </Intrinsic>
+    <Expand>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Variable Name="dataIndex" InitialValue="-1" />
+        <Variable Name="generation" InitialValue="-1" />
+        <Loop>
+          <Break Condition="i == pool->m_indices.m_size " />
+          <Exec>dataIndex=(pool->m_indices.m_data+i)->dataIndex</Exec>
+          <Exec>generation=(pool->m_indices.m_data+i)->generation</Exec>
+          <Break Condition="matchIndex(dataIndex)&amp;&amp;matchGeneration(generation)" />
+          <Exec>i++</Exec>
+        </Loop>
+        <Item Name="pointer" Condition="i==pool->m_indices.m_size">($T1*)nullptr</Item>
+        <Item Name="pointer" Condition="i!=pool->m_indices.m_size">&amp;(pool->m_data.m_data+dataIndex)->data</Item>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>
